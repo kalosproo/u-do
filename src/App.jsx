@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { auth } from "./services/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Login from "./pages/Login";
+import Home from "./pages/Home";
+import Finance from "./pages/Finance";
+import Tasks from "./pages/Tasks";
+import Habits from "./pages/Habits";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -12,19 +19,57 @@ function App() {
       setUser(currentUser);
       setLoading(false);
     });
-
     return () => unsub();
   }, []);
 
   if (loading) return <p>Loading...</p>;
 
-  if (!user) return <Login />;
-
   return (
-    <div>
-      <h1>U. Do</h1>
-      <p>Welcome {user.email}</p>
-    </div>
+    <BrowserRouter>
+      {user && (
+        <button onClick={() => signOut(auth)}>Logout</button>
+      )}
+
+      <Routes>
+        <Route path="/login" element={<Login />} />
+
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute user={user}>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/finance"
+          element={
+            <ProtectedRoute user={user}>
+              <Finance />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/tasks"
+          element={
+            <ProtectedRoute user={user}>
+              <Tasks />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/habits"
+          element={
+            <ProtectedRoute user={user}>
+              <Habits />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

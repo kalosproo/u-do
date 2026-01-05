@@ -4,18 +4,25 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 
 function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const googleLogin = async () => {
-    await signInWithPopup(auth, googleProvider);
-  };
+ const googleLogin = async () => {
+  await signInWithPopup(auth, googleProvider);
+  navigate("/");
+};
+
 
   const emailLogin = async () => {
-    await signInWithEmailAndPassword(auth, email, password);
-  };
+  await signInWithEmailAndPassword(auth, email, password);
+  navigate("/");
+};
+
 
   return (
     <div>
