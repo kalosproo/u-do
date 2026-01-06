@@ -1,3 +1,4 @@
+import BottomNav from "./components/BottomNav";
 import { useEffect, useState } from "react";
 import { auth } from "./services/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -26,6 +27,8 @@ function App() {
 
   return (
     <BrowserRouter>
+    {user && <BottomNav />}
+
       {user && (
         <button onClick={() => signOut(auth)}>Logout</button>
       )}
