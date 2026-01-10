@@ -1,3 +1,4 @@
+import Planner from "./pages/Planner";
 import BottomNav from "./components/BottomNav";
 import { useEffect, useState } from "react";
 import { auth } from "./services/firebase";
@@ -62,6 +63,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+         path="/planner"
+          element={
+          <ProtectedRoute user={user}>
+            <Planner />
+          </ProtectedRoute>
+        }
+         />
 
         <Route
           path="/habits"
@@ -72,6 +81,7 @@ function App() {
           }
         />
       </Routes>
+      
     </BrowserRouter>
   );
 }

@@ -8,7 +8,9 @@ function BottomNav() {
     color: pathname === path ? "#fff" : "#aaa",
     textDecoration: "none",
   });
-
+<Link to="/planner" style={linkStyle("/planner")}>
+  Planner
+</Link>
   return (
     <div
       style={{
@@ -22,6 +24,7 @@ function BottomNav() {
     >
       <Link to="/" style={linkStyle("/")}>Home</Link>
       <Link to="/finance" style={linkStyle("/finance")}>Finance</Link>
+      <Link to="/planner" style={linkStyle("/planner")}>Planner</Link>
       <Link to="/tasks" style={linkStyle("/tasks")}>Tasks</Link>
       <Link to="/habits" style={linkStyle("/habits")}>Habits</Link>
     </div>
