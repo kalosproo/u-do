@@ -77,7 +77,14 @@ const deletePlan = async (plan) => {
       fetchPlans();
     }
   }, [user]);
-
+const groupedPlans = plans.reduce((acc, plan) => {
+  if (!acc[plan.date]) {
+    acc[plan.date] = [];
+  }
+  acc[plan.date].push(plan);
+  return acc;
+}, {});
+const sortedDates = Object.keys(groupedPlans).sort();
   return (
     <div style={{ padding: "20px", paddingBottom: "60px" }}>
       <h2>Weekly Planner</h2>
@@ -101,15 +108,19 @@ const deletePlan = async (plan) => {
 
 
       <button onClick={addPlan}>Add Plan</button>
-
-      <ul>
-        {plans.map((plan) => (
-                <li key={plan.id}>
-        {plan.title} – {plan.date}
-        <button onClick={() => deletePlan(plan)}>❌</button>
-      </li>
-        ))}
-      </ul>
+{sortedDates.map((date) => (
+  <div key={date} style={{ marginTop: "15px" }}>
+    <h4>📅 {date}</h4>
+    <ul>
+      {groupedPlans[date].map((plan) => (
+        <li key={plan.id}>
+          {plan.title}
+          <button onClick={() => deletePlan(plan)}>❌</button>
+        </li>
+      ))}
+    </ul>
+  </div>
+))}
     </div>
   );
 }
