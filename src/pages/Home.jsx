@@ -6,6 +6,7 @@ import { collection, getDocs } from "firebase/firestore";
 function Home() {
   const [total, setTotal] = useState(0);
   const [completed, setCompleted] = useState(0);
+   const [todayPlans, setTodayPlans] = useState(0);
 
   const user = auth.currentUser;
 
@@ -21,10 +22,28 @@ function Home() {
     setTotal(tasks.length);
     setCompleted(tasks.filter((t) => t.completed).length);
   };
+  const fetchTodayPlans = async () => {
+  if (!user) return;
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const snapshot = await getDocs(
+    collection(db, "users", user.uid, "planner")
+  );
+
+  const plans = snapshot.docs.map((doc) => doc.data());
+
+  const todayCount = plans.filter(
+    (plan) => plan.date === today
+  ).length;
+
+  setTodayPlans(todayCount);
+};
 
   useEffect(() => {
   if (user) {
     fetchTaskSummary();
+    fetchTodayPlans();
   }
 }, [user]);
 
@@ -35,6 +54,7 @@ function Home() {
       <p>📝 Total Tasks: {total}</p>
       <p>✅ Completed: {completed}</p>
       <p>⏳ Pending: {total - completed}</p>
+      <p>📅 Today’s Plans: {todayPlans}</p>
     </div>
   );
 }

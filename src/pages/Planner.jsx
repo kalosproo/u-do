@@ -77,6 +77,7 @@ const deletePlan = async (plan) => {
       fetchPlans();
     }
   }, [user]);
+const today = new Date().toISOString().split("T")[0];
 const groupedPlans = plans.reduce((acc, plan) => {
   if (!acc[plan.date]) {
     acc[plan.date] = [];
@@ -110,7 +111,9 @@ const sortedDates = Object.keys(groupedPlans).sort();
       <button onClick={addPlan}>Add Plan</button>
 {sortedDates.map((date) => (
   <div key={date} style={{ marginTop: "15px" }}>
-    <h4>📅 {date}</h4>
+    <h4 style={{ color: date === today ? "green" : "black" }}>
+  📅 {date} {date === today && "(Today)"}
+</h4>
     <ul>
       {groupedPlans[date].map((plan) => (
         <li key={plan.id}>

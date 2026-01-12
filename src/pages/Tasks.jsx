@@ -53,15 +53,32 @@ const addTask = async () => {
     await deleteDoc(doc(db, "users", user.uid, "tasks", id));
     fetchTasks();
   };
-const toggleComplete = async (task) => {
-  await updateDoc(
-    doc(db, "users", user.uid, "tasks", task.id),
-    {
-      completed: !task.completed,
-    }
-  );
-  fetchTasks();
+const toggleTask = async (task) => {
+  const taskRef = doc(db, "users", user.uid, "tasks", task.id);
+
+  // 1️⃣ Update task
+  await updateDoc(taskRef, {
+    completed: !task.completed,
+  });
+
+  // 2️⃣ IF task is completed → remove from planner
+  if (!task.completed) {
+    const plannerSnap = await getDocs(
+      collection(db, "users", user.uid, "planner")
+    );
+
+    plannerSnap.forEach(async (planDoc) => {
+      if (planDoc.data().taskId === task.id) {
+        await deleteDoc(
+          doc(db, "users", user.uid, "planner", planDoc.id)
+        );
+      }
+    });
+  }
+
+  fetchTasks();   // refresh tasks
 };
+
 
  useEffect(() => {
   if (user) {
@@ -101,7 +118,7 @@ const filteredTasks = tasks.filter((task) => {
       <input
         type="checkbox"
         checked={task.completed}
-        onChange={() => toggleComplete(task)}
+        onChange={() => toggleTask(task)}
         />
       <small style={{ marginLeft: "8px" }}>
         [{task.priority}]
