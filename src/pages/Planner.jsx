@@ -109,6 +109,11 @@ const sortedDates = Object.keys(groupedPlans).sort();
 
 
       <button onClick={addPlan}>Add Plan</button>
+{sortedDates.length === 0 && (
+  <p style={{ opacity: 0.6, marginTop: "15px" }}>
+    No plans added yet 📅
+  </p>
+)}
 {sortedDates.map((date) => (
   <div key={date} style={{ marginTop: "15px" }}>
     <h4 style={{ color: date === today ? "green" : "black" }}>

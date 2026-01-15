@@ -112,30 +112,36 @@ const filteredTasks = tasks.filter((task) => {
   <button onClick={() => setFilter("pending")}>Pending</button>
   <button onClick={() => setFilter("completed")}>Completed</button>
 </div>
-      <ul>
- {filteredTasks.map((task) => (
-    <li key={task.id}>
-      <input
-        type="checkbox"
-        checked={task.completed}
-        onChange={() => toggleTask(task)}
+{filteredTasks.length === 0 ? (
+  <p style={{ opacity: 0.6, marginTop: "15px" }}>
+    No tasks yet 📝
+  </p>
+) : (
+  <ul>
+    {filteredTasks.map((task) => (
+      <li key={task.id}>
+        <input
+          type="checkbox"
+          checked={task.completed}
+          onChange={() => toggleTask(task)}
         />
-      <small style={{ marginLeft: "8px" }}>
-        [{task.priority}]
+        <small style={{ marginLeft: "8px" }}>
+          [{task.priority}]
         </small>
 
-      <span
-        style={{
-          textDecoration: task.completed ? "line-through" : "none",
-          marginLeft: "8px",
-        }}
-      >
-        {task.title}
-      </span>
-      <button onClick={() => deleteTask(task.id)}>❌</button>
-    </li>
-  ))}
-</ul>
+        <span
+          style={{
+            textDecoration: task.completed ? "line-through" : "none",
+            marginLeft: "8px",
+          }}
+        >
+          {task.title}
+        </span>
+        <button onClick={() => deleteTask(task.id)}>❌</button>
+      </li>
+    ))}
+  </ul>
+)}
     </div>
   );
 }
