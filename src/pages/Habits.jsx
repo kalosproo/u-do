@@ -13,6 +13,7 @@ import {
 function Habits() {
   const [habits, setHabits] = useState([]);
   const [title, setTitle] = useState("");
+  const [habitType, setHabitType] = useState("strict");
 
 
   const user = auth.currentUser;
@@ -38,18 +39,31 @@ function Habits() {
 
     setHabits(list);
   };
+const getHabitPercentage = (habit) => {
+  if (!habit.durationDays) return null;
+
+  const completedCount = Object.keys(habit.completedDays || {}).length;
+  return Math.round((completedCount / habit.durationDays) * 100);
+};
 
   const addHabit = async () => {
     if (!title) return;
 
-    await addDoc(collection(db, "users", user.uid, "habits"), {
+ await addDoc(collection(db, "users", user.uid, "habits"), {
   title,
+  type: habitType,           // strict / flexible
+  durationDays: null,        // 👈 default (no percentage)
+  completedDays: {},
   streak: 0,
-  completedDays: {},   // 👈 ADD ONLY THIS
   createdAt: new Date(),
 });
 
+
+
+
+
     setTitle("");
+    setHabitType("strict");
     fetchHabits();
   };
 const toggleHabitForToday = async (habit, day) => {
@@ -58,39 +72,40 @@ const toggleHabitForToday = async (habit, day) => {
   const habitRef = doc(db, "users", user.uid, "habits", habit.id);
 
   const completedDays = habit.completedDays || {};
-  const alreadyDoneToday = completedDays[day] === true;
+  const alreadyDone = completedDays[day] === true;
 
-  // yesterday date
-  const yesterday = new Date(day);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = yesterday.toISOString().split("T")[0];
-
+  let newCompletedDays = { ...completedDays };
   let newStreak = habit.streak || 0;
 
-  if (alreadyDoneToday) {
-    // ❌ untick today
-    delete completedDays[day];
+  if (alreadyDone) {
+    // UNCHECK
+    delete newCompletedDays[day];
     newStreak = Math.max(newStreak - 1, 0);
   } else {
-    // ✅ tick today
-    if (!completedDays[yesterdayKey]) {
-      // missed yesterday → reset streak
-      newStreak = 1;
-    } else {
-      // continued streak
-      newStreak = newStreak + 1;
-    }
+    // CHECK
+    newCompletedDays[day] = true;
 
-    completedDays[day] = true;
+    if (habit.type === "strict") {
+      const yesterday = new Date(day);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yKey = yesterday.toISOString().split("T")[0];
+
+      newStreak = completedDays[yKey] ? newStreak + 1 : 1;
+    } else {
+      // FLEXIBLE
+      newStreak = Object.keys(newCompletedDays).length;
+    }
   }
 
   await updateDoc(habitRef, {
-    completedDays,
+    completedDays: newCompletedDays,
     streak: newStreak,
   });
 
   fetchHabits();
 };
+
+
 const getCompletionPercentage = (habit) => {
   if (!habit.createdAt) return 0;
 
@@ -147,7 +162,6 @@ const getTodayStats = () => {
  useEffect(() => {
     if (user) fetchHabits();
   }, [user]);
-
   return (
     <div style={{ padding: "20px", paddingBottom: "60px" }}>
       <h2>Habits</h2>
@@ -165,11 +179,38 @@ const getTodayStats = () => {
 
 
       <input
-        placeholder="New habit"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
-      <button onClick={addHabit}>Add Habit</button>
+  placeholder="New habit"
+  value={title}
+  onChange={(e) => setTitle(e.target.value)}
+/>
+
+<div style={{ margin: "8px 0" }}>
+  <button
+  onClick={() => setHabitType("strict")}
+  style={{
+    background: habitType === "strict" ? "#ff5555" : "#333",
+    color: "white",
+    marginRight: "6px",
+  }}
+>
+  Strict
+</button>
+
+
+  <button
+    onClick={() => setHabitType("flexible")}
+    style={{
+      background: habitType === "flexible" ? "#22c55e" : "#333",
+      color: "white",
+  
+    }}
+  >
+    Flexible
+  </button>
+</div>
+
+<button onClick={addHabit}>Add Habit</button>
+
 
       <table>
   <thead>
@@ -191,16 +232,43 @@ const getTodayStats = () => {
     gap: "10px",
   }}
 >
-  <span style={{ fontWeight: 500 }}>
-    {habit.title}
-  </span>
+    {habit.title} 🔥{habit.streak}
 
-  <span style={{ opacity: 0.8 }}>
-    🔥 {habit.streak}
-  </span>
+
+
+<span
+  style={{
+    marginLeft: "8px",
+    padding: "2px 6px",
+    borderRadius: "6px",
+    fontSize: "12px",
+    background: habit.type === "strict" ? "#ff5555" : "#22c55e",
+    color: "white",
+  }}
+>
+  {habit.type === "strict" ? "Strict" : "Flexible"}
+</span>
+
+
 
   <span style={{ fontSize: "12px", opacity: 0.7 }}>
-    {getCompletionPercentage(habit)}%
+   {habit.durationDays && (
+  <span
+    style={{
+      marginLeft: "8px",
+      fontSize: "12px",
+      opacity: 0.7,
+    }}
+  >
+    {Math.round(
+      (Object.keys(habit.completedDays || {}).length /
+        habit.durationDays) *
+        100
+    )}
+    %
+  </span>
+)}
+
   </span>
 
   <button
