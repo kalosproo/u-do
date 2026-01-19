@@ -14,10 +14,26 @@ function Habits() {
   const [habits, setHabits] = useState([]);
   const [title, setTitle] = useState("");
   const [habitType, setHabitType] = useState("strict");
+  const [reminderTime, setReminderTime] = useState("");
+
 
 
   const user = auth.currentUser;
   const today = new Date().toISOString().split("T")[0];
+  const isReminderMissed = (habit) => {
+  if (!habit.reminderTime) return false;
+
+  const now = new Date();
+
+  const [h, m] = habit.reminderTime.split(":");
+  const reminder = new Date();
+  reminder.setHours(h, m, 0, 0);
+
+  const doneToday = habit.completedDays?.[today];
+
+  return now > reminder && !doneToday;
+};
+
   const days = Array.from({ length: 7 }).map((_, i) => {
   const d = new Date();
   d.setDate(d.getDate() - i);
@@ -51,10 +67,10 @@ const getHabitPercentage = (habit) => {
 
  await addDoc(collection(db, "users", user.uid, "habits"), {
   title,
-  type: habitType,           // strict / flexible
-  durationDays: null,        // 👈 default (no percentage)
-  completedDays: {},
+  type: habitType,          // strict / flexible
+  reminderTime: reminderTime || null,
   streak: 0,
+  completedDays: {},
   createdAt: new Date(),
 });
 
@@ -62,7 +78,9 @@ const getHabitPercentage = (habit) => {
 
 
 
+
     setTitle("");
+    setReminderTime("");
     setHabitType("strict");
     fetchHabits();
   };
@@ -151,6 +169,18 @@ const getTodayStats = () => {
     totalHabits === 0
       ? 0
       : Math.round((completedToday / totalHabits) * 100);
+const isReminderMissed = (habit) => {
+  if (!habit.reminderTime) return false;
+
+  const now = new Date();
+  const [h, m] = habit.reminderTime.split(":");
+  const reminder = new Date();
+  reminder.setHours(h, m, 0, 0);
+
+  const doneToday = habit.completedDays?.[today];
+
+  return now > reminder && !doneToday;
+};
 
   return {
     totalHabits,
@@ -183,6 +213,13 @@ const getTodayStats = () => {
   value={title}
   onChange={(e) => setTitle(e.target.value)}
 />
+<input
+  type="time"
+  value={reminderTime}
+  onChange={(e) => setReminderTime(e.target.value)}
+  style={{ marginTop: "6px" }}
+/>
+
 
 <div style={{ margin: "8px 0" }}>
   <button
@@ -224,30 +261,56 @@ const getTodayStats = () => {
 
   <tbody>
     {habits.map((habit) => (
-      <tr key={habit.id}>
-        <td
+      <tr
+  key={habit.id}
+  style={{
+    backgroundColor: isReminderMissed(habit)
+      ? "rgba(255, 0, 0, 0.08)"
+      : "transparent",
+  }}
+>
+       <td
   style={{
     display: "flex",
     alignItems: "center",
     gap: "10px",
   }}
 >
+  {/* Habit title + streak + reminder */}
+<div style={{ display: "flex", flexDirection: "column" }}>
+  <span>
     {habit.title} 🔥{habit.streak}
+  </span>
 
+  {habit.reminderTime && (
+  <span
+    style={{
+      fontSize: "12px",
+      marginTop: "2px",
+      color: isReminderMissed(habit) ? "#ff4d4f" : "#aaa",
+      fontWeight: isReminderMissed(habit) ? "600" : "400",
+    }}
+  >
+    ⏰ {habit.reminderTime}
+    {isReminderMissed(habit) && " • Pending"}
+  </span>
+)}
+</div>
 
-
-<span
-  style={{
-    marginLeft: "8px",
-    padding: "2px 6px",
-    borderRadius: "6px",
-    fontSize: "12px",
-    background: habit.type === "strict" ? "#ff5555" : "#22c55e",
-    color: "white",
-  }}
->
-  {habit.type === "strict" ? "Strict" : "Flexible"}
-</span>
+  {/* Habit type badge (read-only) */}
+  <span
+    style={{
+      padding: "2px 6px",
+      fontSize: "12px",
+      borderRadius: "6px",
+      backgroundColor:
+        habit.type === "strict" ? "#ff4d4f" : "#22c55e",
+      color: "white",
+      cursor: "default",
+    }}
+  >
+    {habit.type === "strict" ? "Strict" : "Flexible"}
+  </span>
 
 
 
