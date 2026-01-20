@@ -216,27 +216,46 @@ const deleteExpense = async (id) => {
 
 <ul>
   {getMonthlyExpenses().map((exp) => (
-  <li
+<li
   key={exp.id}
   style={{
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: "10px",
   }}
 >
   <span>
     {exp.title} ({exp.date})
   </span>
 
-  <span
-    style={{
-      color: exp.type === "income" ? "green" : "red",
-      fontWeight: "600",
-    }}
-  >
-    {exp.type === "income" ? "+" : "-"}₹{exp.amount}
-  </span>
+  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+    <span
+      style={{
+        color: exp.type === "income" ? "green" : "red",
+        fontWeight: "600",
+      }}
+    >
+      {exp.type === "income" ? "+" : "-"}₹{exp.amount}
+    </span>
+
+    {/* ❌ Delete button */}
+    <button
+      onClick={() => deleteExpense(exp.id)}
+      style={{
+        background: "transparent",
+        border: "none",
+        color: "#ff4d4f",
+        fontSize: "16px",
+        cursor: "pointer",
+      }}
+      title="Delete"
+    >
+      ❌
+    </button>
+  </div>
 </li>
+
 
 
   ))}
