@@ -15,6 +15,8 @@ function Finance() {
     new Date().toISOString().split("T")[0]
   );
   const [expenses, setExpenses] = useState([]);
+  const [type, setType] = useState("expense"); // default
+
 
   const user = auth.currentUser;
   const today = new Date().toISOString().split("T")[0];
@@ -44,18 +46,18 @@ function Finance() {
   const addExpense = async () => {
     if (!title || !amount) return;
 
-    await addDoc(
-      collection(db, "users", user.uid, "expenses"),
-      {
-        title,
-        amount: Number(amount), // SAME AS OLD PROJECT
-        date,
-        createdAt: new Date(),
-      }
-    );
+    await addDoc(collection(db, "users", user.uid, "expenses"), {
+  title,
+  amount: Number(amount),
+  type, // 👈 NEW
+  date,
+  createdAt: new Date(),
+});
+
 
     setTitle("");
     setAmount("");
+    setType("expense");
     fetchExpenses();
   };
 
@@ -64,30 +66,38 @@ function Finance() {
   // (old project reduce logic)
   // =========================
   const getTodayTotal = () => {
-    return expenses
-      .filter((e) => e.date === today)
-      .reduce((sum, e) => sum + e.amount, 0);
-  };
+  return expenses
+    .filter((e) => e.date === today)
+    .reduce((sum, e) => {
+      if (e.type === "income") return sum + e.amount;
+      return sum - e.amount;
+    }, 0);
+};
+
 
   // =========================
   // MONTHLY TOTAL
   // (old project month grouping)
   // =========================
-  const getMonthlyTotal = () => {
-    const now = new Date();
-    const month = now.getMonth();
-    const year = now.getFullYear();
+ const getMonthlyTotal = () => {
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
 
-    return expenses
-      .filter((e) => {
-        const d = new Date(e.date);
-        return (
-          d.getMonth() === month &&
-          d.getFullYear() === year
-        );
-      })
-      .reduce((sum, e) => sum + e.amount, 0);
-  };
+  return expenses
+    .filter((e) => {
+      const d = new Date(e.date);
+      return (
+        d.getMonth() === month &&
+        d.getFullYear() === year
+      );
+    })
+    .reduce((sum, e) => {
+      if (e.type === "income") return sum + e.amount;
+      return sum - e.amount;
+    }, 0);
+};
+
   const getMonthlyExpenses = () => {
   const now = new Date();
   const month = now.getMonth();
@@ -123,13 +133,60 @@ const deleteExpense = async (id) => {
 
       {/* SUMMARY (FROM OLD PROJECT LOGIC) */}
       <div style={{ marginBottom: "15px", fontSize: "14px" }}>
-        <div>Today: ₹{getTodayTotal()}</div>
-        <div>This Month: ₹{getMonthlyTotal()}</div>
+        <div
+  style={{
+    color: getTodayTotal() >= 0 ? "green" : "red",
+    fontWeight: "600",
+  }}
+>
+  Today: ₹{getTodayTotal()}
+</div>
+
+<div
+  style={{
+    color: getMonthlyTotal() >= 0 ? "green" : "red",
+    fontWeight: "600",
+  }}
+>
+  This Month: ₹{getMonthlyTotal()}
+</div>
+
       </div>
+      <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+  <button
+    onClick={() => setType("expense")}
+    style={{
+      backgroundColor: type === "expense" ? "#ff4d4f" : "#333",
+      color: "white",
+      padding: "6px 12px",
+      borderRadius: "6px",
+      border: "none",
+      cursor: "pointer",
+    }}
+  >
+    Expense
+  </button>
+
+  <button
+    onClick={() => setType("income")}
+    style={{
+      backgroundColor: type === "income" ? "#22c55e" : "#333",
+      color: "white",
+      padding: "6px 12px",
+      borderRadius: "6px",
+      border: "none",
+      cursor: "pointer",
+    }}
+  >
+    Income
+  </button>
+</div>
+
+
 
       {/* ADD EXPENSE */}
       <input
-        placeholder="Expense title"
+        placeholder="Enter Title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
@@ -147,7 +204,10 @@ const deleteExpense = async (id) => {
         onChange={(e) => setDate(e.target.value)}
       />
 
-      <button onClick={addExpense}>Add Expense</button>
+      <button onClick={addExpense}>
+  {type === "income" ? "Add Income" : "Add Expense"}
+</button>
+
 
       {/* EXPENSE LIST */}
       <h3 style={{ marginTop: "20px" }}>
@@ -156,26 +216,28 @@ const deleteExpense = async (id) => {
 
 <ul>
   {getMonthlyExpenses().map((exp) => (
-    <li
+  <li
   key={exp.id}
-  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  }}
 >
   <span>
-    {exp.title} – ₹{exp.amount} ({exp.date})
+    {exp.title} ({exp.date})
   </span>
 
-  <button
-    onClick={() => deleteExpense(exp.id)}
+  <span
     style={{
-      background: "transparent",
-      border: "none",
-      color: "red",
-      cursor: "pointer",
+      color: exp.type === "income" ? "green" : "red",
+      fontWeight: "600",
     }}
   >
-    ❌
-  </button>
+    {exp.type === "income" ? "+" : "-"}₹{exp.amount}
+  </span>
 </li>
+
 
   ))}
 </ul>
