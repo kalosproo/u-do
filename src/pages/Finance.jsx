@@ -7,15 +7,39 @@ import {
   deleteDoc,   // ✅ ADD THIS LINE
   doc,
 } from "firebase/firestore";
+const EXPENSE_CATEGORIES = [
+  "Food",
+  "Travel",
+  "Shopping",
+  "Rent",
+  "Bills",
+  "Education",
+  "Entertainment",
+];
+
+const INCOME_CATEGORIES = [
+  "Salary",
+  "Freelance",
+  "Gift",
+  "Other",
+];
 
 function Finance() {
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
+  const [customCategories, setCustomCategories] = useState([]);
   const [date, setDate] = useState(
     new Date().toISOString().split("T")[0]
   );
   const [expenses, setExpenses] = useState([]);
   const [type, setType] = useState("expense"); // default
+   const categories = [
+  ...(type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
+  ...customCategories,
+];
+
 
 
   const user = auth.currentUser;
@@ -46,13 +70,15 @@ function Finance() {
   const addExpense = async () => {
     if (!title || !amount) return;
 
-    await addDoc(collection(db, "users", user.uid, "expenses"), {
+   await addDoc(collection(db, "users", user.uid, "expenses"), {
   title,
   amount: Number(amount),
-  type, // 👈 NEW
+  type,
+  category, // 👈 NEW
   date,
   createdAt: new Date(),
 });
+
 
 
     setTitle("");
@@ -126,6 +152,18 @@ const deleteExpense = async (id) => {
   useEffect(() => {
     if (user) fetchExpenses();
   }, [user]);
+const getCategorySummary = () => {
+  const summary = {};
+
+  expenses.forEach((item) => {
+    if (!summary[item.category]) {
+      summary[item.category] = 0;
+    }
+    summary[item.category] += Number(item.amount);
+  });
+
+  return summary;
+};
 
   return (
     <div style={{ padding: "20px", paddingBottom: "60px" }}>
@@ -180,6 +218,41 @@ const deleteExpense = async (id) => {
   >
     Income
   </button>
+  <select
+  value={category}
+  onChange={(e) => setCategory(e.target.value)}
+>
+  <option value="">Select Category</option>
+
+  {categories.map((cat) => (
+    <option key={cat} value={cat}>
+      {cat}
+    </option>
+  ))}
+</select>
+<input
+  type="text"
+  placeholder="Add custom category"
+  value={customCategory}
+  onChange={(e) => setCustomCategory(e.target.value)}
+  style={{ marginLeft: "8px" }}
+/>
+
+<button
+  onClick={() => {
+    if (!customCategory.trim()) return;
+
+    setCustomCategories((prev) => [
+      ...new Set([...prev, customCategory.trim()]),
+    ]);
+
+    setCustomCategory("");
+  }}
+>
+  Add
+</button>
+
+
 </div>
 
 
@@ -210,9 +283,18 @@ const deleteExpense = async (id) => {
 
 
       {/* EXPENSE LIST */}
-      <h3 style={{ marginTop: "20px" }}>
-  This Month Expenses
-</h3>
+      <h3 style={{ marginTop: "20px" }}>Category Summary</h3>
+
+<ul>
+  {Object.entries(getCategorySummary()).map(
+    ([category, total]) => (
+      <li key={category}>
+        {category} – ₹{total}
+      </li>
+    )
+  )}
+</ul>
+
 
 <ul>
   {getMonthlyExpenses().map((exp) => (
