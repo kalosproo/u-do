@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "../services/firebase";
 import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
+import {
   collection,
   addDoc,
   getDocs,
@@ -164,6 +173,18 @@ const getCategorySummary = () => {
 
   return summary;
 };
+const getCategoryChartData = () => {
+  const summary = getCategorySummary();
+
+  return Object.entries(summary).map(
+    ([category, amount]) => ({
+      category,
+      amount,
+    })
+  );
+};
+console.log(getCategoryChartData());
+
 
   return (
     <div style={{ padding: "20px", paddingBottom: "60px" }}>
@@ -251,7 +272,6 @@ const getCategorySummary = () => {
 >
   Add
 </button>
-
 
 </div>
 
@@ -342,6 +362,24 @@ const getCategorySummary = () => {
 
   ))}
 </ul>
+
+{getCategoryChartData().length > 0 && (
+  <>
+    <h3 style={{ marginTop: "20px" }}>Spending by Category</h3>
+
+    <div style={{ width: "100%", height: 300 }}>
+      <ResponsiveContainer>
+        <BarChart data={getCategoryChartData()}>
+          <XAxis dataKey="category" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="amount" fill="#22c55e" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  </>
+)}
+
 
     </div>
   );
