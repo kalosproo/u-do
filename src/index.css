@@ -66,3 +66,30 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+/* 🌗 THEME STYLES */
+
+body.dark {
+  background-color: #0f0f0f;
+  color: #ffffff;
+}
+
+body.light {
+  background-color: #f4f4f4;
+  color: #111111;
+}
+
+/* make inputs readable */
+body.light input,
+body.light select,
+body.light textarea {
+  background-color: #ffffff;
+  color: #111111;
+  border: 1px solid #cccccc;
+}
+
+/* buttons */
+body.light button {
+  background-color: #e5e5e5;
+  color: #111111;
+  border: 1px solid #cccccc;
+}

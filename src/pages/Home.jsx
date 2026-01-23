@@ -4,6 +4,14 @@ import { db } from "../services/firebase";
 import { collection, getDocs } from "firebase/firestore";
 
 function Home() {
+  const [theme, setTheme] = useState(
+  localStorage.getItem("u_do_theme") || "dark"
+);
+useEffect(() => {
+  document.body.className = theme;
+  localStorage.setItem("u_do_theme", theme);
+}, [theme]);
+
   const [total, setTotal] = useState(0);
   const [completed, setCompleted] = useState(0);
    const [todayPlans, setTodayPlans] = useState(0);
@@ -50,6 +58,21 @@ function Home() {
 
   return (
     <div style={{ padding: "20px", paddingBottom: "60px" }}>
+    <button
+  onClick={() =>
+    setTheme(theme === "dark" ? "light" : "dark")
+  }
+  style={{
+    position: "absolute",
+    top: "10px",
+    right: "10px",
+    padding: "6px 10px",
+    cursor: "pointer",
+  }}
+>
+  {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+</button>
+
       <h2>Today Summary</h2>
       <p>📝 Total Tasks: {total}</p>
       <p>✅ Completed: {completed}</p>
