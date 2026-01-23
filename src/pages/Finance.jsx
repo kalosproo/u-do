@@ -34,6 +34,15 @@ const INCOME_CATEGORIES = [
 ];
 
 function Finance() {
+  const saveExpensesToLocal = (data) => {
+  localStorage.setItem("u_do_expenses", JSON.stringify(data));
+};
+
+const getExpensesFromLocal = () => {
+  const data = localStorage.getItem("u_do_expenses");
+  return data ? JSON.parse(data) : [];
+};
+
 
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
@@ -69,6 +78,8 @@ function Finance() {
     }));
 
     setExpenses(list);
+    saveExpensesToLocal(list);
+
   };
 
    
@@ -170,6 +181,12 @@ const getCategorySummary = () => {
     }
     summary[item.category] += Number(item.amount);
   });
+try {
+  // firebase fetch logic
+} catch (err) {
+  console.log("Firebase failed, loading local data");
+  setExpenses(getExpensesFromLocal());
+}
 
   return summary;
 };

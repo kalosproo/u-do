@@ -15,6 +15,17 @@ function Habits() {
   const [title, setTitle] = useState("");
   const [habitType, setHabitType] = useState("strict");
   const [reminderTime, setReminderTime] = useState("");
+  // 🟢 Save habits to localStorage
+const saveHabitsToLocal = (habits) => {
+  localStorage.setItem("u_do_habits", JSON.stringify(habits));
+};
+
+// 🟢 Get habits from localStorage
+const getHabitsFromLocal = () => {
+  const data = localStorage.getItem("u_do_habits");
+  return data ? JSON.parse(data) : [];
+};
+
 
 
 
@@ -195,8 +206,29 @@ const isReminderMissed = (habit) => {
 };
 
  useEffect(() => {
-    if (user) fetchHabits();
-  }, [user]);
+  const fetchHabits = async () => {
+    try {
+      const snapshot = await getDocs(
+        collection(db, "users", user.uid, "habits")
+      );
+
+      const list = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setHabits(list);
+      saveHabitsToLocal(list); // 🔥 save to local
+    } catch (error) {
+      console.log("Firestore failed, loading habits from local");
+      const localHabits = getHabitsFromLocal();
+      setHabits(localHabits);
+    }
+  };
+
+  fetchHabits();
+}, [user]);
+
   return (
     <div style={{ padding: "20px", paddingBottom: "60px" }}>
       <h2>Habits</h2>
