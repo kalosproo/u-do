@@ -13,7 +13,7 @@ import {
   collection,
   addDoc,
   getDocs,
-  deleteDoc,   // ✅ ADD THIS LINE
+  deleteDoc,    
   doc,
 } from "firebase/firestore";
 const EXPENSE_CATEGORIES = [
@@ -34,6 +34,7 @@ const INCOME_CATEGORIES = [
 ];
 
 function Finance() {
+
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
@@ -43,7 +44,7 @@ function Finance() {
     new Date().toISOString().split("T")[0]
   );
   const [expenses, setExpenses] = useState([]);
-  const [type, setType] = useState("expense"); // default
+  const [type, setType] = useState("expense");  
    const categories = [
   ...(type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
   ...customCategories,
@@ -54,9 +55,7 @@ function Finance() {
   const user = auth.currentUser;
   const today = new Date().toISOString().split("T")[0];
 
-  // =========================
-  // FETCH EXPENSES
-  // =========================
+   
   const fetchExpenses = async () => {
     if (!user) return;
 
@@ -72,18 +71,22 @@ function Finance() {
     setExpenses(list);
   };
 
-  // =========================
-  // ADD EXPENSE
-  // (logic reused from old project)
-  // =========================
+   
+  
   const addExpense = async () => {
+    if (!title || !amount || !category) {
+  alert("Please fill all fields");
+  return;
+}
+
     if (!title || !amount) return;
+    
 
    await addDoc(collection(db, "users", user.uid, "expenses"), {
   title,
   amount: Number(amount),
   type,
-  category, // 👈 NEW
+  category, 
   date,
   createdAt: new Date(),
 });
@@ -96,10 +99,7 @@ function Finance() {
     fetchExpenses();
   };
 
-  // =========================
-  // DAILY TOTAL
-  // (old project reduce logic)
-  // =========================
+ 
   const getTodayTotal = () => {
   return expenses
     .filter((e) => e.date === today)
@@ -110,10 +110,6 @@ function Finance() {
 };
 
 
-  // =========================
-  // MONTHLY TOTAL
-  // (old project month grouping)
-  // =========================
  const getMonthlyTotal = () => {
   const now = new Date();
   const month = now.getMonth();
@@ -153,7 +149,7 @@ const deleteExpense = async (id) => {
     doc(db, "users", user.uid, "expenses", id)
   );
 
-  fetchExpenses(); // refresh list
+  fetchExpenses();  
 };
 
 
@@ -164,7 +160,11 @@ const deleteExpense = async (id) => {
 const getCategorySummary = () => {
   const summary = {};
 
-  expenses.forEach((item) => {
+  expenses
+  .filter((e) => e.type === "expense")
+  .forEach((item) => {
+
+    if (!item.category) return;  
     if (!summary[item.category]) {
       summary[item.category] = 0;
     }
@@ -183,8 +183,8 @@ const getCategoryChartData = () => {
     })
   );
 };
-console.log(getCategoryChartData());
 
+const chartData = getCategoryChartData();
 
   return (
     <div style={{ padding: "20px", paddingBottom: "60px" }}>
@@ -242,6 +242,7 @@ console.log(getCategoryChartData());
   <select
   value={category}
   onChange={(e) => setCategory(e.target.value)}
+   style={{ minWidth: "140px" }}
 >
   <option value="">Select Category</option>
 
@@ -303,7 +304,7 @@ console.log(getCategoryChartData());
 
 
       {/* EXPENSE LIST */}
-      <h3 style={{ marginTop: "20px" }}>Category Summary</h3>
+      <h3 style={{ marginTop: "20px" }}>Expenses by Category</h3>
 
 <ul>
   {Object.entries(getCategorySummary()).map(
@@ -362,22 +363,21 @@ console.log(getCategoryChartData());
 
   ))}
 </ul>
+ 
 
-{getCategoryChartData().length > 0 && (
-  <>
-    <h3 style={{ marginTop: "20px" }}>Spending by Category</h3>
+{chartData.length > 0 && (
+  <div style={{ marginTop: "20px", width: "100%", minHeight: "300px" }}>
+    <h3>Spending by Category</h3>
 
-    <div style={{ width: "100%", height: 300 }}>
-      <ResponsiveContainer>
-        <BarChart data={getCategoryChartData()}>
-          <XAxis dataKey="category" />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey="amount" fill="#22c55e" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </>
+    <ResponsiveContainer width="100%" height={250}>
+      <BarChart data={chartData}>
+        <XAxis dataKey="category" />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="amount" fill="#22c55e" />
+      </BarChart>
+    </ResponsiveContainer>
+  </div>
 )}
 
 

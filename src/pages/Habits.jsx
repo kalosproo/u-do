@@ -63,11 +63,16 @@ const getHabitPercentage = (habit) => {
 };
 
   const addHabit = async () => {
+    if (!title.trim()) {
+  alert("Habit title required");
+  return;
+}
+
     if (!title) return;
 
  await addDoc(collection(db, "users", user.uid, "habits"), {
   title,
-  type: habitType,          // strict / flexible
+  type: habitType,            
   reminderTime: reminderTime || null,
   streak: 0,
   completedDays: {},
@@ -96,11 +101,11 @@ const toggleHabitForToday = async (habit, day) => {
   let newStreak = habit.streak || 0;
 
   if (alreadyDone) {
-    // UNCHECK
+    
     delete newCompletedDays[day];
     newStreak = Math.max(newStreak - 1, 0);
   } else {
-    // CHECK
+     
     newCompletedDays[day] = true;
 
     if (habit.type === "strict") {
@@ -110,7 +115,7 @@ const toggleHabitForToday = async (habit, day) => {
 
       newStreak = completedDays[yKey] ? newStreak + 1 : 1;
     } else {
-      // FLEXIBLE
+      
       newStreak = Object.keys(newCompletedDays).length;
     }
   }
@@ -133,7 +138,7 @@ const getCompletionPercentage = (habit) => {
 
   const todayDate = new Date(today);
 
-  // total days since habit creation (inclusive)
+   
   const diffTime = todayDate - createdDate;
   const totalDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
@@ -156,7 +161,7 @@ const deleteHabit = async (habitId) => {
     doc(db, "users", user.uid, "habits", habitId)
   );
 
-  fetchHabits(); // refresh UI
+  fetchHabits();  
 };
 const getTodayStats = () => {
   const totalHabits = habits.length;
