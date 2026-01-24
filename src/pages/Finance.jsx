@@ -15,6 +15,7 @@ import {
   getDocs,
   deleteDoc,    
   doc,
+  setDoc
 } from "firebase/firestore";
 const EXPENSE_CATEGORIES = [
   "Food",
@@ -66,49 +67,93 @@ const getExpensesFromLocal = () => {
 
    
   const fetchExpenses = async () => {
-    if (!user) return;
+  if (!user) return;
 
+  try {
     const snapshot = await getDocs(
       collection(db, "users", user.uid, "expenses")
     );
 
-    const list = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const list = snapshot.docs.map(doc => ({
+  id: doc.id,        // 🔥 VERY IMPORTANT
+  ...doc.data(),
+}));
 
-    setExpenses(list);
-    saveExpensesToLocal(list);
+    const localList = getExpensesFromLocal();
 
-  };
+    const latestData = getLatestExpenses(
+      list,
+      localList
+    );
+
+    setExpenses(latestData);
+    saveExpensesToLocal(latestData);
+
+    // If local data is newer, push to Firebase
+    if (latestData === localList) {
+      for (const item of localList) {
+        if (!item.id) {
+          await addDoc(
+            collection(db, "users", user.uid, "expenses"),
+            item
+          );
+        }
+      }
+    }
+  } catch (error) {
+    console.log("Firebase failed, using local data");
+    const localList = getExpensesFromLocal();
+    setExpenses(localList);
+  }
+};
+
 
    
   
   const addExpense = async () => {
-    if (!title || !amount || !category) {
-  alert("Please fill all fields");
-  return;
-}
+  if (!title || !amount || !category) {
+    alert("Please fill all fields");
+    return;
+  }
 
-    if (!title || !amount) return;
-    
-
-   await addDoc(collection(db, "users", user.uid, "expenses"), {
+  const newExpense = {
+  id: Date.now().toString(), // 🔥 ADD THIS LINE
   title,
   amount: Number(amount),
   type,
-  category, 
+  category,
   date,
   createdAt: new Date(),
-});
+  updatedAt: new Date(),
+};
 
 
+  // 🔥 1. UI immediately update
+  const updatedExpenses = [...expenses, newExpense];
+  setExpenses(updatedExpenses);
+  saveExpensesToLocal(updatedExpenses);
 
-    setTitle("");
-    setAmount("");
-    setType("expense");
-    fetchExpenses();
-  };
+  // 🔥 2. Firebase save (background)
+  try {
+   const expenseRef = doc(
+  db,
+  "users",
+  user.uid,
+  "expenses",
+  newExpense.id
+);
+
+await setDoc(expenseRef, newExpense);
+  } catch (err) {
+    console.log("Saved locally, Firebase failed");
+  }
+
+  // 🔹 reset fields
+  setTitle("");
+  setAmount("");
+  setCategory("");
+  setType("expense");
+};
 
  
   const getTodayTotal = () => {
@@ -154,15 +199,40 @@ const getExpensesFromLocal = () => {
   });
 };
 const deleteExpense = async (id) => {
-  if (!user) return;
+  if (!id) return;
 
-  await deleteDoc(
-    doc(db, "users", user.uid, "expenses", id)
-  );
+  // 🔥 1. UI update immediately
+  const updated = expenses.filter((e) => e.id !== id);
+  setExpenses(updated);
+  saveExpensesToLocal(updated);
 
-  fetchExpenses();  
+  // 🔥 2. Try Firebase delete
+  try {
+    await deleteDoc(
+      doc(db, "users", user.uid, "expenses", id)
+    );
+  } catch (err) {
+    console.log("Firebase delete failed, local updated");
+  }
 };
 
+
+const getLatestExpenses = (firebaseList, localList) => {
+  if (firebaseList.length === 0) return localList;
+  if (localList.length === 0) return firebaseList;
+
+  const firebaseLatest = Math.max(
+    ...firebaseList.map((e) => new Date(e.updatedAt).getTime())
+  );
+
+  const localLatest = Math.max(
+    ...localList.map((e) => new Date(e.updatedAt).getTime())
+  );
+
+  return firebaseLatest >= localLatest
+    ? firebaseList
+    : localList;
+};
 
 
   useEffect(() => {
@@ -337,7 +407,8 @@ const chartData = getCategoryChartData();
 <ul>
   {getMonthlyExpenses().map((exp) => (
 <li
-  key={exp.id}
+   key={exp.id || `${exp.title}-${exp.date}`}
+
   style={{
     display: "flex",
     justifyContent: "space-between",

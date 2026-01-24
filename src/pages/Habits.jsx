@@ -88,6 +88,7 @@ const getHabitPercentage = (habit) => {
   streak: 0,
   completedDays: {},
   createdAt: new Date(),
+  updatedAt: new Date(),
 });
 
 
@@ -134,6 +135,7 @@ const toggleHabitForToday = async (habit, day) => {
   await updateDoc(habitRef, {
     completedDays: newCompletedDays,
     streak: newStreak,
+    updatedAt: new Date(),
   });
 
   fetchHabits();
