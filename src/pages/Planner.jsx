@@ -116,12 +116,26 @@ const sortedDates = Object.keys(groupedPlans).sort();
 )}
 {sortedDates.map((date) => (
   <div key={date} style={{ marginTop: "15px" }}>
-    <h4 style={{ color: date === today ? "green" : "black" }}>
+    <h4
+  style={{
+    color: date === today ? "#22c55e" : "#aaa",
+    marginBottom: "6px",
+  }}
+>
+
   📅 {date} {date === today && "(Today)"}
 </h4>
     <ul>
       {groupedPlans[date].map((plan) => (
-        <li key={plan.id}>
+        <li
+  key={plan.id}
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "4px 0",
+  }}
+>
+
           {plan.title}
           <button onClick={() => deletePlan(plan)}>❌</button>
         </li>

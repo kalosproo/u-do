@@ -58,26 +58,39 @@ useEffect(() => {
 
   return (
     <div style={{ padding: "20px", paddingBottom: "60px" }}>
+      
     <button
   onClick={() =>
     setTheme(theme === "dark" ? "light" : "dark")
   }
   style={{
-    position: "absolute",
-    top: "10px",
-    right: "10px",
-    padding: "6px 10px",
-    cursor: "pointer",
-  }}
+  position: "absolute",
+  top: "12px",
+  right: "12px",
+  padding: "6px 12px",
+  borderRadius: "20px",
+  border: "none",
+  cursor: "pointer",
+}}
+
 >
   {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
 </button>
+
+<div
+  style={{
+    background: "rgba(255,255,255,0.05)",
+    padding: "16px",
+    borderRadius: "12px",
+  }}
+>
 
       <h2>Today Summary</h2>
       <p>📝 Total Tasks: {total}</p>
       <p>✅ Completed: {completed}</p>
       <p>⏳ Pending: {total - completed}</p>
       <p>📅 Today’s Plans: {todayPlans}</p>
+    </div>
     </div>
   );
 }

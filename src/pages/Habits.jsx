@@ -292,9 +292,12 @@ const isReminderMissed = (habit) => {
   <thead>
     <tr>
       <th>Habit</th>
+      
       {days.map((day) => (
         <th key={day}>{day.slice(8)}</th>
+        
       ))}
+      
     </tr>
   </thead>
 
@@ -303,11 +306,15 @@ const isReminderMissed = (habit) => {
       <tr
   key={habit.id}
   style={{
+    borderBottom: "1px solid rgba(255,255,255,0.05)",
+    height: "44px",
     backgroundColor: isReminderMissed(habit)
       ? "rgba(255, 0, 0, 0.08)"
       : "transparent",
   }}
+  
 >
+  
        <td
   style={{
     display: "flex",
@@ -315,6 +322,7 @@ const isReminderMissed = (habit) => {
     gap: "10px",
   }}
 >
+  
   {/* Habit title + streak + reminder */}
 <div style={{ display: "flex", flexDirection: "column" }}>
   <span>

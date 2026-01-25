@@ -357,8 +357,8 @@ const chartData = getCategoryChartData();
     style={{
       backgroundColor: type === "expense" ? "#ff4d4f" : "#333",
       color: "white",
-      padding: "6px 12px",
-      borderRadius: "6px",
+      padding: "8px 14px",
+      borderRadius: "8px",
       border: "none",
       cursor: "pointer",
     }}
@@ -371,8 +371,8 @@ const chartData = getCategoryChartData();
     style={{
       backgroundColor: type === "income" ? "#22c55e" : "#333",
       color: "white",
-      padding: "6px 12px",
-      borderRadius: "6px",
+      padding: "8px 14px",
+      borderRadius: "8px",
       border: "none",
       cursor: "pointer",
     }}
@@ -483,6 +483,8 @@ const chartData = getCategoryChartData();
     justifyContent: "space-between",
     alignItems: "center",
     gap: "10px",
+     padding: "6px 0",
+  borderBottom: "1px solid rgba(255,255,255,0.05)",
   }}
 >
   <span>

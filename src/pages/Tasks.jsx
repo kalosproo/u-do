@@ -119,12 +119,16 @@ const filteredTasks = tasks.filter((task) => {
 ) : (
   <ul>
     {filteredTasks.map((task) => (
-      <li key={task.id}>
-        <input
-          type="checkbox"
-          checked={task.completed}
-          onChange={() => toggleTask(task)}
-        />
+      <li
+  key={task.id}
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "6px 0",
+  }}
+>
+
         <small style={{ marginLeft: "8px" }}>
           [{task.priority}]
         </small>
