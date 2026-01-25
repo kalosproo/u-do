@@ -33,6 +33,32 @@ const INCOME_CATEGORIES = [
   "Gift",
   "Other",
 ];
+const convertExpensesToCSV = (expenses) => {
+  if (!expenses.length) return "";
+
+  const headers = [
+    "Title",
+    "Amount",
+    "Category",
+    "Type",
+    "Date",
+  ];
+
+  const rows = expenses.map(exp => [
+    exp.title,
+    exp.amount,
+    exp.category,
+    exp.type,
+    `"${exp.date}"`,
+  ]);
+
+  const csvContent = [
+    headers.join(","),
+    ...rows.map(row => row.join(","))
+  ].join("\n");
+
+  return csvContent;
+};
 
 function Finance() {
   const saveExpensesToLocal = (data) => {
@@ -105,6 +131,24 @@ const getExpensesFromLocal = () => {
     const localList = getExpensesFromLocal();
     setExpenses(localList);
   }
+};
+const downloadFinanceCSV = () => {
+  const csv = convertExpensesToCSV(expenses);
+
+  if (!csv) {
+    alert("No data to export");
+    return;
+  }
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "u-do-finance.csv";
+  link.click();
+
+  URL.revokeObjectURL(url);
 };
 
 
@@ -326,6 +370,22 @@ const chartData = getCategoryChartData();
   >
     Income
   </button>
+  <button
+  onClick={downloadFinanceCSV}
+  style={{
+    marginTop: "10px",
+    padding: "8px 14px",
+    borderRadius: "6px",
+    border: "none",
+    cursor: "pointer",
+    background: "#2ecc71",
+    color: "#000",
+    fontWeight: "600"
+  }}
+>
+  Export CSV
+</button>
+
   <select
   value={category}
   onChange={(e) => setCategory(e.target.value)}
