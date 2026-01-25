@@ -61,14 +61,23 @@ const convertExpensesToCSV = (expenses) => {
 };
 
 function Finance() {
-  const saveExpensesToLocal = (data) => {
-  localStorage.setItem("u_do_expenses", JSON.stringify(data));
+ const saveExpensesToLocal = (data) => {
+  if (!user) return;
+  localStorage.setItem(
+    `u_do_expenses_${user.uid}`,
+    JSON.stringify(data)
+  );
 };
 
+
 const getExpensesFromLocal = () => {
-  const data = localStorage.getItem("u_do_expenses");
+  if (!user) return [];
+  const data = localStorage.getItem(
+    `u_do_expenses_${user.uid}`
+  );
   return data ? JSON.parse(data) : [];
 };
+
 
 
   const [title, setTitle] = useState("");
