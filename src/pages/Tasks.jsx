@@ -92,7 +92,11 @@ const filteredTasks = tasks.filter((task) => {
   return true;
 });
   return (
-    <div style={{ padding: "20px", paddingBottom: "60px" }}>
+  <div
+    className="page"
+    style={{ padding: "20px", paddingBottom: "60px" }}
+  >
+
       <h2>Tasks</h2>
 
       <input

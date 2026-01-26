@@ -57,7 +57,11 @@ useEffect(() => {
 
 
   return (
-    <div style={{ padding: "20px", paddingBottom: "60px" }}>
+  <div
+    className="page"
+    style={{ padding: "20px", paddingBottom: "60px" }}
+  >
+
       
     <button
   onClick={() =>

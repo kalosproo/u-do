@@ -326,8 +326,12 @@ const getCategoryChartData = () => {
 
 const chartData = getCategoryChartData();
 
-  return (
-    <div style={{ padding: "20px", paddingBottom: "60px" }}>
+ return (
+  <div
+    className="page"
+    style={{ padding: "20px", paddingBottom: "60px" }}
+  >
+
       <h2>Finance</h2>
 
       {/* SUMMARY (FROM OLD PROJECT LOGIC) */}

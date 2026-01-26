@@ -86,8 +86,12 @@ const groupedPlans = plans.reduce((acc, plan) => {
   return acc;
 }, {});
 const sortedDates = Object.keys(groupedPlans).sort();
-  return (
-    <div style={{ padding: "20px", paddingBottom: "60px" }}>
+ return (
+  <div
+    className="page"
+    style={{ padding: "20px", paddingBottom: "60px" }}
+  >
+
       <h2>Weekly Planner</h2>
 
       <input
