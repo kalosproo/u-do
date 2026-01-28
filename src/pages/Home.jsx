@@ -4,98 +4,70 @@ import { db } from "../services/firebase";
 import { collection, getDocs } from "firebase/firestore";
 
 function Home() {
-  const [theme, setTheme] = useState(
-  localStorage.getItem("u_do_theme") || "dark"
-);
-useEffect(() => {
-  document.body.className = theme;
-  localStorage.setItem("u_do_theme", theme);
-}, [theme]);
-
   const [total, setTotal] = useState(0);
   const [completed, setCompleted] = useState(0);
-   const [todayPlans, setTodayPlans] = useState(0);
+  const [todayPlans, setTodayPlans] = useState(0);
 
   const user = auth.currentUser;
 
-  const fetchTaskSummary = async () => {
+  useEffect(() => {
     if (!user) return;
 
-    const snapshot = await getDocs(
-      collection(db, "users", user.uid, "tasks")
-    );
+    const fetchData = async () => {
+      const taskSnap = await getDocs(
+        collection(db, "users", user.uid, "tasks")
+      );
+      const tasks = taskSnap.docs.map(d => d.data());
+      setTotal(tasks.length);
+      setCompleted(tasks.filter(t => t.completed).length);
 
-    const tasks = snapshot.docs.map((d) => d.data());
+      const today = new Date().toISOString().split("T")[0];
+      const planSnap = await getDocs(
+        collection(db, "users", user.uid, "planner")
+      );
+      const plans = planSnap.docs.map(d => d.data());
+      setTodayPlans(plans.filter(p => p.date === today).length);
+    };
 
-    setTotal(tasks.length);
-    setCompleted(tasks.filter((t) => t.completed).length);
-  };
-  const fetchTodayPlans = async () => {
-  if (!user) return;
-
-  const today = new Date().toISOString().split("T")[0];
-
-  const snapshot = await getDocs(
-    collection(db, "users", user.uid, "planner")
-  );
-
-  const plans = snapshot.docs.map((doc) => doc.data());
-
-  const todayCount = plans.filter(
-    (plan) => plan.date === today
-  ).length;
-
-  setTodayPlans(todayCount);
-};
-
-  useEffect(() => {
-  if (user) {
-    fetchTaskSummary();
-    fetchTodayPlans();
-  }
-}, [user]);
-
+    fetchData();
+  }, [user]);
 
   return (
-  <div
-    className="page"
-    style={{ padding: "20px", paddingBottom: "60px" }}
-  >
+    <main className="main-content">
+      <h1 className="page-title">Dashboard</h1>
 
-      
-    <button
-  onClick={() =>
-    setTheme(theme === "dark" ? "light" : "dark")
-  }
-  style={{
-  position: "absolute",
-  top: "12px",
-  right: "12px",
-  padding: "6px 12px",
-  borderRadius: "20px",
-  border: "none",
-  cursor: "pointer",
-}}
+      <div className="dashboard-grid">
+        <div className="dashboard-left">
+          <div className="card large">
+            <h3>Today Summary</h3>
+            <ul>
+              <li>Total Tasks: {total}</li>
+              <li>Completed: {completed}</li>
+              <li>Pending: {total - completed}</li>
+              <li>Today's Plans: {todayPlans}</li>
+            </ul>
+          </div>
 
->
-  {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
-</button>
+          <div className="card large">
+            <h3>Expenses</h3>
+            <p>Expense charts will appear here.</p>
+          </div>
+        </div>
 
-<div
-  style={{
-    background: "rgba(255,255,255,0.05)",
-    padding: "16px",
-    borderRadius: "12px",
-  }}
->
+        <div className="dashboard-right">
+          <div className="card">
+            <h3>Finance</h3>
+            <p>Today: ₹ —</p>
+            <p>This Month: ₹ —</p>
+          </div>
 
-      <h2>Today Summary</h2>
-      <p>📝 Total Tasks: {total}</p>
-      <p>✅ Completed: {completed}</p>
-      <p>⏳ Pending: {total - completed}</p>
-      <p>📅 Today’s Plans: {todayPlans}</p>
-    </div>
-    </div>
+          <div className="card">
+            <h3>Habits</h3>
+            <p>Habit streak preview will appear here.</p>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }
 
