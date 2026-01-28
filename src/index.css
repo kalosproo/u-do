@@ -477,3 +477,35 @@ body.dark .text-muted {
   padding: 32px;
   min-height: 100vh;
 }
+/* ===== MOBILE SIDEBAR FIX ===== */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 200px;
+    padding: 16px 12px;
+  }
+
+  .logo {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .nav-links a {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  .sidebar-bottom {
+    gap: 8px;
+  }
+
+  .mode-btn,
+  .logout-btn {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  .main-content {
+    margin-left: 200px;
+    padding: 20px;
+  }
+}

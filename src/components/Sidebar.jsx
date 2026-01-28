@@ -1,6 +1,27 @@
 import { NavLink } from "react-router-dom";
 
 function Sidebar({ onLogout }) {
+  function Sidebar({ onLogout }) {
+  const toggleTheme = () => {
+    document.body.classList.toggle("light");
+  };
+
+  return (
+    <aside className="sidebar">
+      {/* existing code unchanged */}
+
+      <div className="sidebar-bottom">
+        <button className="mode-btn" onClick={toggleTheme}>
+          Light Mode
+        </button>
+        <button className="logout-btn" onClick={onLogout}>
+          Logout
+        </button>
+      </div>
+    </aside>
+  );
+}
+
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
