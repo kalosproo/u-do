@@ -41,6 +41,7 @@ function Sidebar({ onLogout }) {
         <button className="logout-btn" onClick={onLogout}>
           Logout
         </button>
+        
       </div>
     </aside>
   );
