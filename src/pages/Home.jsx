@@ -33,7 +33,7 @@ function Home() {
   }, [user]);
 
   return (
-    <main className="main-content">
+    <div className="home-page">
       <h1 className="page-title">Dashboard</h1>
 
       <div className="dashboard-grid">
@@ -67,7 +67,7 @@ function Home() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

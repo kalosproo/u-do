@@ -38,6 +38,22 @@
   --s-md: 16px;
   --s-lg: 24px;
 }
+:root {
+  --bg: #ffffff;
+  --surface: #f3f4f6;
+  --text: #111111;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
+}
+
+body.dark {
+  --bg: #0e0f14;
+  --surface: #181a20;
+  --text: #ffffff;
+  --text-muted: #a0a4b8;
+  --border: #2a2d3a;
+}
+
 
 /* =========================
    GLOBAL RESET
@@ -111,6 +127,7 @@ body.dark input::placeholder {
 /* =========================
    BUTTONS (PILL STYLE)
 ========================= */
+
 button {
   border: none;
   border-radius: 999px;
@@ -349,6 +366,12 @@ body.dark .text-muted {
   font-size: 12px;
   opacity: 0.7;
 }
+.card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 20px;
+}
+
 
 .card {
   background: var(--surface-dark);
@@ -508,4 +531,70 @@ body.dark .text-muted {
     margin-left: 200px;
     padding: 20px;
   }
+}
+/* ===== THEME VARIABLES ===== */
+:root {
+  --bg: #ffffff;
+  --surface: #f5f6fa;
+  --card: #ffffff;
+  --text: #0f1222;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
+
+  --accent: #6c63ff;
+  --success: #00d09c;
+  --danger: #ff4d4f;
+}
+
+body.dark {
+  --bg: #16171d;
+  --surface: #1f212a;
+  --card: #1f212a;
+  --text: #ffffff;
+  --text-muted: #a0a4b8;
+  --border: #2a2d3a;
+
+  --accent: #6c63ff;
+  --success: #00d09c;
+  --danger: #ff4d4f;
+}
+
+/* ===== GLOBAL ===== */
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+  border-radius: 999px;
+  padding: 10px 18px;
+  border: none;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn.success {
+  background: var(--success);
+  color: black;
+}
+
+.btn.danger {
+  background: var(--danger);
+  color: white;
 }

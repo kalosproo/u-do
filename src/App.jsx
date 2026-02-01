@@ -19,7 +19,9 @@ function Protected({ user, children }) {
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState("dark");
 
+  // 🔥 Auth listener
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -28,11 +30,24 @@ function App() {
     return unsub;
   }, []);
 
+  // 🔥 Theme sync
+  useEffect(() => {
+    document.body.className = theme === "dark" ? "dark" : "light";
+  }, [theme]);
+
   if (loading) return <p>Loading...</p>;
 
   return (
     <BrowserRouter>
-      {user && <Sidebar onLogout={() => signOut(auth)} />}
+      {user && (
+        <Sidebar
+          theme={theme}
+          toggleTheme={() =>
+            setTheme((t) => (t === "dark" ? "light" : "dark"))
+          }
+          onLogout={() => signOut(auth)}
+        />
+      )}
 
       <Routes>
         <Route path="/login" element={<Login />} />
