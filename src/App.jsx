@@ -37,9 +37,10 @@ function App() {
 
   if (loading) return <p>Loading...</p>;
 
-  return (
-    <BrowserRouter>
-      {user && (
+ return (
+  <BrowserRouter>
+    {user && (
+      <div className="app-layout">
         <Sidebar
           theme={theme}
           toggleTheme={() =>
@@ -47,27 +48,34 @@ function App() {
           }
           onLogout={() => signOut(auth)}
         />
-      )}
 
+        <main className="main-content">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+
+            <Route
+              path="/"
+              element={
+                <Protected user={user}>
+                  <Home />
+                </Protected>
+              }
+            />
+
+            <Route path="/finance" element={<Protected user={user}><Finance /></Protected>} />
+            <Route path="/planner" element={<Protected user={user}><Planner /></Protected>} />
+            <Route path="/tasks" element={<Protected user={user}><Tasks /></Protected>} />
+            <Route path="/habits" element={<Protected user={user}><Habits /></Protected>} />
+          </Routes>
+        </main>
+      </div>
+    )}
+
+    {!user && (
       <Routes>
         <Route path="/login" element={<Login />} />
-
-        <Route
-          path="/"
-          element={
-            <Protected user={user}>
-              <Home />
-            </Protected>
-          }
-        />
-
-        <Route path="/finance" element={<Protected user={user}><Finance /></Protected>} />
-        <Route path="/planner" element={<Protected user={user}><Planner /></Protected>} />
-        <Route path="/tasks" element={<Protected user={user}><Tasks /></Protected>} />
-        <Route path="/habits" element={<Protected user={user}><Habits /></Protected>} />
       </Routes>
-    </BrowserRouter>
-  );
-}
-
+    )}
+  </BrowserRouter>
+)};
 export default App;
