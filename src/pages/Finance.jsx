@@ -327,57 +327,45 @@ const getCategoryChartData = () => {
 const chartData = getCategoryChartData();
 
  return (
-  <div
-    className="page"
-    style={{ padding: "20px", paddingBottom: "60px" }}
-  >
+ <div className="main-content">
+
 
       <h2>Finance</h2>
+      <div className="finance-cards">
+  <div className="card">
+    <h4>Today</h4>
+    <p>₹{getTodayTotal()}</p>
+  </div>
 
-      {/* SUMMARY (FROM OLD PROJECT LOGIC) */}
-      <div style={{ marginBottom: "15px", fontSize: "14px" }}>
-        <div
-  style={{
-    color: getTodayTotal() >= 0 ? "green" : "red",
-    fontWeight: "600",
-  }}
->
-  Today: ₹{getTodayTotal()}
-</div>
-
-<div
-  style={{
-    color: getMonthlyTotal() >= 0 ? "green" : "red",
-    fontWeight: "600",
-  }}
->
-  This Month: ₹{getMonthlyTotal()}
-</div>
+  <div className="card">
+    <h4>This Month</h4>
+    <p>₹{getMonthlyTotal()}</p>
+  </div>
 
       </div>
       <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
   <button
     onClick={() => setType("expense")}
     style={{
-      backgroundColor: type === "expense" ? "#ff4d4f" : "#333",
-      color: "white",
+      backgroundColor: type === "expense" ? "var(--surface)" : "transparent",
+      color: "var(--text)",
       padding: "8px 14px",
       borderRadius: "8px",
-      border: "none",
+      border: "1px solid var(--border)",
       cursor: "pointer",
     }}
   >
     Expense
   </button>
 
-  <button
+  <button     
     onClick={() => setType("income")}
     style={{
-      backgroundColor: type === "income" ? "#22c55e" : "#333",
-      color: "white",
+      backgroundColor: type === "income" ? "var(--surface)": "transparent",
+      color: "var(--text)",
       padding: "8px 14px",
       borderRadius: "8px",
-      border: "none",
+      border: "1px solid var(--border)",
       cursor: "pointer",
     }}
   >
@@ -498,7 +486,7 @@ const chartData = getCategoryChartData();
   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
     <span
       style={{
-        color: exp.type === "income" ? "green" : "red",
+        color: exp.type === "income" ? "var(--text-muted)" : "var(--text)",
         fontWeight: "600",
       }}
     >
@@ -537,7 +525,8 @@ const chartData = getCategoryChartData();
         <XAxis dataKey="category" />
         <YAxis />
         <Tooltip />
-        <Bar dataKey="amount" fill="#22c55e" />
+       <Bar dataKey="amount" fill="rgba(255,255,255,0.35)" />
+
       </BarChart>
     </ResponsiveContainer>
   </div>

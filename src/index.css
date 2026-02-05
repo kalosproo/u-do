@@ -417,3 +417,10 @@ body {
   min-height: 100vh;
   box-sizing: border-box;
 }
+/*finance page*/
+.finance-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
