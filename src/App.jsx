@@ -40,42 +40,73 @@ function App() {
  return (
   <BrowserRouter>
     {user && (
-      <div className="app-layout">
-        <Sidebar
-          theme={theme}
-          toggleTheme={() =>
-            setTheme((t) => (t === "dark" ? "light" : "dark"))
+      <Sidebar
+        theme={theme}
+        toggleTheme={() =>
+          setTheme((t) => (t === "dark" ? "light" : "dark"))
+        }
+        onLogout={() => signOut(auth)}
+      />
+    )}
+
+    <main className="main-content">
+      <Routes>
+        {/* LOGIN */}
+        <Route path="/login" element={<Login />} />
+
+        {/* PROTECTED ROUTES */}
+        <Route
+          path="/"
+          element={
+            <Protected user={user}>
+              <Home />
+            </Protected>
           }
-          onLogout={() => signOut(auth)}
         />
 
-        <main className="main-content">
-          <Routes>
-            <Route path="/login" element={<Login />} />
+        <Route
+          path="/finance"
+          element={
+            <Protected user={user}>
+              <Finance />
+            </Protected>
+          }
+        />
 
-            <Route
-              path="/"
-              element={
-                <Protected user={user}>
-                  <Home />
-                </Protected>
-              }
-            />
+        <Route
+          path="/planner"
+          element={
+            <Protected user={user}>
+              <Planner />
+            </Protected>
+          }
+        />
 
-            <Route path="/finance" element={<Protected user={user}><Finance /></Protected>} />
-            <Route path="/planner" element={<Protected user={user}><Planner /></Protected>} />
-            <Route path="/tasks" element={<Protected user={user}><Tasks /></Protected>} />
-            <Route path="/habits" element={<Protected user={user}><Habits /></Protected>} />
-          </Routes>
-        </main>
-      </div>
-    )}
+        <Route
+          path="/tasks"
+          element={
+            <Protected user={user}>
+              <Tasks />
+            </Protected>
+          }
+        />
 
-    {!user && (
-      <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/habits"
+          element={
+            <Protected user={user}>
+              <Habits />
+            </Protected>
+          }
+        />
+
+        {/* CATCH ALL */}
+        <Route
+          path="*"
+          element={<Navigate to={user ? "/" : "/login"} replace />}
+        />
       </Routes>
-    )}
+    </main>
   </BrowserRouter>
 )};
 export default App;

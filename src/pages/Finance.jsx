@@ -327,106 +327,78 @@ const getCategoryChartData = () => {
 const chartData = getCategoryChartData();
 
  return (
- <div className="main-content">
+  <div className="main-content">
+    {/* PAGE TITLE */}
+    <h2>Finance</h2>
 
-
-      <h2>Finance</h2>
-      <div className="finance-cards">
-  <div className="card">
-    <h4>Today</h4>
-    <p>₹{getTodayTotal()}</p>
-  </div>
-
-  <div className="card">
-    <h4>This Month</h4>
-    <p>₹{getMonthlyTotal()}</p>
-  </div>
-
+    {/* ================= TOP SUMMARY CARDS ================= */}
+    <div className="finance-cards">
+      <div className="card">
+        <h4>Today</h4>
+        <p>₹{getTodayTotal()}</p>
       </div>
-      <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
-  <button
-    onClick={() => setType("expense")}
-    style={{
-      backgroundColor: type === "expense" ? "var(--surface)" : "transparent",
-      color: "var(--text)",
-      padding: "8px 14px",
-      borderRadius: "8px",
-      border: "1px solid var(--border)",
-      cursor: "pointer",
-    }}
-  >
-    Expense
-  </button>
 
-  <button     
-    onClick={() => setType("income")}
-    style={{
-      backgroundColor: type === "income" ? "var(--surface)": "transparent",
-      color: "var(--text)",
-      padding: "8px 14px",
-      borderRadius: "8px",
-      border: "1px solid var(--border)",
-      cursor: "pointer",
-    }}
-  >
-    Income
-  </button>
-  <button
-  onClick={downloadFinanceCSV}
-  style={{
-    marginTop: "10px",
-    padding: "8px 14px",
-    borderRadius: "6px",
-    border: "none",
-    cursor: "pointer",
-    background: "#2ecc71",
-    color: "#000",
-    fontWeight: "600"
-  }}
->
-  Export CSV
-</button>
+      <div className="card">
+        <h4>This Month</h4>
+        <p>₹{getMonthlyTotal()}</p>
+      </div>
+    </div>
 
-  <select
-  value={category}
-  onChange={(e) => setCategory(e.target.value)}
-   style={{ minWidth: "140px" }}
->
-  <option value="">Select Category</option>
+    {/* ================= ACTION BAR ================= */}
+    <div className="card" style={{ marginBottom: "24px" }}>
+      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <button
+          onClick={() => setType("expense")}
+          className={type === "expense" ? "active" : ""}
+        >
+          Expense
+        </button>
 
-  {categories.map((cat) => (
-    <option key={cat} value={cat}>
-      {cat}
-    </option>
-  ))}
-</select>
-<input
-  type="text"
-  placeholder="Add custom category"
-  value={customCategory}
-  onChange={(e) => setCustomCategory(e.target.value)}
-  style={{ marginLeft: "8px" }}
-/>
+        <button
+          onClick={() => setType("income")}
+          className={type === "income" ? "active" : ""}
+        >
+          Income
+        </button>
 
-<button
-  onClick={() => {
-    if (!customCategory.trim()) return;
+        <button onClick={downloadFinanceCSV}>
+          Export CSV
+        </button>
+      </div>
 
-    setCustomCategories((prev) => [
-      ...new Set([...prev, customCategory.trim()]),
-    ]);
+      <div style={{ marginTop: "16px" }}>
+        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+          <option value="">Select Category</option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
 
-    setCustomCategory("");
-  }}
->
-  Add
-</button>
+        <input
+          type="text"
+          placeholder="Add custom category"
+          value={customCategory}
+          onChange={(e) => setCustomCategory(e.target.value)}
+        />
 
-</div>
+        <button
+          onClick={() => {
+            if (!customCategory.trim()) return;
+            setCustomCategories((prev) => [
+              ...new Set([...prev, customCategory.trim()])
+            ]);
+            setCustomCategory("");
+          }}
+        >
+          Add
+        </button>
+      </div>
+    </div>
 
+    {/* ================= ADD TRANSACTION ================= */}
+    <div className="card">
+      <h3>Add Transaction</h3>
 
-
-      {/* ADD EXPENSE */}
       <input
         placeholder="Enter Title"
         value={title}
@@ -447,94 +419,60 @@ const chartData = getCategoryChartData();
       />
 
       <button onClick={addExpense}>
-  {type === "income" ? "Add Income" : "Add Expense"}
-</button>
-
-
-      {/* EXPENSE LIST */}
-      <h3 style={{ marginTop: "20px" }}>Expenses by Category</h3>
-
-<ul>
-  {Object.entries(getCategorySummary()).map(
-    ([category, total]) => (
-      <li key={category}>
-        {category} – ₹{total}
-      </li>
-    )
-  )}
-</ul>
-
-
-<ul>
-  {getMonthlyExpenses().map((exp) => (
-<li
-   key={exp.id || `${exp.title}-${exp.date}`}
-
-  style={{
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "10px",
-     padding: "6px 0",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
-  }}
->
-  <span>
-    {exp.title} ({exp.date})
-  </span>
-
-  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-    <span
-      style={{
-        color: exp.type === "income" ? "var(--text-muted)" : "var(--text)",
-        fontWeight: "600",
-      }}
-    >
-      {exp.type === "income" ? "+" : "-"}₹{exp.amount}
-    </span>
-
-    {/* ❌ Delete button */}
-    <button
-      onClick={() => deleteExpense(exp.id)}
-      style={{
-        background: "transparent",
-        border: "none",
-        color: "#ff4d4f",
-        fontSize: "16px",
-        cursor: "pointer",
-      }}
-      title="Delete"
-    >
-      ❌
-    </button>
-  </div>
-</li>
-
-
-
-  ))}
-</ul>
- 
-
-{chartData.length > 0 && (
-  <div style={{ marginTop: "20px", width: "100%", minHeight: "300px" }}>
-    <h3>Spending by Category</h3>
-
-    <ResponsiveContainer width="100%" height={250}>
-      <BarChart data={chartData}>
-        <XAxis dataKey="category" />
-        <YAxis />
-        <Tooltip />
-       <Bar dataKey="amount" fill="rgba(255,255,255,0.35)" />
-
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-)}
-
-
+        {type === "income" ? "Add Income" : "Add Expense"}
+      </button>
     </div>
-  );
-}
 
+    {/* ================= CATEGORY SUMMARY ================= */}
+    <div className="card">
+      <h3>Expenses by Category</h3>
+      <ul>
+        {Object.entries(getCategorySummary()).map(([cat, total]) => (
+          <li key={cat}>
+            {cat} – ₹{total}
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    {/* ================= TRANSACTION LIST ================= */}
+    <div className="card">
+      <h3>Recent Transactions</h3>
+      <ul>
+        {getMonthlyExpenses().map((exp) => (
+          <li key={exp.id} style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>{exp.title} ({exp.date})</span>
+
+            <span
+              style={{
+                color: exp.type === "income"
+                  ? "var(--text-muted)"
+                  : "var(--text)"
+              }}
+            >
+              {exp.type === "income" ? "+" : "-"}₹{exp.amount}
+            </span>
+
+            <button onClick={() => deleteExpense(exp.id)}>❌</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    {/* ================= CHART ================= */}
+    {chartData.length > 0 && (
+      <div className="card">
+        <h3>Spending by Category</h3>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={chartData}>
+            <XAxis dataKey="category" />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="amount" fill="rgba(255,255,255,0.35)" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    )}
+  </div>
+)};
 export default Finance;

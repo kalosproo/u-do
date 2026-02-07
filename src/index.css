@@ -424,3 +424,140 @@ body {
   gap: 16px;
   margin-bottom: 24px;
 }
+/* ===== FINANCE PAGE ===== */
+
+.main-content {
+  padding: 32px;
+  color: var(--text);
+  max-width: 1100px;
+}
+
+/* Page title */
+.main-content h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+/* ===== TOP CARDS ===== */
+.finance-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.finance-cards .card {
+  background: linear-gradient(180deg, #1a1c22, #14161b);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.finance-cards h4 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.finance-cards p {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+/* ===== ACTION BAR ===== */
+.main-content > div[style*="display: flex"] {
+  background: #121318;
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+.main-content button {
+  background: #1a1c22;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.main-content button:hover {
+  background: #20222a;
+}
+
+/* CSV button override */
+.main-content button[style*="Export"] {
+  background: #e5e7eb;
+  color: #000;
+  font-weight: 600;
+}
+
+/* ===== INPUTS ===== */
+.main-content input,
+.main-content select {
+  background: #0f1015;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.main-content input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Add Expense button */
+.main-content > button {
+  margin-top: 10px;
+  background: #e5e7eb;
+  color: #000;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+/* ===== CATEGORY SUMMARY ===== */
+.main-content h3 {
+  font-size: 16px;
+  margin: 28px 0 12px;
+}
+
+.main-content ul {
+  background: #121318;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.main-content ul li {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 14px;
+}
+
+.main-content ul li:last-child {
+  border-bottom: none;
+}
+
+/* ===== TRANSACTION LIST ===== */
+.main-content ul li span {
+  font-size: 14px;
+}
+
+/* Delete button */
+.main-content ul button {
+  color: #888;
+}
+
+.main-content ul button:hover {
+  color: #fff;
+}
+
+/* ===== CHART CARD ===== */
+.main-content > div:has(svg) {
+  background: #121318;
+  border-radius: 18px;
+  padding: 20px;
+  margin-top: 28px;
+}
