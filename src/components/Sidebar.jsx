@@ -1,6 +1,17 @@
 import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { signOut } from "firebase/auth";
+import { auth } from "../services/firebase";
+
 
 function Sidebar({ onLogout, toggleTheme, theme }) {
+  const navigate = useNavigate();
+
+const handleLogout = async () => {
+  await signOut(auth);
+  navigate("/login", { replace: true });
+};
+
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
@@ -20,7 +31,7 @@ function Sidebar({ onLogout, toggleTheme, theme }) {
           {theme === "dark" ? "Light Mode" : "Dark Mode"}
         </button>
 
-        <button className="logout-btn" onClick={onLogout}>
+        <button className="logout-btn" onClick={handleLogout}>
           Logout
         </button>
       </div>

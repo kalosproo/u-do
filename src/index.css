@@ -561,3 +561,35 @@ body {
   padding: 20px;
   margin-top: 28px;
 }
+/* ===== PLANNER PAGE ===== 
+.plan-item.low { opacity: 0.6; }
+.plan-item.medium { opacity: 0.85; }
+.plan-item.high { font-weight: 600; }
+/* ===== CHART CARD ===== */
+.plan-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.plan-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.priority {
+  font-size: 12px;
+  opacity: 0.6;
+  text-transform: capitalize;
+}
+/*action bar*/
+.action-bar {
+  margin-bottom: 24px;
+}
+
+.action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}

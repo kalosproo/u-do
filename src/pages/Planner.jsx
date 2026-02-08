@@ -31,25 +31,18 @@ function Planner() {
     setPlans(list);
   };
 
- const addPlan = async () => {
+const addPlan = async () => {
   if (!title || !date) return;
 
-  const taskRef = await addDoc(
-    collection(db, "users", user.uid, "tasks"),
+  await addDoc(
+    collection(db, "users", user.uid, "planner"),
     {
       title,
-      completed: false,
+      date,
       priority,
       createdAt: new Date(),
     }
   );
-
-  await addDoc(collection(db, "users", user.uid, "planner"), {
-    title,
-    date,
-    taskId: taskRef.id,
-    createdAt: new Date(),
-  });
 
   setTitle("");
   setPriority("medium");
@@ -63,16 +56,10 @@ const deletePlan = async (plan) => {
     doc(db, "users", user.uid, "planner", plan.id)
   );
 
-  if (plan.taskId) {
-    await deleteDoc(
-      doc(db, "users", user.uid, "tasks", plan.taskId)
-    );
-  }
-
   fetchPlans();
 };
 
-  useEffect(() => {
+useEffect(() => {
     if (user) {
       fetchPlans();
     }
@@ -85,13 +72,15 @@ const groupedPlans = plans.reduce((acc, plan) => {
   acc[plan.date].push(plan);
   return acc;
 }, {});
-const sortedDates = Object.keys(groupedPlans).sort();
- return (
-  <div
-    className="page"
-    style={{ padding: "20px", paddingBottom: "60px" }}
-  >
+const sortedDates = Object.keys(groupedPlans).sort(
+  (a, b) => new Date(a) - new Date(b)
+);
 
+ return (
+  <div className="card action-bar">
+  <div className="action-row">
+
+   <div className="main-content">
       <h2>Weekly Planner</h2>
 
       <input
@@ -131,24 +120,24 @@ const sortedDates = Object.keys(groupedPlans).sort();
 </h4>
     <ul>
       {groupedPlans[date].map((plan) => (
-        <li
-  key={plan.id}
-  style={{
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "4px 0",
-  }}
->
+        <li className={`plan-item ${plan.priority}`}>
+  <div className="plan-left">
+    <span className="plan-title">{plan.title}</span>
+    <span className="priority">{plan.priority}</span>
+  </div>
 
-          {plan.title}
-          <button onClick={() => deletePlan(plan)}>❌</button>
-        </li>
+  <button onClick={() => deletePlan(plan)}>❌</button>
+</li>
+
+
       ))}
     </ul>
   </div>
 ))}
     </div>
+  </div>
+  </div>
   );
 }
-  
+
 export default Planner;

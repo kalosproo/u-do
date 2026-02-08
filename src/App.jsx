@@ -29,6 +29,7 @@ function App() {
     });
     return unsub;
   }, []);
+  
 
   // 🔥 Theme sync
   useEffect(() => {
@@ -50,6 +51,7 @@ function App() {
     )}
 
     <main className="main-content">
+      
       <Routes>
         {/* LOGIN */}
         <Route path="/login" element={<Login />} />
