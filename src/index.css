@@ -12,11 +12,6 @@
   --text: #111111;
   --text-muted: #6b7280;
   --border: #e5e7eb;
-
-  --primary: #6c63ff;
-  --success: #00d09c;
-  --danger: #ef4444;
-
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 16px;
@@ -561,11 +556,6 @@ body {
   padding: 20px;
   margin-top: 28px;
 }
-/* ===== PLANNER PAGE ===== 
-.plan-item.low { opacity: 0.6; }
-.plan-item.medium { opacity: 0.85; }
-.plan-item.high { font-weight: 600; }
-/* ===== CHART CARD ===== */
 .plan-item {
   display: flex;
   justify-content: space-between;
@@ -592,4 +582,66 @@ body {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+/*finance page*/
+.finance-page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.finance-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.summary-card {
+  background: linear-gradient(180deg, #1a1c22, #14161b);
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.summary-card span {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.summary-card h3 {
+  font-size: 28px;
+  margin-top: 6px;
+}
+
+.finance-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 24px;
+}
+
+.finance-left,
+.finance-right {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+/*finaance page toggle ui*/
+.transaction-type-toggle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.transaction-type-toggle button {
+  flex: 1;
+  background: #121318;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 8px 0;
+}
+
+.transaction-type-toggle button.active {
+  background: rgba(255,255,255,0.08);
+  color: white;
+  border-color: rgba(255,255,255,0.2);
 }

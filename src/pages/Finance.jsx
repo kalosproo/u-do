@@ -325,154 +325,150 @@ const getCategoryChartData = () => {
 };
 
 const chartData = getCategoryChartData();
+// Income and Expense totals for summary cards
+const getTotalIncome = () =>
+  expenses
+    .filter(e => e.type === "income")
+    .reduce((sum, e) => sum + e.amount, 0);
 
- return (
-  <div className="main-content">
-    {/* PAGE TITLE */}
-    <h2>Finance</h2>
+const getTotalExpenses = () =>
+  expenses
+    .filter(e => e.type === "expense")
+    .reduce((sum, e) => sum + e.amount, 0);
 
-    {/* ================= TOP SUMMARY CARDS ================= */}
-    <div className="finance-cards">
-      <div className="card">
-        <h4>Today</h4>
-        <p>₹{getTodayTotal()}</p>
+  return (
+    <div className="finance-page">
+      <header className="finance-header">
+        <h2>Finance</h2>
+      </header>
+
+      <section className="finance-summary">
+        <div className="summary-card">
+          <span>Balance</span>
+          <h3>₹{getMonthlyTotal()}</h3>
+        </div>
+
+        <div className="summary-card">
+          <span>Income</span>
+          <h3>₹{/* calculate income */}</h3>
+        </div>
+
+        <div className="summary-card">
+          <span>Expenses</span>
+          <h3>₹{/* calculate expenses */}</h3>
+        </div>
+      </section>
+      {/* ================== FINANCE GRID ================== */}
+      {/*  - Left side: Add Transaction form + Category Breakdown
+        - Right side: Action bar (type/category filter + export) + Transaction list + Chart
+      */}
+      <section className="finance-grid">
+        <div className="finance-left">
+          <div className="card add-transaction">
+            <h3>Add Transaction</h3>
+            <div className="transaction-type-toggle">
+  <button
+    className={type === "expense" ? "active" : ""}
+    onClick={() => setType("expense")}
+  >
+    Expense
+  </button>
+
+  <button
+    className={type === "income" ? "active" : ""}
+    onClick={() => setType("income")}
+  >
+    Income
+  </button>
+</div>
+
+            <select value={category} onChange={e => setCategory(e.target.value)}>
+  <option value="">Select Category</option>
+  {categories.map(cat => (
+    <option key={cat} value={cat}>{cat}</option>
+  ))}
+</select>
+
+<input
+  placeholder="Enter title"
+  value={title}
+  onChange={e => setTitle(e.target.value)}
+/>
+
+<input
+  type="number"
+  placeholder="Amount"
+  value={amount}
+  onChange={e => setAmount(e.target.value)}
+/>
+
+<input
+  type="date"
+  value={date}
+  onChange={e => setDate(e.target.value)}
+/>
+
+<button onClick={addExpense}>
+  {type === "income" ? "Add Income" : "Add Expense"}
+</button>
+
+
+            {/* category */}
+            {/* amount */}
+            {/* date */}
+            {/* button */}
+          </div>
+
+          <div className="card category-breakdown">
+            <h3>Category Breakdown</h3>
+            <ul>
+  {Object.entries(getCategorySummary()).map(([cat, total]) => (
+    <li key={cat}>
+      <span>{cat}</span>
+      <span>₹{total}</span>
+    </li>
+  ))}
+</ul>
+
+            {/* category summary list */}
+          </div>
+        </div>
+        <div className="finance-right">
+          <div className="card recent-transactions">
+            <h3>Recent Transactions</h3>
+            <ul>
+  {getMonthlyExpenses().slice(-5).map(exp => (
+    <li key={exp.id} className="transaction-item">
+      <div>
+        <strong>{exp.title}</strong>
+        <span className="text-muted">{exp.category}</span>
       </div>
 
-      <div className="card">
-        <h4>This Month</h4>
-        <p>₹{getMonthlyTotal()}</p>
-      </div>
+      <span>₹{exp.amount}</span>
+    </li>
+  ))}
+</ul>
+
+            {/* transaction list */}
+          </div>
+
+          <div className="card chart-card">
+            <h3>Spending by Category</h3>
+            <ResponsiveContainer width="100%" height={240}>
+  <BarChart data={chartData}>
+    <XAxis dataKey="category" />
+    <YAxis />
+    <Tooltip />
+    <Bar dataKey="amount" fill="rgba(255,255,255,0.35)" />
+  </BarChart>
+</ResponsiveContainer>
+
+            {/* recharts */}
+          </div>
+        </div>
+      </section>
     </div>
+  );
+}
 
-    {/* ================= ACTION BAR ================= */}
-    <div className="card" style={{ marginBottom: "24px" }}>
-      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-        <button
-          onClick={() => setType("expense")}
-          className={type === "expense" ? "active" : ""}
-        >
-          Expense
-        </button>
-
-        <button
-          onClick={() => setType("income")}
-          className={type === "income" ? "active" : ""}
-        >
-          Income
-        </button>
-
-        <button onClick={downloadFinanceCSV}>
-          Export CSV
-        </button>
-      </div>
-
-      <div style={{ marginTop: "16px" }}>
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">Select Category</option>
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-
-        <input
-          type="text"
-          placeholder="Add custom category"
-          value={customCategory}
-          onChange={(e) => setCustomCategory(e.target.value)}
-        />
-
-        <button
-          onClick={() => {
-            if (!customCategory.trim()) return;
-            setCustomCategories((prev) => [
-              ...new Set([...prev, customCategory.trim()])
-            ]);
-            setCustomCategory("");
-          }}
-        >
-          Add
-        </button>
-      </div>
-    </div>
-
-    {/* ================= ADD TRANSACTION ================= */}
-    <div className="card">
-      <h3>Add Transaction</h3>
-
-      <input
-        placeholder="Enter Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
-
-      <input
-        type="number"
-        placeholder="Amount"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-      />
-
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-      />
-
-      <button onClick={addExpense}>
-        {type === "income" ? "Add Income" : "Add Expense"}
-      </button>
-    </div>
-
-    {/* ================= CATEGORY SUMMARY ================= */}
-    <div className="card">
-      <h3>Expenses by Category</h3>
-      <ul>
-        {Object.entries(getCategorySummary()).map(([cat, total]) => (
-          <li key={cat}>
-            {cat} – ₹{total}
-          </li>
-        ))}
-      </ul>
-    </div>
-
-    {/* ================= TRANSACTION LIST ================= */}
-    <div className="card">
-      <h3>Recent Transactions</h3>
-      <ul>
-        {getMonthlyExpenses().map((exp) => (
-          <li key={exp.id} style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>{exp.title} ({exp.date})</span>
-
-            <span
-              style={{
-                color: exp.type === "income"
-                  ? "var(--text-muted)"
-                  : "var(--text)"
-              }}
-            >
-              {exp.type === "income" ? "+" : "-"}₹{exp.amount}
-            </span>
-
-            <button onClick={() => deleteExpense(exp.id)}>❌</button>
-          </li>
-        ))}
-      </ul>
-    </div>
-
-    {/* ================= CHART ================= */}
-    {chartData.length > 0 && (
-      <div className="card">
-        <h3>Spending by Category</h3>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={chartData}>
-            <XAxis dataKey="category" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="amount" fill="rgba(255,255,255,0.35)" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    )}
-  </div>
-)};
 export default Finance;
