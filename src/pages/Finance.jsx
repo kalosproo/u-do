@@ -350,12 +350,12 @@ const getTotalExpenses = () =>
 
         <div className="summary-card">
           <span>Income</span>
-          <h3>₹{/* calculate income */}</h3>
+          <h3>₹{getTotalIncome()}</h3>
         </div>
 
         <div className="summary-card">
           <span>Expenses</span>
-          <h3>₹{/* calculate expenses */}</h3>
+          <h3>₹{getTotalExpenses()}</h3>
         </div>
       </section>
       {/* ================== FINANCE GRID ================== */}
@@ -423,7 +423,7 @@ const getTotalExpenses = () =>
             <h3>Category Breakdown</h3>
             <ul>
   {Object.entries(getCategorySummary()).map(([cat, total]) => (
-    <li key={cat}>
+    <li key={cat} className="category-row">
       <span>{cat}</span>
       <span>₹{total}</span>
     </li>
@@ -437,14 +437,28 @@ const getTotalExpenses = () =>
           <div className="card recent-transactions">
             <h3>Recent Transactions</h3>
             <ul>
-  {getMonthlyExpenses().slice(-5).map(exp => (
+  {getMonthlyExpenses().map(exp => (
     <li key={exp.id} className="transaction-item">
       <div>
         <strong>{exp.title}</strong>
         <span className="text-muted">{exp.category}</span>
       </div>
 
-      <span>₹{exp.amount}</span>
+  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+  <span>₹{exp.amount}</span>
+  <button
+    onClick={() => deleteExpense(exp.id)}
+    style={{
+      background: "transparent",
+      border: "none",
+      color: "#888",
+      cursor: "pointer"
+    }}
+  >
+    ✕
+  </button>
+</div>
+
     </li>
   ))}
 </ul>

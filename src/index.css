@@ -6,22 +6,7 @@
 /* =========================
    DESIGN TOKENS
 ========================= */
-:root {
-  --bg: #ffffff;
-  --surface: #f3f4f6;
-  --text: #111111;
-  --text-muted: #6b7280;
-  --border: #e5e7eb;
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-
-  --s-xs: 6px;
-  --s-sm: 10px;
-  --s-md: 16px;
-  --s-lg: 24px;
-}
-body.dark {
+:root  {
   --bg: #0e0f14;
   --surface: #181a20;
   --text: #ffffff;
@@ -268,10 +253,6 @@ body.dark .text-muted {
   border-bottom: none;
   padding: 4px 0;
 }
-.theme-toggle {
-  margin-top: 16px;
-  align-self: flex-start;
-}
 .sidebar-nav {
   display: flex;
   flex-direction: column;
@@ -289,13 +270,6 @@ body.dark .text-muted {
 .sidebar-nav a:hover {
   background: rgba(255,255,255,0.06);
   color: white;
-}
-.theme-toggle {
-  background: rgba(255,255,255,0.06);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 12px;
-  opacity: 0.7;
 }
 
 .sidebar-top {
@@ -399,9 +373,9 @@ body {
  
 /* ===== CARDS ===== */
 .card {
-  background: var(--surface);
-  border-radius: 16px;
-  padding: 20px;
+  background: linear-gradient(180deg, #1a1c22, #14161b);
+  border-radius: 18px;
+  padding: 24px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.25);
 }
 
@@ -644,4 +618,94 @@ body {
   background: rgba(255,255,255,0.08);
   color: white;
   border-color: rgba(255,255,255,0.2);
+}
+/*finance category card fix*/
+.category-breakdown ul {
+  padding: 12px 0;
+}
+
+.category-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+/*transction card spacing fix*/
+.transaction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.transaction-item:last-child {
+  border-bottom: none;
+}
+
+
+.transaction-item strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.transaction-item .text-muted {
+  font-size: 12px;
+  opacity: 0.6;
+}
+/*smooth hoover effect */
+.card {
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 0 25px rgba(255, 255, 255, 0.06);
+}
+button {
+  transition: all 0.25s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 15px rgba(255, 255, 255, 0.15),
+    0 8px 20px rgba(0, 0, 0, 0.5);
+}
+.summary-card:hover {
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.7),
+    0 0 30px rgba(255, 255, 255, 0.08);
+}
+* {
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/*summary list fix*/
+.recent-transactions ul {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* Smooth scrollbar */
+.recent-transactions ul::-webkit-scrollbar {
+  width: 6px;
+}
+
+.recent-transactions ul::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+}
+.category-breakdown {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;   /* control full card height */
+}
+
+.category-breakdown ul {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 10px;
 }

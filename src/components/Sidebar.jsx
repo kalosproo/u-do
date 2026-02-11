@@ -4,7 +4,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../services/firebase";
 
 
-function Sidebar({ onLogout, toggleTheme, theme }) {
+function Sidebar() {
   const navigate = useNavigate();
 
 const handleLogout = async () => {
@@ -27,9 +27,6 @@ const handleLogout = async () => {
       </div>
 
       <div className="sidebar-bottom">
-        <button className="mode-btn" onClick={toggleTheme}>
-          {theme === "dark" ? "Light Mode" : "Dark Mode"}
-        </button>
 
         <button className="logout-btn" onClick={handleLogout}>
           Logout
