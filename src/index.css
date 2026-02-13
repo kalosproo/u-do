@@ -709,3 +709,14 @@ button:hover {
   overflow-y: auto;
   margin-top: 10px;
 }
+ /* Category breakdown scrollbar same as recent */ 
+ .category-breakdown ul::-webkit-scrollbar {
+ width: 6px; 
+} 
+ .category-breakdown ul::-webkit-scrollbar-thumb { 
+background: rgba(255,255,255,0.1); 
+border-radius: 10px; 
+} 
+.category-breakdown ul::-webkit-scrollbar-track {
+ background: transparent; 
+}
