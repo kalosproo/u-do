@@ -20,9 +20,13 @@ import {
 const EXPENSE_CATEGORIES = [
   "Food",
   "Travel",
+  "Fuel",
+  "Transaction",
   "Shopping",
+  "Needs",
   "Rent",
   "Bills",
+  "Investment",
   "Education",
   "Entertainment",
 ];
