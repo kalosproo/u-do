@@ -395,11 +395,7 @@ body {
 }
 /* ===== FINANCE PAGE ===== */
 
-.main-content {
-  padding: 32px;
-  color: var(--text);
-  max-width: 1100px;
-}
+ 
 
 /* Page title */
 .main-content h2 {
@@ -657,12 +653,9 @@ body {
 .card {
   transition: all 0.3s ease;
 }
-
 .card:hover {
-  transform: translateY(-4px);
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.6),
-    0 0 25px rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
 }
 button {
   transition: all 0.25s ease;
@@ -719,4 +712,157 @@ border-radius: 10px;
 } 
 .category-breakdown ul::-webkit-scrollbar-track {
  background: transparent; 
+}
+/* ===== PLANNER PAGE ===== */
+
+.planner-add {
+  .planner-add input,
+.planner-add select {
+  height: 44px;
+}
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+
+}
+.planner-add {
+  background: linear-gradient(180deg, #20232b, #171920);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.planner-add button {
+  height: 44px;
+}
+
+.planner-day {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.planner-date {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.plan-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.plan-item:last-child {
+  border-bottom: none;
+}
+
+.plan-title {
+  font-weight: 500;
+}
+.planner-section {
+  margin-top: 40px;
+}
+
+.planner-section-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 14px;
+  letter-spacing: 0.5px;
+}
+.planner-section {
+  border-top: 1px solid rgba(255,255,255,0.04);
+  padding-top: 24px;
+}
+.main-content {
+  padding: 24px 32px;
+}
+/* ===== WEEKLY BOARD ===== */
+.board-page {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+ 
+.board-header {
+   width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-muted);
+}
+
+.week-nav button {
+  background: #16181f;
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: var(--text);
+}
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 14px;
+  width: 100%;
+}
+.day-column {
+  background: #14161b;
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 360px;
+   min-width: 0;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.day-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-card {
+  background: #1c1f26;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.add-task {
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.day-name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.day-date {
+  opacity: 0.6;
+}
+.task-card {
+  width: 100%;
 }

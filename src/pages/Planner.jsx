@@ -76,68 +76,38 @@ const sortedDates = Object.keys(groupedPlans).sort(
   (a, b) => new Date(a) - new Date(b)
 );
 
- return (
-  <div className="card action-bar">
-  <div className="action-row">
+return (
+  <div className="main-content">
+  <div className="board-page">
+    <div className="board-header">
+      <h2 className="page-title">Planner</h2>
 
-   <div className="main-content">
-      <h2>Weekly Planner</h2>
+      <div className="week-nav">
+        <button>{"<"}</button>
+        <span>Week of March 3</span>
+        <button>{">"}</button>
+      </div>
+    </div>
 
-      <input
-        placeholder="Plan title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
+    <div className="week-grid">
+      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+        <div key={day} className="day-column">
+          <div className="day-header">
+            <span className="day-name">{day}</span>
+            <span className="day-date">03</span>
+          </div>
 
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-      />
-      <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-  <option value="low">Low</option>
-  <option value="medium">Medium</option>
-  <option value="high">High</option>
-</select>
+          <div className="day-body">
+            <div className="task-card">Sample Task</div>
+          </div>
 
-
-      <button onClick={addPlan}>Add Plan</button>
-{sortedDates.length === 0 && (
-  <p style={{ opacity: 0.6, marginTop: "15px" }}>
-    No plans added yet 📅
-  </p>
-)}
-{sortedDates.map((date) => (
-  <div key={date} style={{ marginTop: "15px" }}>
-    <h4
-  style={{
-    color: date === today ? "#22c55e" : "#aaa",
-    marginBottom: "6px",
-  }}
->
-
-  📅 {date} {date === today && "(Today)"}
-</h4>
-    <ul>
-      {groupedPlans[date].map((plan) => (
-        <li className={`plan-item ${plan.priority}`}>
-  <div className="plan-left">
-    <span className="plan-title">{plan.title}</span>
-    <span className="priority">{plan.priority}</span>
-  </div>
-
-  <button onClick={() => deletePlan(plan)}>❌</button>
-</li>
-
-
+          <div className="add-task">+ Add Task</div>
+        </div>
       ))}
-    </ul>
-  </div>
-))}
     </div>
   </div>
   </div>
-  );
+);
 }
 
 export default Planner;
