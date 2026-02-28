@@ -381,10 +381,10 @@ body {
 
 .main-content {
   margin-left: 240px;
-  width: calc(100% - 240px);
-  padding: 32px;
+  padding: 40px;
   min-height: 100vh;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 /*finance page*/
 .finance-cards {
@@ -782,8 +782,8 @@ border-radius: 10px;
 /* ===== WEEKLY BOARD ===== */
 .board-page {
   width: 100%;
-  padding: 0;
-  margin: 0;
+  max-width: 1200px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -814,7 +814,7 @@ border-radius: 10px;
 .week-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 14px;
+  gap: 18px;
   width: 100%;
 }
 .day-column {
@@ -843,12 +843,6 @@ border-radius: 10px;
   gap: 10px;
 }
 
-.task-card {
-  background: #1c1f26;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-}
 
 .add-task {
   font-size: 12px;
@@ -863,6 +857,63 @@ border-radius: 10px;
 .day-date {
   opacity: 0.6;
 }
+.today-column {
+  border: 1px solid rgba(255,255,255,0.15);
+  background: #171a22;
+}
+.empty-day {
+  font-size: 12px;
+  opacity: 0.4;
+  margin-top: 8px;
+}
+.inline-input {
+  background: #1c1f26;
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: white;
+}
 .task-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.delete-icon {
+  opacity: 0;
+  transform: translateX(6px);
+  cursor: pointer;
+  transition: 0.2s ease;
+  width: 16px;
+}
+
+.task-card:hover .delete-icon {
+  opacity: 0.6;
+  transform: translateX(0);
+}
+
+.delete-icon:hover {
+  opacity: 1;
+  color: #ffffff;
+}
+.inline-input {
   width: 100%;
+  background: #1c1f26;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: white;
+}
+.priority-low {
+  border-left: 2px solid rgba(255,255,255,0.08);
+}
+
+.priority-medium {
+  border-left: 2px solid rgba(255,255,255,0.15);
+}
+
+.priority-high {
+  border-left: 2px solid rgba(255,255,255,0.25);
 }
