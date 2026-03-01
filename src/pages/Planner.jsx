@@ -1,264 +1,254 @@
-import { FiTrash2 } from "react-icons/fi";
-import { useEffect, useState } from "react";
-import { auth } from "../services/firebase";
-import { db } from "../services/firebase";
-import { deleteDoc, doc } from "firebase/firestore";
-import {
-  collection,
-  addDoc,
-  getDocs,
-} from "firebase/firestore";
-import { updateDoc } from "firebase/firestore";
+import { FiChevronLeft, FiChevronRight, FiPlus, FiTrash2 } from "react-icons/fi";
+import { useEffect, useMemo, useState } from "react";
+import { auth, db } from "../services/firebase";
+import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 
 function Planner() {
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
   const [plans, setPlans] = useState([]);
-  const [priority, setPriority] = useState("medium");
-  const [currentDate, setCurrentDate] = useState(new Date());const [activeInputDate, setActiveInputDate] = useState(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [activeInputDate, setActiveInputDate] = useState(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingText, setEditingText] = useState("");
 
   const user = auth.currentUser;
 
+  const formatDateKey = (date) => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = `${d.getMonth() + 1}`.padStart(2, "0");
+    const day = `${d.getDate()}`.padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const fetchPlans = async () => {
     if (!user) return;
 
-    const snapshot = await getDocs(
-      collection(db, "users", user.uid, "planner")
-    );
+    const snapshot = await getDocs(collection(db, "users", user.uid, "planner"));
 
-    const list = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
+    const list = snapshot.docs.map((planDoc) => ({
+      id: planDoc.id,
+      ...planDoc.data(),
     }));
 
     setPlans(list);
   };
-  const formatDateKey = (date) => {
-  return new Date(date).toISOString().split("T")[0];
-};
-const addTaskToDate = async (date) => {
-  if (!newTaskTitle.trim()) return;
 
-  await addDoc(
-    collection(db, "users", user.uid, "planner"),
-    {
-      title: newTaskTitle,
+  const addTaskToDate = async (date) => {
+    if (!newTaskTitle.trim() || !user) return;
+
+    await addDoc(collection(db, "users", user.uid, "planner"), {
+      title: newTaskTitle.trim(),
       date: formatDateKey(date),
       priority: "medium",
       createdAt: new Date(),
-    }
-  );
+    });
 
-  setNewTaskTitle("");
-  setActiveInputDate(null);
-  fetchPlans();
-};
-const updateTask = async (plan) => {
-  if (!editingText.trim()) return;
+    setNewTaskTitle("");
+    setActiveInputDate(null);
+    fetchPlans();
+  };
 
-  await updateDoc(
-    doc(db, "users", user.uid, "planner", plan.id),
-    {
-      title: editingText,
-    }
-  );
+  const updateTask = async (planId) => {
+    if (!editingText.trim() || !user) return;
 
-  setEditingTaskId(null);
-  setEditingText("");
-  fetchPlans();
-};
-const addPlan = async () => {
-  if (!title || !date) return;
+    await updateDoc(doc(db, "users", user.uid, "planner", planId), {
+      title: editingText.trim(),
+    });
 
-  await addDoc(
-    collection(db, "users", user.uid, "planner"),
-    {
-      title,
-      date,
-      priority,
-      createdAt: new Date(),
-    }
-  );
+    setEditingTaskId(null);
+    setEditingText("");
+    fetchPlans();
+  };
 
-  setTitle("");
-  setPriority("medium");
-  setDate("");
-  fetchPlans();
-};
+  const deletePlan = async (planId) => {
+    if (!user) return;
+    await deleteDoc(doc(db, "users", user.uid, "planner", planId));
+    fetchPlans();
+  };
 
-  
-const deletePlan = async (plan) => {
-  await deleteDoc(
-    doc(db, "users", user.uid, "planner", plan.id)
-  );
-
-  fetchPlans();
-};
-
-useEffect(() => {
+  useEffect(() => {
     if (user) {
       fetchPlans();
     }
   }, [user]);
-const today = new Date().toISOString().split("T")[0];
-const groupedPlans = plans.reduce((acc, plan) => {
-  if (!acc[plan.date]) {
-    acc[plan.date] = [];
-  }
-  acc[plan.date].push(plan);
-  return acc;
-}, {});
-const sortedDates = Object.keys(groupedPlans).sort(
-  (a, b) => new Date(a) - new Date(b)
-);
-const getStartOfWeek = (date) => {
-  const d = new Date(date);
-  const day = d.getDay(); // 0 = Sun, 1 = Mon ...
-  const diff = day === 0 ? -6 : 1 - day; // make Monday start
-  d.setDate(d.getDate() + diff);
-  return d;
-};
 
-const startOfWeek = getStartOfWeek(currentDate);
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
+  };
 
-const weekDays = Array.from({ length: 7 }).map((_, i) => {
-  const date = new Date(startOfWeek);
-  date.setDate(startOfWeek.getDate() + i);
-  return date;
-});
-return (
-  <div className="main-content">
-  <div className="board-page">
-    <div className="board-header">
-      <h2 className="page-title">Planner</h2>
+  const startOfWeek = getStartOfWeek(currentDate);
 
-      <div className="week-nav">
-        <button onClick={() =>
-  setCurrentDate(prev => {
-  const newDate = new Date(prev);
-  newDate.setDate(prev.getDate() - 7);
-  return newDate;
-})
-}>
-  {"<"}
-</button>
-        <span>
-  Week of {startOfWeek.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  })}
-</span>
-       <button onClick={() =>
-  setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))
-}>
-  {">"}
-</button>
-      </div>
-    </div>
+  const weekDays = useMemo(
+    () =>
+      Array.from({ length: 7 }).map((_, i) => {
+        const date = new Date(startOfWeek);
+        date.setDate(startOfWeek.getDate() + i);
+        return date;
+      }),
+    [startOfWeek]
+  );
 
-<div className="week-grid">
-  {weekDays.map((date) => {
-    const isToday =
-      date.toDateString() === new Date().toDateString();
-      
-    return (
-      <div
-  key={date.toISOString()}
-  className={`day-column ${isToday ? "today-column" : ""}`}>
-        <div className="day-header">
-          <span className="day-name">
-            {date.toLocaleDateString("en-US", { weekday: "short" })}
-          </span>
+  const plansByDate = useMemo(
+    () =>
+      plans.reduce((acc, plan) => {
+        if (!acc[plan.date]) {
+          acc[plan.date] = [];
+        }
+        acc[plan.date].push(plan);
+        return acc;
+      }, {}),
+    [plans]
+  );
 
-          <span className="day-date">
-            {date.getDate()}
-          </span>
+  const totalWeekTasks = weekDays.reduce((acc, day) => {
+    const dayKey = formatDateKey(day);
+    return acc + (plansByDate[dayKey]?.length || 0);
+  }, 0);
+
+  return (
+    <section className="board-page">
+      <div className="board-header">
+        <div>
+          <h2 className="page-title">Planner</h2>
+          <p className="planner-subtitle">Plan your week by day and keep tasks in clear focus.</p>
         </div>
 
-        <div className="day-body">
-  {plans
-    .filter((plan) => plan.date === formatDateKey(date))
-    .map((plan) => (
-      <div
-  key={plan.id}
-  className={`task-card priority-${plan.priority}`}
->
-
-  {editingTaskId === plan.id ? (
-    <input
-      autoFocus
-      className="inline-input"
-      value={editingText}
-      onChange={(e) => setEditingText(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") updateTask(plan);
-        if (e.key === "Escape") {
-          setEditingTaskId(null);
-          setEditingText("");
-        }
-      }}
-    />
-  ) : (
-    <>
-      <span
-        onClick={() => {
-          setEditingTaskId(plan.id);
-          setEditingText(plan.title);
-        }}
-      >
-        {plan.title}
-      </span>
-
-      <FiTrash2
-        className="delete-icon"
-        onClick={(e) => {
-          e.stopPropagation();
-          deletePlan(plan);
-        }}
-      />
-    </>
-  )}
-
-</div>
-    ))}
-    {plans.filter((plan) => plan.date === formatDateKey(date)).length === 0 && (
-  <div className="empty-day">No tasks</div>
-)}
-</div>
-
-        {activeInputDate === formatDateKey(date) ? (
-  <input
-    autoFocus
-    className="inline-input"
-    placeholder="New task..."
-    value={newTaskTitle}
-    onChange={(e) => setNewTaskTitle(e.target.value)}
-    onKeyDown={(e) => {
-      if (e.key === "Enter") addTaskToDate(date);
-      if (e.key === "Escape") {
-        setActiveInputDate(null);
-        setNewTaskTitle("");
-      }
-    }}
-  />
-) : (
-  <div
-    className="add-task"
-    onClick={() => setActiveInputDate(formatDateKey(date))}
-  >
-    + Add Task
-  </div>
-)}
+        <div className="week-nav" role="navigation" aria-label="Week navigation">
+          <button
+            type="button"
+            aria-label="Previous week"
+            onClick={() =>
+              setCurrentDate((prev) => {
+                const newDate = new Date(prev);
+                newDate.setDate(newDate.getDate() - 7);
+                return newDate;
+              })
+            }
+          >
+            <FiChevronLeft />
+          </button>
+          <span>
+            Week of{" "}
+            {startOfWeek.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+          <button
+            type="button"
+            aria-label="Next week"
+            onClick={() =>
+              setCurrentDate((prev) => {
+                const newDate = new Date(prev);
+                newDate.setDate(newDate.getDate() + 7);
+                return newDate;
+              })
+            }
+          >
+            <FiChevronRight />
+          </button>
+        </div>
       </div>
-    );
-  })}
-</div>
-  </div>
-  </div>
-);
+
+      <div className="planner-meta">
+        <span className="meta-pill">Total tasks this week: {totalWeekTasks}</span>
+      </div>
+
+      <div className="week-grid-wrap">
+        <div className="week-grid">
+          {weekDays.map((date) => {
+            const dateKey = formatDateKey(date);
+            const dayPlans = plansByDate[dateKey] || [];
+            const isToday = date.toDateString() === new Date().toDateString();
+
+            return (
+              <div key={date.toISOString()} className={`day-column ${isToday ? "today-column" : ""}`}>
+                <div className="day-header">
+                  <span className="day-name">
+                    {date.toLocaleDateString("en-US", { weekday: "short" })}
+                    {isToday ? <em className="today-pill">Today</em> : null}
+                  </span>
+
+                  <span className="day-date">{date.getDate()}</span>
+                </div>
+
+                <div className="day-body">
+                  {dayPlans.map((plan) => (
+                    <div key={plan.id} className={`task-card priority-${plan.priority}`}>
+                      {editingTaskId === plan.id ? (
+                        <input
+                          autoFocus
+                          className="inline-input"
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") updateTask(plan.id);
+                            if (e.key === "Escape") {
+                              setEditingTaskId(null);
+                              setEditingText("");
+                            }
+                          }}
+                        />
+                      ) : (
+                        <>
+                          <span
+                            className="task-title"
+                            onClick={() => {
+                              setEditingTaskId(plan.id);
+                              setEditingText(plan.title);
+                            }}
+                          >
+                            {plan.title}
+                          </span>
+
+                          <FiTrash2
+                            className="delete-icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deletePlan(plan.id);
+                            }}
+                          />
+                        </>
+                      )}
+                    </div>
+                  ))}
+
+                  {dayPlans.length === 0 && <div className="empty-day">No tasks yet</div>}
+                </div>
+
+                {activeInputDate === dateKey ? (
+                  <input
+                    autoFocus
+                    className="inline-input"
+                    placeholder="New task..."
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") addTaskToDate(date);
+                      if (e.key === "Escape") {
+                        setActiveInputDate(null);
+                        setNewTaskTitle("");
+                      }
+                    }}
+                  />
+                ) : (
+                  <button type="button" className="add-task" onClick={() => setActiveInputDate(dateKey)}>
+                    <FiPlus />
+                    Add task
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export default Planner;
