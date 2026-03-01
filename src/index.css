@@ -787,7 +787,7 @@ border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: linear-gradient(180deg, rgba(18, 18, 18, 0.9), rgba(10, 10, 10, 0.92));
+  background: linear-gradient(180deg, rgba(17, 20, 30, 0.75), rgba(12, 14, 22, 0.7));
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 20px;
   padding: 28px;
@@ -812,7 +812,7 @@ border-radius: 10px;
   align-items: center;
   gap: 10px;
   color: var(--text);
-  background: #141414;
+  background: #161b27;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 8px 10px;
@@ -820,7 +820,7 @@ border-radius: 10px;
 }
 
 .week-nav button {
-  background: #1d1d1d;
+  background: #1d2330;
   border: 1px solid rgba(255, 255, 255, 0.1);
   width: 32px;
   height: 32px;
@@ -862,7 +862,7 @@ border-radius: 10px;
 }
 
 .day-column {
-  background: #131313;
+  background: #141925;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   padding: 12px;
@@ -893,11 +893,11 @@ border-radius: 10px;
   font-size: 9px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(113, 154, 255, 0.2);
+  border: 1px solid rgba(113, 154, 255, 0.35);
   border-radius: 999px;
   padding: 2px 6px;
-  color: #ffffff;
+  color: #cddcff;
 }
 
 .day-date {
@@ -917,7 +917,7 @@ border-radius: 10px;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  background: #1a1a1a;
+  background: #1b2230;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 8px 10px;
@@ -951,7 +951,7 @@ border-radius: 10px;
 
 .inline-input {
   width: 100%;
-  background: #202020;
+  background: #1c2333;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   padding: 8px 10px;
@@ -961,26 +961,26 @@ border-radius: 10px;
 
 .add-task {
   font-size: 12px;
-  color: #f3f3f3;
+  color: #dfe6ff;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1px dashed rgba(255, 255, 255, 0.25);
+  border: 1px dashed rgba(180, 198, 255, 0.35);
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(94, 129, 255, 0.08);
   padding: 8px;
 }
 
 .add-task:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(94, 129, 255, 0.14);
+  border-color: rgba(180, 198, 255, 0.5);
 }
 
 .today-column {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: #161616;
+  border: 1px solid rgba(119, 157, 255, 0.55);
+  background: #182033;
 }
 
 .empty-day {
