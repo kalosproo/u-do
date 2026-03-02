@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { auth } from "./services/firebase";
 
@@ -29,7 +29,16 @@ function App() {
     return unsub;
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <div className="app-loading-screen" role="status" aria-live="polite">
+        <div className="loading-orb" />
+        <h2>U.Do</h2>
+        <p>Syncing your workspace...</p>
+      </div>
+    );
+  }
+
 
  return (
   <BrowserRouter>
@@ -37,7 +46,7 @@ function App() {
       <Sidebar/>
     )}
 
-    <main className="main-content">
+    <main className={`main-content ${user ? "with-sidebar" : "no-sidebar"}`}>
       
       <Routes>
         {/* LOGIN */}

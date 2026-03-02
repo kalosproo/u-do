@@ -67,16 +67,17 @@ function PlannerTaskCard({
             }}
           />
         ) : (
-          <span
-            className="task-title"
+          <div
+            className="task-title-wrap"
             onClick={(e) => {
               e.stopPropagation();
               setEditingTaskId(plan.id);
               setEditingText(plan.title);
             }}
           >
-            {plan.title}
-          </span>
+            <span className="task-title">{plan.title}</span>
+            {plan.time ? <small className="task-time">{plan.time}</small> : null}
+          </div>
         )}
       </div>
 
@@ -182,6 +183,7 @@ function Planner() {
       fetchPlans();
     }
   }, [user]);
+
 
   const getStartOfWeek = (date) => {
     const d = new Date(date);
@@ -295,8 +297,10 @@ function Planner() {
   return (
     <section className="board-page">
       <div className="board-header">
-        <div>
-          <h2 className="page-title">Planner</h2>
+        <div className="planner-title-wrap">
+          <div className="page-title-pill">
+            <h2 className="page-title">Planner</h2>
+          </div>
           <p className="planner-subtitle">Plan your week by day and keep tasks in clear focus.</p>
         </div>
 
@@ -413,22 +417,30 @@ function Planner() {
                 </div>
 
                 {activeInputDate === dateKey ? (
-                  <input
-                    autoFocus
-                    className="inline-input"
-                    placeholder="New task..."
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") addTaskToDate(date);
-                      if (e.key === "Escape") {
-                        setActiveInputDate(null);
-                        setNewTaskTitle("");
-                      }
-                    }}
-                  />
+                  <div className="inline-add-row">
+                    <input
+                      autoFocus
+                      className="inline-input"
+                      placeholder="New task..."
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addTaskToDate(date);
+                        if (e.key === "Escape") {
+                          setActiveInputDate(null);
+                          setNewTaskTitle("");
+                        }
+                      }}
+                    />
+                    <button type="button" className="inline-save" onClick={() => addTaskToDate(date)}>
+                      Save
+                    </button>
+                  </div>
                 ) : (
-                  <button type="button" className="add-task" onClick={() => setActiveInputDate(dateKey)}>
+                  <button type="button" className="add-task" onClick={() => {
+                      setActiveInputDate(dateKey);
+                      setNewTaskTitle("");
+                    }}>
                     <FiPlus />
                     Add task
                   </button>
