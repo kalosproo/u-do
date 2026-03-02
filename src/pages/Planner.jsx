@@ -101,8 +101,6 @@ function Planner() {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingText, setEditingText] = useState("");
   const [dragTaskId, setDragTaskId] = useState(null);
-  const [timerSeconds, setTimerSeconds] = useState(25 * 60);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
 
   const user = auth.currentUser;
 
@@ -189,27 +187,6 @@ function Planner() {
     }
   }, [user]);
 
-
-  useEffect(() => {
-    if (!isTimerRunning) return undefined;
-
-    const interval = setInterval(() => {
-      setTimerSeconds((prev) => {
-        if (prev <= 1) {
-          setIsTimerRunning(false);
-          return 0;
-        }
-
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isTimerRunning]);
-
-  const formattedTimer = `${String(Math.floor(timerSeconds / 60)).padStart(2, "0")}:${String(
-    timerSeconds % 60
-  ).padStart(2, "0")}`;
 
   const getStartOfWeek = (date) => {
     const d = new Date(date);
@@ -367,22 +344,6 @@ function Planner() {
 
       <div className="planner-meta">
         <span className="meta-pill">Completed {completedWeekTasks} / {totalWeekTasks} this week</span>
-
-        <div className="planner-timer" role="timer" aria-live="polite">
-          <strong>{formattedTimer}</strong>
-          <button type="button" onClick={() => setIsTimerRunning((prev) => !prev)}>
-            {isTimerRunning ? "Pause" : "Start"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsTimerRunning(false);
-              setTimerSeconds(25 * 60);
-            }}
-          >
-            Reset
-          </button>
-        </div>
       </div>
 
       <div className="week-grid-wrap">

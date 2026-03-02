@@ -1925,3 +1925,43 @@ body {
   display: grid;
   place-items: center;
 }
+
+/* ===== FINAL UX FIXES ===== */
+.main-content.with-sidebar {
+  margin-left: 240px;
+}
+
+.main-content.no-sidebar {
+  margin-left: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+.dashboard-header-block,
+.wire-card {
+  border-radius: 16px;
+}
+
+.inline-input,
+.inline-time {
+  color: #f7f9ff !important;
+  caret-color: #f7f9ff;
+  background: #12151d;
+}
+
+.inline-time {
+  color-scheme: dark;
+}
+
+.inline-time::-webkit-calendar-picker-indicator {
+  filter: invert(0.9);
+}
+
+/* timer removed from planner top */
+.planner-timer,
+.planner-timer strong,
+.planner-timer button {
+  display: none;
+}
