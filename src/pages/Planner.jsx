@@ -67,16 +67,17 @@ function PlannerTaskCard({
             }}
           />
         ) : (
-          <span
-            className="task-title"
+          <div
+            className="task-title-wrap"
             onClick={(e) => {
               e.stopPropagation();
               setEditingTaskId(plan.id);
               setEditingText(plan.title);
             }}
           >
-            {plan.title}
-          </span>
+            <span className="task-title">{plan.title}</span>
+            {plan.time ? <small className="task-time">{plan.time}</small> : null}
+          </div>
         )}
       </div>
 
@@ -96,6 +97,7 @@ function Planner() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeInputDate, setActiveInputDate] = useState(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskTime, setNewTaskTime] = useState("");
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingText, setEditingText] = useState("");
   const [dragTaskId, setDragTaskId] = useState(null);
@@ -127,7 +129,7 @@ function Planner() {
     setPlans(list);
   };
 
-  const addTaskToDate = async (date) => {
+  const addTaskToDate = async (date, timeValue = newTaskTime) => {
     if (!newTaskTitle.trim() || !user) return;
 
     const dateKey = formatDateKey(date);
@@ -137,12 +139,14 @@ function Planner() {
       title: newTaskTitle.trim(),
       date: dateKey,
       priority: "medium",
+      time: timeValue || "",
       completed: false,
       order: dayPlans.length,
       createdAt: new Date(),
     });
 
     setNewTaskTitle("");
+    setNewTaskTime("");
     setActiveInputDate(null);
     fetchPlans();
   };
@@ -453,22 +457,41 @@ function Planner() {
                 </div>
 
                 {activeInputDate === dateKey ? (
-                  <input
-                    autoFocus
-                    className="inline-input"
-                    placeholder="New task..."
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") addTaskToDate(date);
-                      if (e.key === "Escape") {
-                        setActiveInputDate(null);
-                        setNewTaskTitle("");
-                      }
-                    }}
-                  />
+                  <div className="inline-add-row">
+                    <input
+                      autoFocus
+                      className="inline-input"
+                      placeholder="New task..."
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addTaskToDate(date);
+                        if (e.key === "Escape") {
+                          setActiveInputDate(null);
+                          setNewTaskTitle("");
+                          setNewTaskTime("");
+                        }
+                      }}
+                    />
+                    <input
+                      type="time"
+                      className="inline-time"
+                      value={newTaskTime}
+                      onChange={(e) => setNewTaskTime(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addTaskToDate(date, e.currentTarget.value);
+                      }}
+                    />
+                    <button type="button" className="inline-save" onClick={() => addTaskToDate(date)}>
+                      Save
+                    </button>
+                  </div>
                 ) : (
-                  <button type="button" className="add-task" onClick={() => setActiveInputDate(dateKey)}>
+                  <button type="button" className="add-task" onClick={() => {
+                      setActiveInputDate(dateKey);
+                      setNewTaskTitle("");
+                      setNewTaskTime("");
+                    }}>
                     <FiPlus />
                     Add task
                   </button>

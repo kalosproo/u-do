@@ -149,7 +149,7 @@ function Home() {
               ) : (
                 summary.upcomingPlans.map((plan) => (
                   <div key={plan.id} className="line-row">
-                    <span>{plan.date || "No date"}</span>
+                    <span>{plan.date || "No date"}{plan.time ? ` • ${plan.time}` : ""}</span>
                     <strong>{plan.title}</strong>
                   </div>
                 ))

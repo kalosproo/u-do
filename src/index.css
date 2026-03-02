@@ -1816,3 +1816,112 @@ body {
     padding: 24px;
   }
 }
+
+/* ===== THEME SYNC (finance-style dark) ===== */
+body {
+  background: radial-gradient(circle at top, #171a24 0%, #0f1118 55%, #0c0f14 100%);
+}
+
+.main-content {
+  background: transparent;
+}
+
+.page,
+.board-page,
+.tasks-page,
+.habits-page,
+.dashboard-page,
+.finance-page {
+  background: transparent;
+}
+
+.card,
+.glass-panel,
+.wire-card,
+.day-column,
+.kanban-column,
+.today-panel,
+.analytics-panel,
+.month-panel {
+  background: #12151d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+/* ===== SIDEBAR REDESIGN ===== */
+.sidebar {
+  width: 240px;
+  padding: 20px 14px;
+  background: #0f131b;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo {
+  margin-bottom: 26px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.nav-links a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+}
+
+.nav-links a svg,
+.logout-btn svg {
+  opacity: 0.85;
+}
+
+.nav-links a.active,
+.nav-links a:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d8dbe6;
+}
+
+/* ===== PLANNER PLAN TIME INPUT/DISPLAY ===== */
+.task-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.task-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.inline-add-row {
+  display: grid;
+  grid-template-columns: 1fr 110px auto;
+  gap: 8px;
+}
+
+.inline-time,
+.inline-save {
+  margin: 0;
+}
+
+.inline-save {
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+/* keep login centered */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
