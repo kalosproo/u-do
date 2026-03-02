@@ -343,7 +343,9 @@ const getTotalExpenses = () =>
   return (
     <div className="finance-page">
       <header className="finance-header">
-        <h2>Finance</h2>
+        <div className="page-title-pill">
+          <h2>Finance</h2>
+        </div>
       </header>
 
       <section className="finance-summary">

@@ -1581,7 +1581,12 @@ body {
   backdrop-filter: none;
 }
 
-.main-content > * {
+.dashboard-page,
+.tasks-page,
+.habits-page,
+.finance-page,
+.board-page,
+.login-page {
   animation: page-enter 0.28s ease;
 }
 
@@ -1891,6 +1896,37 @@ body {
   color: #d8dbe6;
 }
 
+
+.page-title-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #12151d;
+}
+
+.page-title-pill h2,
+.page-title-pill .page-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}
+
+.finance-header {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.planner-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 /* ===== PLANNER PLAN TIME INPUT/DISPLAY ===== */
 .task-title-wrap {
   display: flex;
@@ -1981,34 +2017,63 @@ body {
 .sidebar-profile {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
+  gap: 12px;
+  padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 14px;
   margin-bottom: 14px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.sidebar-profile strong {
+.profile-text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.profile-name {
   font-size: 13px;
+  line-height: 1.3;
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 148px;
 }
 
-.sidebar-profile small {
-  color: rgba(255, 255, 255, 0.6);
+.profile-email {
+  color: rgba(255, 255, 255, 0.58);
   font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 148px;
 }
 
 .profile-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   font-weight: 700;
+  flex-shrink: 0;
   background: rgba(255, 255, 255, 0.14);
 }
 
 @media (max-width: 900px) {
+  .page-title-pill {
+    width: 100%;
+    min-height: 52px;
+    padding: 10px 14px;
+  }
+
+  .page-title-pill h2,
+  .page-title-pill .page-title {
+    font-size: 22px;
+  }
+
   .sidebar {
     width: 100%;
     height: auto;

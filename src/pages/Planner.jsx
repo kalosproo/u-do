@@ -297,8 +297,10 @@ function Planner() {
   return (
     <section className="board-page">
       <div className="board-header">
-        <div>
-          <h2 className="page-title">Planner</h2>
+        <div className="planner-title-wrap">
+          <div className="page-title-pill">
+            <h2 className="page-title">Planner</h2>
+          </div>
           <p className="planner-subtitle">Plan your week by day and keep tasks in clear focus.</p>
         </div>
 

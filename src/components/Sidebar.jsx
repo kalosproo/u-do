@@ -29,9 +29,9 @@ function Sidebar() {
 
         <div className="sidebar-profile" aria-label="Current user profile">
           <span className="profile-avatar">{avatarText}</span>
-          <div>
-            <strong>{userName}</strong>
-            <small>{user?.email || "Signed in"}</small>
+          <div className="profile-text">
+            <strong className="profile-name" title={userName}>{userName}</strong>
+            <small className="profile-email" title={user?.email || "Signed in"}>{user?.email || "Signed in"}</small>
           </div>
         </div>
 
