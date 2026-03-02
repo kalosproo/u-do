@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { auth } from "./services/firebase";
 
@@ -37,7 +37,7 @@ function App() {
       <Sidebar/>
     )}
 
-    <main className="main-content">
+    <main className={`main-content ${user ? "with-sidebar" : "no-sidebar"}`}>
       
       <Routes>
         {/* LOGIN */}

@@ -1544,3 +1544,411 @@ border-radius: 10px;
     gap: 10px;
   }
 }
+
+/* ===== BLUEPRINT MODE OVERRIDES ===== */
+:root {
+  --wire-bg: #0f1218;
+  --wire-surface: #11151d;
+  --wire-border: rgba(255, 255, 255, 0.12);
+  --wire-text: #f1f3f7;
+  --wire-muted: rgba(241, 243, 247, 0.68);
+}
+
+body {
+  background: var(--wire-bg);
+  color: var(--wire-text);
+}
+
+.sidebar {
+  width: 240px;
+  background: #0d1118;
+  border-right: 1px solid var(--wire-border);
+  box-shadow: none;
+}
+
+.nav-links a.active,
+.nav-links a:hover {
+  background: transparent;
+  border: 1px solid var(--wire-border);
+}
+
+.card,
+.glass-panel,
+.wire-card {
+  background: var(--wire-surface);
+  border: 1px solid var(--wire-border);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.main-content > * {
+  animation: page-enter 0.28s ease;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* dashboard blueprint */
+.dashboard-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+.dashboard-header-block {
+  border: 1px solid var(--wire-border);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.dashboard-header-block h1 {
+  font-size: 26px;
+  margin: 0 0 8px;
+}
+
+.dashboard-header-block p {
+  color: var(--wire-muted);
+  font-size: 14px;
+}
+
+.dashboard-layout-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.dashboard-left-stack,
+.dashboard-right-stack {
+  display: grid;
+  gap: 24px;
+}
+
+.wire-card {
+  padding: 24px;
+}
+
+.wire-card h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+
+.summary-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summary-metrics-grid div {
+  border: 1px solid var(--wire-border);
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.summary-metrics-grid span,
+.line-row span,
+.muted-line,
+.wire-card small {
+  font-size: 14px;
+  color: var(--wire-muted);
+}
+
+.summary-metrics-grid strong,
+.line-row strong,
+.habit-line-row strong {
+  font-size: 16px;
+}
+
+.line-list {
+  display: grid;
+  gap: 12px;
+}
+
+.line-row,
+.habit-line-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.wire-progress {
+  height: 10px;
+  border: 1px solid var(--wire-border);
+  margin: 12px 0;
+}
+
+.wire-progress span {
+  display: block;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.habit-line-row {
+  grid-template-columns: 1fr auto auto;
+}
+
+.tiny-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.tiny-dots em {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.tiny-dots .filled {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.tiny-dots .empty {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* planner timer */
+.planner-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.planner-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.planner-timer strong {
+  min-width: 56px;
+  text-align: center;
+}
+
+.planner-timer button {
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+/* login wireframe */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(460px, 100%);
+  border: 1px solid var(--wire-border);
+  background: var(--wire-surface);
+  padding: 28px;
+  display: grid;
+  gap: 14px;
+}
+
+.login-card h2 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.login-card p {
+  color: var(--wire-muted);
+}
+
+.login-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.login-tabs button,
+.login-primary,
+.login-google {
+  border-radius: 8px;
+  border: 1px solid var(--wire-border);
+  background: transparent;
+  color: var(--wire-text);
+}
+
+.login-tabs button.active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.login-divider {
+  border-top: 1px solid var(--wire-border);
+}
+
+.login-card label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--wire-muted);
+}
+
+.login-error {
+  color: #f5b8b8;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-page {
+    padding: 24px;
+  }
+}
+
+/* ===== THEME SYNC (finance-style dark) ===== */
+body {
+  background: radial-gradient(circle at top, #171a24 0%, #0f1118 55%, #0c0f14 100%);
+}
+
+.main-content {
+  background: transparent;
+}
+
+.page,
+.board-page,
+.tasks-page,
+.habits-page,
+.dashboard-page,
+.finance-page {
+  background: transparent;
+}
+
+.card,
+.glass-panel,
+.wire-card,
+.day-column,
+.kanban-column,
+.today-panel,
+.analytics-panel,
+.month-panel {
+  background: #12151d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+/* ===== SIDEBAR REDESIGN ===== */
+.sidebar {
+  width: 240px;
+  padding: 20px 14px;
+  background: #0f131b;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo {
+  margin-bottom: 26px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.nav-links a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+}
+
+.nav-links a svg,
+.logout-btn svg {
+  opacity: 0.85;
+}
+
+.nav-links a.active,
+.nav-links a:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d8dbe6;
+}
+
+/* ===== PLANNER PLAN TIME INPUT/DISPLAY ===== */
+.task-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.task-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.inline-add-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.inline-save {
+  margin: 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+/* keep login centered */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+/* ===== FINAL UX FIXES ===== */
+.main-content.with-sidebar {
+  margin-left: 240px;
+}
+
+.main-content.no-sidebar {
+  margin-left: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+.dashboard-header-block,
+.wire-card {
+  border-radius: 16px;
+}
+
+.inline-input {
+  color: #f7f9ff !important;
+  caret-color: #f7f9ff;
+  background: #12151d;
+}
+
+/* timer removed from planner top */
+.planner-timer,
+.planner-timer strong,
+.planner-timer button {
+  display: none;
+}
