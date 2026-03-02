@@ -1,9 +1,6 @@
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, googleProvider } from "../services/firebase";
-import {
-  signInWithPopup,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
+import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -43,66 +40,66 @@ function Login() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Login to U. Do</h2>
+    <section className="login-page">
+      <div className="login-card">
+        <h2>U.Do</h2>
+        <p>Sign in to continue your system.</p>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-        <button
-          onClick={() => {
-            setIsSignup(false);
-            setError("");
-          }}
-          style={{
-            background: isSignup ? "#333" : "#555",
-            color: "#fff",
-            padding: "6px 12px",
-          }}
-        >
-          Login
+        <div className="login-tabs" role="tablist" aria-label="Auth mode">
+          <button
+            onClick={() => {
+              setIsSignup(false);
+              setError("");
+            }}
+            className={!isSignup ? "active" : ""}
+          >
+            Login
+          </button>
+          <button
+            onClick={() => {
+              setIsSignup(true);
+              setError("");
+            }}
+            className={isSignup ? "active" : ""}
+          >
+            Sign Up
+          </button>
+        </div>
+
+        <button className="login-google" onClick={googleLogin}>
+          Continue with Google
         </button>
 
-        <button
-          onClick={() => {
-            setIsSignup(true);
-            setError("");
-          }}
-          style={{
-            background: isSignup ? "#555" : "#333",
-            color: "#fff",
-            padding: "6px 12px",
-          }}
-        >
-          Sign Up
-        </button>
+        <div className="login-divider" />
+
+        <label>
+          Email
+          <input placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </label>
+
+        <label>
+          Password
+          <input
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+
+        {error && <p className="login-error">{error}</p>}
+
+        {isSignup ? (
+          <button className="login-primary" onClick={signupWithEmail}>
+            Create Account
+          </button>
+        ) : (
+          <button className="login-primary" onClick={emailLogin}>
+            Login
+          </button>
+        )}
       </div>
-
-      <button onClick={googleLogin}>Login with Google</button>
-
-      <hr />
-
-      <input
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <br />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <br />
-
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      {isSignup ? (
-        <button onClick={signupWithEmail}>Sign Up</button>
-      ) : (
-        <button onClick={emailLogin}>Login</button>
-      )}
-    </div>
+    </section>
   );
 }
 
