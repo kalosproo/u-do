@@ -13,6 +13,9 @@ const links = [
 
 function Sidebar() {
   const navigate = useNavigate();
+  const user = auth.currentUser;
+  const userName = user?.displayName || user?.email?.split("@")[0] || "User";
+  const avatarText = userName.trim().charAt(0).toUpperCase();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -23,6 +26,14 @@ function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-top">
         <h2 className="logo">U.Do</h2>
+
+        <div className="sidebar-profile" aria-label="Current user profile">
+          <span className="profile-avatar">{avatarText}</span>
+          <div>
+            <strong>{userName}</strong>
+            <small>{user?.email || "Signed in"}</small>
+          </div>
+        </div>
 
         <nav className="nav-links">
           {links.map(({ to, label, icon }) => (

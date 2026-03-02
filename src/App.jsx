@@ -29,7 +29,16 @@ function App() {
     return unsub;
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <div className="app-loading-screen" role="status" aria-live="polite">
+        <div className="loading-orb" />
+        <h2>U.Do</h2>
+        <p>Syncing your workspace...</p>
+      </div>
+    );
+  }
+
 
  return (
   <BrowserRouter>

@@ -1952,3 +1952,114 @@ body {
 .planner-timer button {
   display: none;
 }
+
+/* ===== LOADING + PROFILE + MOBILE ===== */
+.app-loading-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 10px;
+  background: radial-gradient(circle at top, #1a1f2c 0%, #10141c 60%, #0c1017 100%);
+}
+
+.loading-orb {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: rgba(255, 255, 255, 0.9);
+  animation: orb-spin 0.9s linear infinite;
+}
+
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.sidebar-profile strong {
+  font-size: 13px;
+  display: block;
+}
+
+.sidebar-profile small {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+}
+
+.profile-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    inset: auto 0 0 0;
+    padding: 10px;
+    border-right: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    z-index: 20;
+  }
+
+  .sidebar-top {
+    padding: 0;
+  }
+
+  .logo,
+  .sidebar-profile,
+  .sidebar-bottom {
+    display: none;
+  }
+
+  .nav-links {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .nav-links a {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  .nav-links a span {
+    display: none;
+  }
+
+  .main-content.with-sidebar {
+    margin-left: 0;
+    padding: 20px 14px 90px;
+  }
+
+  .dashboard-page,
+  .tasks-page,
+  .habits-page,
+  .board-page,
+  .finance-page,
+  .page {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
