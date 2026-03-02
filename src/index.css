@@ -1905,16 +1905,12 @@ body {
 
 .inline-add-row {
   display: grid;
-  grid-template-columns: 1fr 110px auto;
+  grid-template-columns: 1fr auto;
   gap: 8px;
 }
 
-.inline-time,
 .inline-save {
   margin: 0;
-}
-
-.inline-save {
   border-radius: 8px;
   padding: 10px 12px;
 }
@@ -1944,19 +1940,10 @@ body {
   border-radius: 16px;
 }
 
-.inline-input,
-.inline-time {
+.inline-input {
   color: #f7f9ff !important;
   caret-color: #f7f9ff;
   background: #12151d;
-}
-
-.inline-time {
-  color-scheme: dark;
-}
-
-.inline-time::-webkit-calendar-picker-indicator {
-  filter: invert(0.9);
 }
 
 /* timer removed from planner top */

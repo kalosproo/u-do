@@ -97,7 +97,6 @@ function Planner() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeInputDate, setActiveInputDate] = useState(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskTime, setNewTaskTime] = useState("");
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingText, setEditingText] = useState("");
   const [dragTaskId, setDragTaskId] = useState(null);
@@ -127,7 +126,7 @@ function Planner() {
     setPlans(list);
   };
 
-  const addTaskToDate = async (date, timeValue = newTaskTime) => {
+  const addTaskToDate = async (date) => {
     if (!newTaskTitle.trim() || !user) return;
 
     const dateKey = formatDateKey(date);
@@ -137,14 +136,12 @@ function Planner() {
       title: newTaskTitle.trim(),
       date: dateKey,
       priority: "medium",
-      time: timeValue || "",
       completed: false,
       order: dayPlans.length,
       createdAt: new Date(),
     });
 
     setNewTaskTitle("");
-    setNewTaskTime("");
     setActiveInputDate(null);
     fetchPlans();
   };
@@ -430,17 +427,7 @@ function Planner() {
                         if (e.key === "Escape") {
                           setActiveInputDate(null);
                           setNewTaskTitle("");
-                          setNewTaskTime("");
                         }
-                      }}
-                    />
-                    <input
-                      type="time"
-                      className="inline-time"
-                      value={newTaskTime}
-                      onChange={(e) => setNewTaskTime(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") addTaskToDate(date, e.currentTarget.value);
                       }}
                     />
                     <button type="button" className="inline-save" onClick={() => addTaskToDate(date)}>
@@ -451,7 +438,6 @@ function Planner() {
                   <button type="button" className="add-task" onClick={() => {
                       setActiveInputDate(dateKey);
                       setNewTaskTitle("");
-                      setNewTaskTime("");
                     }}>
                     <FiPlus />
                     Add task
