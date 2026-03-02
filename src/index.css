@@ -1293,3 +1293,254 @@ border-radius: 10px;
     width: 100%;
   }
 }
+
+/* ===== HABITS PAGE ===== */
+.habits-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 1260px;
+  margin: 0 auto;
+}
+
+.habits-header {
+  padding: 16px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.habits-header h2 {
+  margin: 0;
+}
+
+.habits-filter-group {
+  display: flex;
+  gap: 8px;
+}
+
+.habit-filter-pill {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.habit-filter-pill.active {
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.habits-add-bar {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1.8fr 1fr auto;
+  gap: 10px;
+}
+
+.habits-add-bar input,
+.habits-add-bar select {
+  margin: 0;
+  background: rgba(10, 12, 18, 0.8);
+}
+
+.habits-add-bar button {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.habits-grid {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 12px;
+}
+
+.today-panel,
+.analytics-panel,
+.month-panel {
+  padding: 14px;
+}
+
+.today-panel h3,
+.analytics-panel h3,
+.month-panel h3 {
+  margin: 0 0 12px;
+}
+
+.today-list,
+.analytics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.today-card,
+.analytics-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 10, 16, 0.75);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.today-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.today-main p,
+.analytics-card p {
+  font-size: 22px;
+  margin: 0;
+}
+
+.today-main small,
+.analytics-card small {
+  opacity: 0.72;
+}
+
+.habit-checkbox {
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0;
+}
+
+.habit-checkbox.checked {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.today-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.week-dots,
+.trend-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.dot-filled,
+.dot-empty {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.dot-filled {
+  background: rgba(220, 227, 238, 0.95);
+}
+
+.dot-empty {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.habit-delete {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.today-done {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.today-muted {
+  opacity: 0.62;
+}
+
+.right-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.analytics-trend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.analytics-trend strong {
+  min-width: 46px;
+  text-align: right;
+}
+
+.month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.month-weekdays {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  opacity: 0.64;
+}
+
+.month-weekdays span,
+.month-cell {
+  text-align: center;
+  font-size: 12px;
+}
+
+.month-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.month-cell {
+  min-height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: grid;
+  place-items: center;
+}
+
+.month-empty {
+  border: none;
+}
+
+.month-done {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.month-missed {
+  background: rgba(255, 255, 255, 0.04);
+  opacity: 0.58;
+}
+
+.month-today {
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+@media (max-width: 1024px) {
+  .habits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .habits-add-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .habits-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
