@@ -32,3 +32,11 @@ If you want to use PNG/JPG instead:
 1. Add the image to `src/assets/` (for example `udo-logo.png`).
 2. Update the import path in `src/components/BrandLogo.jsx`.
 3. Adjust size in `src/index.css` (`.brand-mark` and `.brand-compact .brand-mark`).
+
+## Latest U.Do branding/auth update
+
+This branch includes the refreshed U.Do app branding and login behavior:
+
+- U.Do logo used in app UI and favicon.
+- Login subtitle centered in the auth card.
+- Email/password auth restricted to `@svce.edu.in` addresses.
