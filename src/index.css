@@ -344,6 +344,37 @@ body {
   margin-bottom: 32px;
 }
 
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+
+.brand-compact .brand-mark {
+  width: 32px;
+  height: 32px;
+}
+
+.brand-compact .brand-text {
+  font-size: 20px;
+}
+
 .nav-links {
   display: flex;
   flex-direction: column;

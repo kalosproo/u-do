@@ -3,6 +3,7 @@ import { auth, googleProvider } from "../services/firebase";
 import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import BrandLogo from "../components/BrandLogo";
 
 function Login() {
   const navigate = useNavigate();
@@ -42,7 +43,7 @@ function Login() {
   return (
     <section className="login-page">
       <div className="login-card">
-        <h2>U.Do</h2>
+        <BrandLogo />
         <p>Sign in to continue your system.</p>
 
         <div className="login-tabs" role="tablist" aria-label="Auth mode">
