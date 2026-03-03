@@ -3,6 +3,12 @@ import { auth, googleProvider } from "../services/firebase";
 import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import BrandLogo from "../components/BrandLogo";
+
+const ALLOWED_DOMAIN = "@svce.edu.in";
+
+const normalizeEmail = (value) => value.trim().toLowerCase();
+const isAllowedEmail = (value) => normalizeEmail(value).endsWith(ALLOWED_DOMAIN);
 
 function Login() {
   const navigate = useNavigate();
@@ -18,8 +24,15 @@ function Login() {
   };
 
   const emailLogin = async () => {
+    const formattedEmail = normalizeEmail(email);
+
+    if (!isAllowedEmail(formattedEmail)) {
+      setError("Only @svce.edu.in email addresses are allowed.");
+      return;
+    }
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, formattedEmail, password);
       navigate("/");
     } catch {
       setError("Invalid email or password");
@@ -27,8 +40,15 @@ function Login() {
   };
 
   const signupWithEmail = async () => {
+    const formattedEmail = normalizeEmail(email);
+
+    if (!isAllowedEmail(formattedEmail)) {
+      setError("Only @svce.edu.in email addresses are allowed.");
+      return;
+    }
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(auth, formattedEmail, password);
       navigate("/");
     } catch (err) {
       if (err.code === "auth/email-already-in-use") {
@@ -42,8 +62,8 @@ function Login() {
   return (
     <section className="login-page">
       <div className="login-card">
-        <h2>U.Do</h2>
-        <p>Sign in to continue your system.</p>
+        <BrandLogo />
+        <p>Login to continue your system.</p>
 
         <div className="login-tabs" role="tablist" aria-label="Auth mode">
           <button
@@ -74,7 +94,7 @@ function Login() {
 
         <label>
           Email
-          <input placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input type="email" placeholder="you@svce.edu.in" value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
 
         <label>
