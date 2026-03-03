@@ -344,6 +344,38 @@ body {
   margin-bottom: 32px;
 }
 
+
+.brand {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.brand-mark {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #eef2f7;
+  letter-spacing: 0.02em;
+}
+
+.brand-compact .brand-mark {
+  width: 44px;
+  height: 44px;
+}
+
+.brand-compact .brand-name {
+  font-size: 16px;
+}
+
 .nav-links {
   display: flex;
   flex-direction: column;
@@ -1616,7 +1648,7 @@ body {
 
 .dashboard-header-block h1 {
   font-size: 26px;
-  margin: 0 0 8px;
+  margin: 0;
 }
 
 .dashboard-header-block p {
@@ -1907,6 +1939,7 @@ body {
   background: #12151d;
 }
 
+.page-title-pill h1,
 .page-title-pill h2,
 .page-title-pill .page-title {
   margin: 0;
@@ -2127,4 +2160,10 @@ body {
     padding-left: 0;
     padding-right: 0;
   }
+}
+
+
+/* buttery smooth motion across app */
+* {
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
