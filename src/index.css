@@ -1809,6 +1809,8 @@ body {
 
 .login-card p {
   color: var(--wire-muted);
+  text-align: center;
+  margin: 0 auto;
 }
 
 .login-tabs {
