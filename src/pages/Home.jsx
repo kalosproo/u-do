@@ -125,7 +125,9 @@ function Home() {
   return (
     <section className="dashboard-page">
       <header className="dashboard-header-block">
-        <h1>Dashboard</h1>
+        <div className="page-title-pill">
+          <h1>Dashboard</h1>
+        </div>
         <p>Today you have {summary.pendingTasks} pending task{summary.pendingTasks === 1 ? "" : "s"}.</p>
       </header>
 

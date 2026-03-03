@@ -344,6 +344,38 @@ body {
   margin-bottom: 32px;
 }
 
+
+.brand {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.brand-mark {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #eef2f7;
+  letter-spacing: 0.02em;
+}
+
+.brand-compact .brand-mark {
+  width: 44px;
+  height: 44px;
+}
+
+.brand-compact .brand-name {
+  font-size: 16px;
+}
+
 .nav-links {
   display: flex;
   flex-direction: column;
@@ -554,7 +586,11 @@ body {
   flex-wrap: wrap;
 }
 /*finance page*/
-.finance-page {
+.finance-page,
+.dashboard-page,
+.tasks-page,
+.habits-page,
+.board-page {
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -1616,7 +1652,7 @@ body {
 
 .dashboard-header-block h1 {
   font-size: 26px;
-  margin: 0 0 8px;
+  margin: 0;
 }
 
 .dashboard-header-block p {
@@ -1907,6 +1943,7 @@ body {
   background: #12151d;
 }
 
+.page-title-pill h1,
 .page-title-pill h2,
 .page-title-pill .page-title {
   margin: 0;
@@ -1915,10 +1952,14 @@ body {
   letter-spacing: 0.1px;
 }
 
-.finance-header {
+.finance-header,
+.tasks-header,
+.habits-header {
   margin-bottom: 8px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .planner-title-wrap {

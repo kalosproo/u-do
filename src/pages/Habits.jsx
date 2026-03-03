@@ -215,7 +215,9 @@ function Habits() {
   return (
     <section className="habits-page">
       <header className="habits-header glass-panel">
-        <h2>Habit Tracker</h2>
+        <div className="page-title-pill">
+          <h2>Habit Tracker</h2>
+        </div>
         <div className="habits-filter-group">
           {FILTER_OPTIONS.map(([value, label]) => (
             <button

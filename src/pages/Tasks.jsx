@@ -157,7 +157,9 @@ function Tasks() {
   return (
     <section className="tasks-page">
       <header className="tasks-header glass-panel">
-        <h2>Tasks</h2>
+        <div className="page-title-pill">
+          <h2>Tasks</h2>
+        </div>
       </header>
 
       <div className="tasks-controls glass-panel">

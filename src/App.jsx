@@ -10,6 +10,7 @@ import Planner from "./pages/Planner";
 import Tasks from "./pages/Tasks";
 import Habits from "./pages/Habits";
 import Sidebar from "./components/Sidebar";
+import BrandLogo from "./components/BrandLogo";
 
 function Protected({ user, children }) {
   if (!user) return <Navigate to="/login" replace />;
@@ -33,7 +34,7 @@ function App() {
     return (
       <div className="app-loading-screen" role="status" aria-live="polite">
         <div className="loading-orb" />
-        <h2>U.Do</h2>
+        <BrandLogo />
         <p>Syncing your workspace...</p>
       </div>
     );
