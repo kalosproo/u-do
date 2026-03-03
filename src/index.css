@@ -850,18 +850,19 @@ border-radius: 10px;
 }
 
 .week-nav button {
-  background: #16181f;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #121318;
+  border: 1px solid var(--border);
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  color: var(--text);
+  border-radius: 999px;
+  color: var(--text-muted);
   display: grid;
   place-items: center;
 }
 
 .week-nav button:hover {
   border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 .planner-meta {
@@ -1166,15 +1167,17 @@ border-radius: 10px;
 }
 
 .filter-pill {
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #121318;
+  color: var(--text-muted);
+  padding: 8px 14px;
 }
 
 .filter-pill.active {
-  color: rgba(255, 255, 255, 0.96);
-  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .kanban-grid {
@@ -1352,15 +1355,17 @@ border-radius: 10px;
 }
 
 .habit-filter-pill {
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #121318;
+  color: var(--text-muted);
+  padding: 8px 14px;
 }
 
 .habit-filter-pill.active {
-  color: rgba(255, 255, 255, 0.95);
-  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .habits-add-bar {
@@ -1815,14 +1820,15 @@ body {
 .login-tabs button,
 .login-primary,
 .login-google {
-  border-radius: 8px;
-  border: 1px solid var(--wire-border);
-  background: transparent;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #121318;
   color: var(--wire-text);
 }
 
 .login-tabs button.active {
   background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .login-divider {
