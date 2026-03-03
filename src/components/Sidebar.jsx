@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { FiGrid, FiDollarSign, FiCalendar, FiCheckSquare, FiActivity, FiLogOut } from "react-icons/fi";
 import { auth } from "../services/firebase";
+import BrandLogo from "./BrandLogo";
 
 const links = [
   { to: "/", label: "Home", icon: <FiGrid /> },
@@ -25,7 +26,7 @@ function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
-        <h2 className="logo">U.Do</h2>
+        <BrandLogo compact />
 
         <div className="sidebar-profile" aria-label="Current user profile">
           <span className="profile-avatar">{avatarText}</span>
