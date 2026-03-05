@@ -1,6 +1,7 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const STREAK_MILESTONES = [7, 30, 100];
+const MAX_FREEZE_TOKENS = 5;
 
 const FREQUENCY_RULES = {
   daily: {
@@ -213,6 +214,7 @@ export const buildHabitMetadata = (habit, todayDate = new Date()) => {
     .map((milestone) => ({
       milestone,
       reachedOn: todayKey,
+      reward: `${milestone}-day badge`,
     }));
 
   const mergedMilestones = [...existingMilestones];
@@ -224,12 +226,17 @@ export const buildHabitMetadata = (habit, todayDate = new Date()) => {
 
   const sortedMilestones = mergedMilestones.sort((a, b) => a.milestone - b.milestone);
   const nextMilestone = STREAK_MILESTONES.find((value) => value > snapshot.currentStreak) || null;
+  const freezeCapacity = Math.min(
+    MAX_FREEZE_TOKENS,
+    snapshot.rules.freezeAllowance + sortedMilestones.length
+  );
+  const freezesLeft = Math.max(0, Math.min(freezeCapacity, freezeCapacity - snapshot.freezesUsed));
 
   return {
     currentStreak: snapshot.currentStreak,
     bestStreak: Math.max(snapshot.bestStreak, existingMeta.bestStreak || 0),
-    freezeAllowance: snapshot.rules.freezeAllowance,
-    freezesLeft: snapshot.freezesLeft,
+    freezeAllowance: freezeCapacity,
+    freezesLeft,
     graceWindow: snapshot.rules.graceWindow,
     recoveryWindow: snapshot.rules.recoveryWindow,
     lastCompletedDate: snapshot.lastCompletedDate,
@@ -238,6 +245,8 @@ export const buildHabitMetadata = (habit, todayDate = new Date()) => {
     currentWindowLabel: snapshot.currentWindowLabel,
     recoveryEligible: snapshot.recoveryEligible,
     milestoneHistory: sortedMilestones,
+    rewardsHistory: sortedMilestones.map((entry) => entry.reward),
+    badgeTier: sortedMilestones.at(-1)?.milestone || 0,
     lastEvaluatedOn: todayKey,
     nextMilestone,
   };

@@ -1868,6 +1868,10 @@ body {
   color: #f5b8b8;
 }
 
+.login-info {
+  color: #b9ddff;
+}
+
 @media (max-width: 1024px) {
   .dashboard-layout-grid {
     grid-template-columns: 1fr;

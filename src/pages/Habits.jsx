@@ -239,10 +239,10 @@ function Habits() {
                   <div>
                     <p>{habit.title}</p>
                     <small>
-                      {habit.frequency} • streak {habit.streakMeta.currentStreak} • best {habit.streakMeta.bestStreak}
+                      🔥 {habit.frequency} streak {habit.streakMeta.currentStreak} • best {habit.streakMeta.bestStreak}
                     </small>
                     <small>
-                      freeze {habit.streakMeta.freezesLeft}/{habit.streakMeta.freezeAllowance} • {habit.streakMeta.streakState}
+                      🛡️ freezes {habit.streakMeta.freezesLeft}/{habit.streakMeta.freezeAllowance} • {habit.streakMeta.streakState}
                     </small>
                   </div>
                 </div>
@@ -275,7 +275,7 @@ function Habits() {
                       {habit.streakMeta.currentWindowLabel} • {habit.streakMeta.missedWindows} miss window(s)
                     </small>
                     <small>
-                      Milestones: {habit.streakMeta.milestoneHistory.map((entry) => entry.milestone).join(", ") || "none"}
+                      Badges: {habit.streakMeta.milestoneHistory.map((entry) => `🏅${entry.milestone}`).join(" ") || "none"}
                     </small>
                   </div>
                   <div className="analytics-trend">
@@ -284,7 +284,7 @@ function Habits() {
                         <span key={`${habit.id}-t-${index}`} className={done ? "dot-filled" : "dot-empty"} />
                       ))}
                     </div>
-                    <strong>{habit.streakMeta.nextMilestone ? `${habit.streakMeta.nextMilestone - habit.streakMeta.currentStreak} left` : "Max"}</strong>
+                    <strong>{habit.streakMeta.nextMilestone ? `🏁 ${habit.streakMeta.nextMilestone - habit.streakMeta.currentStreak} left` : "🏆 Max"}</strong>
                   </div>
                 </article>
               ))}
