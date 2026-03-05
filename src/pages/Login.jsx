@@ -7,6 +7,7 @@ import {
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
+import { POLICY_CODES, authorizeAuthAttempt } from "../services/authPolicy";
 import { auth, googleProvider } from "../services/firebase";
 
 const POPULAR_EMAIL_DOMAINS = new Set([
@@ -83,6 +84,21 @@ const sendOtpEmail = async ({ email, otp }) => {
   return response.ok;
 };
 
+const getPolicyErrorMessage = (policyCode) => {
+  switch (policyCode) {
+    case POLICY_CODES.INVALID_EMAIL:
+      return "Please enter a valid email address.";
+    case POLICY_CODES.DISPOSABLE_EMAIL_BLOCKED:
+      return "Temporary/disposable emails are not allowed.";
+    case POLICY_CODES.DOMAIN_NOT_ALLOWED:
+      return "This email domain is not allowed.";
+    case POLICY_CODES.RATE_LIMITED:
+      return "Too many login attempts. Please try again later.";
+    default:
+      return "Unable to verify this sign in attempt.";
+  }
+};
+
 function Login() {
   const navigate = useNavigate();
 
@@ -102,83 +118,23 @@ function Login() {
     setInfo("");
   };
 
-  const emailProviderError = useMemo(() => validateEmailProvider(email), [email]);
-  const isOtpMode = !isSignup && Boolean(otpSession);
-
-  const resetMessages = () => {
-    setError("");
-    setInfo("");
-  };
-
-  const emailProviderError = useMemo(() => validateEmailProvider(email), [email]);
-  const isOtpMode = !isSignup && Boolean(otpSession);
-
-  const resetMessages = () => {
-    setError("");
-    setInfo("");
-  };
-
   const runPolicyCheck = async (authEmail, mode) => {
-    const { normalizedEmail } = await authorizeAuthAttempt({
-      email: normalizeEmail(authEmail),
-      mode,
-    });
+    const normalizedEmail = normalizeEmail(authEmail);
 
-  const validateEmailForAuth = (formattedEmail) => {
-    if (!formattedEmail.includes("@")) {
-      setError("Please enter a valid email address.");
-      return false;
+    try {
+      const { normalizedEmail: approvedEmail } = await authorizeAuthAttempt({
+        email: normalizedEmail,
+        mode,
+      });
+
+      return approvedEmail || normalizedEmail;
+    } catch (err) {
+      if (err?.policyCode) {
+        throw new Error(getPolicyErrorMessage(err.policyCode));
+      }
+
+      throw new Error("Could not verify email policy. Try again.");
     }
-
-    if (isDisposableDomain(formattedEmail)) {
-      setError(DISPOSABLE_DOMAIN_ERROR);
-      return false;
-    }
-
-    if (!isPopularProvider(formattedEmail)) {
-      setError(POPULAR_PROVIDER_ERROR);
-      return false;
-    }
-
-    return true;
-  };
-
-  const startOtpVerification = async (formattedEmail) => {
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const sent = await sendOtpEmail({ email: formattedEmail, otp });
-
-    setOtpSession({
-      otp,
-      email: formattedEmail,
-      expiresAt: Date.now() + OTP_EXPIRY_MS,
-    });
-    setOtpInput("");
-
-    if (sent) {
-      setInfo("OTP sent to your email. Enter the 6-digit code to continue.");
-      return;
-    }
-
-    setInfo(`OTP delivery is in demo mode. Use code: ${otp}`);
-  };
-
-  const startOtpVerification = async (formattedEmail) => {
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const sent = await sendOtpEmail({ email: formattedEmail, otp });
-
-    setOtpSession({
-      otp,
-      email: formattedEmail,
-      expiresAt: Date.now() + OTP_EXPIRY_MS,
-    });
-    setOtpInput("");
-
-    if (sent) {
-      setInfo("OTP sent to your email. Enter the 6-digit code to continue.");
-      return;
-    }
-
-    setInfo(`OTP delivery is in demo mode. Use code: ${otp}`);
   };
 
   const startOtpVerification = async (formattedEmail) => {
@@ -201,22 +157,19 @@ function Login() {
   };
 
   const emailLogin = async () => {
-    const formattedEmail = normalizeEmail(email);
     resetMessages();
 
     if (emailProviderError) {
       setError(emailProviderError);
       return;
     }
-  };
 
-  const emailLogin = async () => {
     try {
       const formattedEmail = await runPolicyCheck(email, "login");
       await signInWithEmailAndPassword(auth, formattedEmail, password);
       await startOtpVerification(formattedEmail);
-    } catch {
-      setError("Invalid email or password");
+    } catch (err) {
+      setError(err?.message || "Invalid email or password");
     }
   };
 
@@ -242,7 +195,6 @@ function Login() {
   };
 
   const signupWithEmail = async () => {
-    const formattedEmail = normalizeEmail(email);
     resetMessages();
 
     if (emailProviderError) {
@@ -255,7 +207,18 @@ function Login() {
       await createUserWithEmailAndPassword(auth, formattedEmail, password);
       navigate("/");
     } catch (err) {
-      setError(getErrorMessage(err, "Something went wrong. Try again."));
+      setError(err?.message || "Something went wrong. Try again.");
+    }
+  };
+
+  const googleLogin = async () => {
+    resetMessages();
+
+    try {
+      await signInWithPopup(auth, googleProvider);
+      navigate("/");
+    } catch {
+      setError("Google login failed");
     }
   };
 

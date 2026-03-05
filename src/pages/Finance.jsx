@@ -1,22 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { auth, db } from "../services/firebase";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { collection, addDoc, getDocs, deleteDoc, doc, setDoc } from "firebase/firestore";
 
-import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,    
-  doc,
-  setDoc
-} from "firebase/firestore";
 const EXPENSE_CATEGORIES = [
   "Food",
   "Travel",
@@ -31,314 +17,172 @@ const EXPENSE_CATEGORIES = [
   "Entertainment",
 ];
 
-const INCOME_CATEGORIES = [
-  "Salary",
-  "Freelance",
-  "Gift",
-  "Other",
-];
+const INCOME_CATEGORIES = ["Salary", "Freelance", "Gift", "Other"];
+
 const convertExpensesToCSV = (expenses) => {
   if (!expenses.length) return "";
 
-  const headers = [
-    "Title",
-    "Amount",
-    "Category",
-    "Type",
-    "Date",
-  ];
+  const headers = ["Title", "Amount", "Category", "Type", "Date"];
+  const rows = expenses.map((exp) => [exp.title, exp.amount, exp.category, exp.type, `"${exp.date}"`]);
 
-  const rows = expenses.map(exp => [
-    exp.title,
-    exp.amount,
-    exp.category,
-    exp.type,
-    `"${exp.date}"`,
-  ]);
-
-  const csvContent = [
-    headers.join(","),
-    ...rows.map(row => row.join(","))
-  ].join("\n");
-
-  return csvContent;
+  return [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
 };
 
 function Finance() {
- const saveExpensesToLocal = (data) => {
-  if (!user) return;
-  localStorage.setItem(
-    `u_do_expenses_${user.uid}`,
-    JSON.stringify(data)
-  );
-};
-
-
-const getExpensesFromLocal = () => {
-  if (!user) return [];
-  const data = localStorage.getItem(
-    `u_do_expenses_${user.uid}`
-  );
-  return data ? JSON.parse(data) : [];
-};
-
-
+  const user = auth.currentUser;
 
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
-  const [customCategory, setCustomCategory] = useState("");
-  const [customCategories, setCustomCategories] = useState([]);
-  const [date, setDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [expenses, setExpenses] = useState([]);
-  const [type, setType] = useState("expense");  
-   const categories = [
-  ...(type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
-  ...customCategories,
-];
+  const [type, setType] = useState("expense");
 
+  const categories = useMemo(
+    () => (type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
+    [type]
+  );
 
+  const saveExpensesToLocal = useCallback((data) => {
+    if (!user) return;
+    localStorage.setItem(`u_do_expenses_${user.uid}`, JSON.stringify(data));
+  }, [user]);
 
-  const user = auth.currentUser;
-  const today = new Date().toISOString().split("T")[0];
+  const getExpensesFromLocal = useCallback(() => {
+    if (!user) return [];
+    const data = localStorage.getItem(`u_do_expenses_${user.uid}`);
+    return data ? JSON.parse(data) : [];
+  }, [user]);
 
-   
-  const fetchExpenses = async () => {
-  if (!user) return;
+  const getLatestExpenses = (firebaseList, localList) => {
+    if (firebaseList.length === 0) return localList;
+    if (localList.length === 0) return firebaseList;
 
-  try {
-    const snapshot = await getDocs(
-      collection(db, "users", user.uid, "expenses")
-    );
+    const firebaseLatest = Math.max(...firebaseList.map((e) => new Date(e.updatedAt || e.createdAt).getTime()));
+    const localLatest = Math.max(...localList.map((e) => new Date(e.updatedAt || e.createdAt).getTime()));
 
-    const list = snapshot.docs.map(doc => ({
-  id: doc.id,        // 🔥 VERY IMPORTANT
-  ...doc.data(),
-}));
+    return firebaseLatest >= localLatest ? firebaseList : localList;
+  };
 
-    const localList = getExpensesFromLocal();
+  const fetchExpenses = useCallback(async () => {
+    if (!user) return;
 
-    const latestData = getLatestExpenses(
-      list,
-      localList
-    );
+    try {
+      const snapshot = await getDocs(collection(db, "users", user.uid, "expenses"));
+      const firebaseList = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      const localList = getExpensesFromLocal();
+      const latestData = getLatestExpenses(firebaseList, localList);
 
-    setExpenses(latestData);
-    saveExpensesToLocal(latestData);
-
-    // If local data is newer, push to Firebase
-    if (latestData === localList) {
-      for (const item of localList) {
-        if (!item.id) {
-          await addDoc(
-            collection(db, "users", user.uid, "expenses"),
-            item
-          );
-        }
-      }
+      setExpenses(latestData);
+      saveExpensesToLocal(latestData);
+    } catch {
+      setExpenses(getExpensesFromLocal());
     }
-  } catch (error) {
-    console.log("Firebase failed, using local data");
-    const localList = getExpensesFromLocal();
-    setExpenses(localList);
-  }
-};
-const downloadFinanceCSV = () => {
-  const csv = convertExpensesToCSV(expenses);
-
-  if (!csv) {
-    alert("No data to export");
-    return;
-  }
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "u-do-finance.csv";
-  link.click();
-
-  URL.revokeObjectURL(url);
-};
-
-
-   
-  
-  const addExpense = async () => {
-  if (!title || !amount || !category) {
-    alert("Please fill all fields");
-    return;
-  }
-
-  const newExpense = {
-  id: Date.now().toString(), // 🔥 ADD THIS LINE
-  title,
-  amount: Number(amount),
-  type,
-  category,
-  date,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
-
-
-  // 🔥 1. UI immediately update
-  const updatedExpenses = [...expenses, newExpense];
-  setExpenses(updatedExpenses);
-  saveExpensesToLocal(updatedExpenses);
-
-  // 🔥 2. Firebase save (background)
-  try {
-   const expenseRef = doc(
-  db,
-  "users",
-  user.uid,
-  "expenses",
-  newExpense.id
-);
-
-await setDoc(expenseRef, newExpense);
-  } catch (err) {
-    console.log("Saved locally, Firebase failed");
-  }
-
-  // 🔹 reset fields
-  setTitle("");
-  setAmount("");
-  setCategory("");
-  setType("expense");
-};
-
- 
-  const getTodayTotal = () => {
-  return expenses
-    .filter((e) => e.date === today)
-    .reduce((sum, e) => {
-      if (e.type === "income") return sum + e.amount;
-      return sum - e.amount;
-    }, 0);
-};
-
-
- const getMonthlyTotal = () => {
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-
-  return expenses
-    .filter((e) => {
-      const d = new Date(e.date);
-      return (
-        d.getMonth() === month &&
-        d.getFullYear() === year
-      );
-    })
-    .reduce((sum, e) => {
-      if (e.type === "income") return sum + e.amount;
-      return sum - e.amount;
-    }, 0);
-};
-
-  const getMonthlyExpenses = () => {
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-
-  return expenses.filter((e) => {
-    const d = new Date(e.date);
-    return (
-      d.getMonth() === month &&
-      d.getFullYear() === year
-    );
-  });
-};
-const deleteExpense = async (id) => {
-  if (!id) return;
-
-  // 🔥 1. UI update immediately
-  const updated = expenses.filter((e) => e.id !== id);
-  setExpenses(updated);
-  saveExpensesToLocal(updated);
-
-  // 🔥 2. Try Firebase delete
-  try {
-    await deleteDoc(
-      doc(db, "users", user.uid, "expenses", id)
-    );
-  } catch (err) {
-    console.log("Firebase delete failed, local updated");
-  }
-};
-
-
-const getLatestExpenses = (firebaseList, localList) => {
-  if (firebaseList.length === 0) return localList;
-  if (localList.length === 0) return firebaseList;
-
-  const firebaseLatest = Math.max(
-    ...firebaseList.map((e) => new Date(e.updatedAt).getTime())
-  );
-
-  const localLatest = Math.max(
-    ...localList.map((e) => new Date(e.updatedAt).getTime())
-  );
-
-  return firebaseLatest >= localLatest
-    ? firebaseList
-    : localList;
-};
-
+  }, [getExpensesFromLocal, saveExpensesToLocal, user]);
 
   useEffect(() => {
-    if (user) fetchExpenses();
-  }, [user]);
-const getCategorySummary = () => {
-  const summary = {};
+    if (!user) return;
 
-  expenses
-  .filter((e) => e.type === "expense")
-  .forEach((item) => {
+    const timer = setTimeout(() => {
+      fetchExpenses();
+    }, 0);
 
-    if (!item.category) return;  
-    if (!summary[item.category]) {
-      summary[item.category] = 0;
+    return () => clearTimeout(timer);
+  }, [fetchExpenses, user]);
+
+  const addExpense = async () => {
+    if (!title || !amount || !category || !user) {
+      alert("Please fill all fields");
+      return;
     }
-    summary[item.category] += Number(item.amount);
-  });
-try {
-  // firebase fetch logic
-} catch (err) {
-  console.log("Firebase failed, loading local data");
-  setExpenses(getExpensesFromLocal());
-}
 
-  return summary;
-};
-const getCategoryChartData = () => {
-  const summary = getCategorySummary();
-
-  return Object.entries(summary).map(
-    ([category, amount]) => ({
+    const newExpense = {
+      id: crypto.randomUUID(),
+      title,
+      amount: Number(amount),
+      type,
       category,
-      amount,
-    })
-  );
-};
+      date,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-const chartData = getCategoryChartData();
-// Income and Expense totals for summary cards
-const getTotalIncome = () =>
-  expenses
-    .filter(e => e.type === "income")
-    .reduce((sum, e) => sum + e.amount, 0);
+    const updatedExpenses = [...expenses, newExpense];
+    setExpenses(updatedExpenses);
+    saveExpensesToLocal(updatedExpenses);
 
-const getTotalExpenses = () =>
-  expenses
-    .filter(e => e.type === "expense")
-    .reduce((sum, e) => sum + e.amount, 0);
+    try {
+      await setDoc(doc(db, "users", user.uid, "expenses", newExpense.id), newExpense);
+    } catch {
+      await addDoc(collection(db, "users", user.uid, "expenses"), newExpense);
+    }
+
+    setTitle("");
+    setAmount("");
+    setCategory("");
+    setType("expense");
+  };
+
+  const deleteExpense = async (id) => {
+    if (!id || !user) return;
+
+    const updated = expenses.filter((e) => e.id !== id);
+    setExpenses(updated);
+    saveExpensesToLocal(updated);
+
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "expenses", id));
+    } catch {
+      // noop: local copy already updated
+    }
+  };
+
+  const downloadFinanceCSV = () => {
+    const csv = convertExpensesToCSV(expenses);
+    if (!csv) {
+      alert("No data to export");
+      return;
+    }
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "u-do-finance.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const getMonthlyExpenses = () => {
+    const now = new Date();
+    return expenses.filter((e) => {
+      const d = new Date(e.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+  };
+
+  const getMonthlyTotal = () =>
+    getMonthlyExpenses().reduce((sum, e) => (e.type === "income" ? sum + e.amount : sum - e.amount), 0);
+
+  const getCategorySummary = () => {
+    const summary = {};
+    expenses
+      .filter((e) => e.type === "expense")
+      .forEach((item) => {
+        if (!item.category) return;
+        summary[item.category] = (summary[item.category] || 0) + Number(item.amount);
+      });
+
+    return summary;
+  };
+
+  const chartData = Object.entries(getCategorySummary()).map(([name, value]) => ({
+    category: name,
+    amount: value,
+  }));
+
+  const getTotalIncome = () => expenses.filter((e) => e.type === "income").reduce((sum, e) => sum + e.amount, 0);
+  const getTotalExpenses = () => expenses.filter((e) => e.type === "expense").reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <div className="finance-page">
@@ -364,126 +208,81 @@ const getTotalExpenses = () =>
           <h3>₹{getTotalExpenses()}</h3>
         </div>
       </section>
-      {/* ================== FINANCE GRID ================== */}
-      {/*  - Left side: Add Transaction form + Category Breakdown
-        - Right side: Action bar (type/category filter + export) + Transaction list + Chart
-      */}
+
       <section className="finance-grid">
         <div className="finance-left">
           <div className="card add-transaction">
             <h3>Add Transaction</h3>
             <div className="transaction-type-toggle">
-  <button
-    className={type === "expense" ? "active" : ""}
-    onClick={() => setType("expense")}
-  >
-    Expense
-  </button>
+              <button className={type === "expense" ? "active" : ""} onClick={() => setType("expense")}>Expense</button>
+              <button className={type === "income" ? "active" : ""} onClick={() => setType("income")}>Income</button>
+            </div>
 
-  <button
-    className={type === "income" ? "active" : ""}
-    onClick={() => setType("income")}
-  >
-    Income
-  </button>
-</div>
+            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">Select Category</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
 
-            <select value={category} onChange={e => setCategory(e.target.value)}>
-  <option value="">Select Category</option>
-  {categories.map(cat => (
-    <option key={cat} value={cat}>{cat}</option>
-  ))}
-</select>
+            <input placeholder="Enter title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
 
-<input
-  placeholder="Enter title"
-  value={title}
-  onChange={e => setTitle(e.target.value)}
-/>
-
-<input
-  type="number"
-  placeholder="Amount"
-  value={amount}
-  onChange={e => setAmount(e.target.value)}
-/>
-
-<input
-  type="date"
-  value={date}
-  onChange={e => setDate(e.target.value)}
-/>
-
-<button onClick={addExpense}>
-  {type === "income" ? "Add Income" : "Add Expense"}
-</button>
-
-
-            {/* category */}
-            {/* amount */}
-            {/* date */}
-            {/* button */}
+            <button onClick={addExpense}>{type === "income" ? "Add Income" : "Add Expense"}</button>
+            <button onClick={downloadFinanceCSV}>Export CSV</button>
           </div>
 
           <div className="card category-breakdown">
             <h3>Category Breakdown</h3>
             <ul>
-  {Object.entries(getCategorySummary()).map(([cat, total]) => (
-    <li key={cat} className="category-row">
-      <span>{cat}</span>
-      <span>₹{total}</span>
-    </li>
-  ))}
-</ul>
-
-            {/* category summary list */}
+              {Object.entries(getCategorySummary()).map(([cat, total]) => (
+                <li key={cat} className="category-row">
+                  <span>{cat}</span>
+                  <span>₹{total}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
+
         <div className="finance-right">
           <div className="card recent-transactions">
             <h3>Recent Transactions</h3>
             <ul>
-  {getMonthlyExpenses().map(exp => (
-    <li key={exp.id} className="transaction-item">
-      <div>
-        <strong>{exp.title}</strong>
-        <span className="text-muted">{exp.category}</span>
-      </div>
+              {getMonthlyExpenses().map((exp) => (
+                <li key={exp.id} className="transaction-item">
+                  <div>
+                    <strong>{exp.title}</strong>
+                    <span className="text-muted">{exp.category}</span>
+                  </div>
 
-  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-  <span>₹{exp.amount}</span>
-  <button
-    onClick={() => deleteExpense(exp.id)}
-    style={{
-      background: "transparent",
-      border: "none",
-      color: "#888",
-      cursor: "pointer"
-    }}
-  >
-    ✕
-  </button>
-</div>
-
-    </li>
-  ))}
-</ul>
-
-            {/* transaction list */}
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <span>₹{exp.amount}</span>
+                    <button
+                      onClick={() => deleteExpense(exp.id)}
+                      style={{ background: "transparent", border: "none", color: "#888", cursor: "pointer" }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="card chart-card">
             <h3>Spending by Category</h3>
             <ResponsiveContainer width="100%" height={240}>
-  <BarChart data={chartData}>
-    <XAxis dataKey="category" />
-    <YAxis />
-    <Tooltip />
-    <Bar dataKey="amount" fill="rgba(255,255,255,0.35)" />
-  </BarChart>
-</ResponsiveContainer>
-
-            {/* recharts */}
+              <BarChart data={chartData}>
+                <XAxis dataKey="category" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="amount" fill="rgba(255,255,255,0.35)" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </section>
