@@ -22,7 +22,8 @@ const POPULAR_EMAIL_DOMAINS = new Set([
   "zoho.com",
   "gmx.com",
   "mail.com",
-  "yandex.com",
+  "yandex.com"
+  "svce.edu.in,
 ]);
 
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
@@ -101,9 +102,56 @@ function Login() {
     setInfo("");
   };
 
-  const googleLogin = async () => {
-    await signInWithPopup(auth, googleProvider);
-    navigate("/");
+  const emailProviderError = useMemo(() => validateEmailProvider(email), [email]);
+  const isOtpMode = !isSignup && Boolean(otpSession);
+
+  const resetMessages = () => {
+    setError("");
+    setInfo("");
+  };
+
+  const runPolicyCheck = async (authEmail, mode) => {
+    const { normalizedEmail } = await authorizeAuthAttempt({
+      email: normalizeEmail(authEmail),
+      mode,
+    });
+
+  const validateEmailForAuth = (formattedEmail) => {
+    if (!formattedEmail.includes("@")) {
+      setError("Please enter a valid email address.");
+      return false;
+    }
+
+    if (isDisposableDomain(formattedEmail)) {
+      setError(DISPOSABLE_DOMAIN_ERROR);
+      return false;
+    }
+
+    if (!isPopularProvider(formattedEmail)) {
+      setError(POPULAR_PROVIDER_ERROR);
+      return false;
+    }
+
+    return true;
+  };
+
+  const startOtpVerification = async (formattedEmail) => {
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const sent = await sendOtpEmail({ email: formattedEmail, otp });
+
+    setOtpSession({
+      otp,
+      email: formattedEmail,
+      expiresAt: Date.now() + OTP_EXPIRY_MS,
+    });
+    setOtpInput("");
+
+    if (sent) {
+      setInfo("OTP sent to your email. Enter the 6-digit code to continue.");
+      return;
+    }
+
+    setInfo(`OTP delivery is in demo mode. Use code: ${otp}`);
   };
 
   const startOtpVerification = async (formattedEmail) => {
@@ -133,8 +181,11 @@ function Login() {
       setError(emailProviderError);
       return;
     }
+  };
 
+  const emailLogin = async () => {
     try {
+      const formattedEmail = await runPolicyCheck(email, "login");
       await signInWithEmailAndPassword(auth, formattedEmail, password);
       await startOtpVerification(formattedEmail);
     } catch {
@@ -173,14 +224,11 @@ function Login() {
     }
 
     try {
+      const formattedEmail = await runPolicyCheck(email, "signup");
       await createUserWithEmailAndPassword(auth, formattedEmail, password);
       navigate("/");
     } catch (err) {
-      if (err.code === "auth/email-already-in-use") {
-        setError("This email is already registered. Please login.");
-      } else {
-        setError("Something went wrong. Try again.");
-      }
+      setError(getErrorMessage(err, "Something went wrong. Try again."));
     }
   };
 
