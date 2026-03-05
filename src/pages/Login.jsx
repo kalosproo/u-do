@@ -1,6 +1,5 @@
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithPopup, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth, googleProvider } from "../services/firebase";
-import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
@@ -17,10 +16,11 @@ function Login() {
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState("");
 
-  const googleLogin = async () => {
-    await signInWithPopup(auth, googleProvider);
-    navigate("/");
-  };
+  const runPolicyCheck = async (authEmail, mode) => {
+    const { normalizedEmail } = await authorizeAuthAttempt({
+      email: normalizeEmail(authEmail),
+      mode,
+    });
 
   const validateEmailForAuth = (formattedEmail) => {
     if (!formattedEmail.includes("@")) {
@@ -47,12 +47,15 @@ function Login() {
     if (!validateEmailForAuth(formattedEmail)) {
       return;
     }
+  };
 
+  const emailLogin = async () => {
     try {
+      const formattedEmail = await runPolicyCheck(email, "login");
       await signInWithEmailAndPassword(auth, formattedEmail, password);
       navigate("/");
-    } catch {
-      setError("Invalid email or password");
+    } catch (err) {
+      setError(getErrorMessage(err, "Invalid email or password"));
     }
   };
 
@@ -64,14 +67,11 @@ function Login() {
     }
 
     try {
+      const formattedEmail = await runPolicyCheck(email, "signup");
       await createUserWithEmailAndPassword(auth, formattedEmail, password);
       navigate("/");
     } catch (err) {
-      if (err.code === "auth/email-already-in-use") {
-        setError("This email is already registered. Please login.");
-      } else {
-        setError("Something went wrong. Try again.");
-      }
+      setError(getErrorMessage(err, "Something went wrong. Try again."));
     }
   };
 
