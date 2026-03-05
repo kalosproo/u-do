@@ -65,8 +65,8 @@ const completionRate30 = (habit, today = new Date()) => {
 function Habits() {
   const [habits, setHabits] = useState([]);
   const [title, setTitle] = useState("");
-  const [frequency, setFrequency] = useState("daily");
-  const [filter, setFilter] = useState("all");
+  const [habitType, setHabitType] = useState("strict");
+  const [reminderTime, setReminderTime] = useState("");
 
   const user = auth.currentUser;
   const today = useMemo(() => new Date(), []);
@@ -77,19 +77,29 @@ function Habits() {
     return toDateKey(previous);
   }, [today]);
 
-  const refreshHabits = async () => {
+  const fetchHabits = useCallback(async () => {
     if (!user) return;
 
-    const snapshot = await getDocs(collection(db, "users", user.uid, "habits"));
-    const list = snapshot.docs.map((habitDoc) =>
-      normalizeHabit({
-        id: habitDoc.id,
-        ...habitDoc.data(),
-      })
-    );
+    try {
+      const snapshot = await getDocs(collection(db, "users", user.uid, "habits"));
+      const list = snapshot.docs.map((item) => normalizeHabit({ id: item.id, ...item.data() }));
+      setHabits(list);
+      localStorage.setItem("u_do_habits", JSON.stringify(list));
+    } catch {
+      const local = localStorage.getItem("u_do_habits");
+      setHabits(local ? JSON.parse(local) : []);
+    }
+  }, [user]);
 
-    setHabits(list);
-  };
+  useEffect(() => {
+    if (!user) return;
+
+    const timer = setTimeout(() => {
+      fetchHabits();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [fetchHabits, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -114,37 +124,53 @@ function Habits() {
 
     await addDoc(collection(db, "users", user.uid, "habits"), {
       title: title.trim(),
-      frequency,
-      logs: {},
+      type: habitType,
+      reminderTime: reminderTime || null,
+      streak: 0,
+      completedDays: {},
       createdAt: new Date(),
     });
 
     setTitle("");
-    setFrequency("daily");
-    refreshHabits();
+    setReminderTime("");
+    setHabitType("strict");
+    fetchHabits();
   };
 
-  const toggleToday = async (habit) => {
-    if (!user) return;
+  const toggleHabitForToday = async (habit, day) => {
+    if (!user || day !== today) return;
 
-    const nextLogs = { ...(habit.logs || {}) };
-    if (nextLogs[todayKey]) {
-      delete nextLogs[todayKey];
+    const completedDays = { ...(habit.completedDays || {}) };
+    const alreadyDone = completedDays[day] === true;
+    let newStreak = Number(habit.streak || 0);
+
+    if (alreadyDone) {
+      delete completedDays[day];
+      newStreak = Math.max(newStreak - 1, 0);
     } else {
-      nextLogs[todayKey] = true;
+      completedDays[day] = true;
+
+      if (habit.type === "strict") {
+        const yesterday = new Date(day);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yKey = getDateKey(yesterday);
+        newStreak = habit.completedDays?.[yKey] ? newStreak + 1 : 1;
+      } else {
+        newStreak = Object.keys(completedDays).length;
+      }
     }
 
     await updateDoc(doc(db, "users", user.uid, "habits", habit.id), {
       logs: nextLogs,
     });
 
-    refreshHabits();
+    fetchHabits();
   };
 
-  const removeHabit = async (habitId) => {
+  const deleteHabitItem = async (habitId) => {
     if (!user) return;
     await deleteDoc(doc(db, "users", user.uid, "habits", habitId));
-    refreshHabits();
+    fetchHabits();
   };
 
   const visibleHabits = useMemo(() => {
@@ -175,16 +201,25 @@ function Habits() {
     return Math.round((completeDays / keys.length) * 100);
   }, [habits, monthCells]);
 
-  return (
-    <section className="habits-page">
-      <header className="habits-header glass-panel">
-        <h2>Habit Tracker</h2>
-        <div className="habits-filter-group">
-          {FILTER_OPTIONS.map(([value, label]) => (
-            <button
-              key={value}
-              className={`habit-filter-pill ${filter === value ? "active" : ""}`}
-              onClick={() => setFilter(value)}
+      <table>
+        <thead>
+          <tr>
+            <th>Habit</th>
+            {days.map((day) => (
+              <th key={day}>{day.slice(8)}</th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {habits.map((habit) => (
+            <tr
+              key={habit.id}
+              style={{
+                borderBottom: "1px solid rgba(255,255,255,0.05)",
+                height: "44px",
+                backgroundColor: isReminderMissed(habit) ? "rgba(255, 0, 0, 0.08)" : "transparent",
+              }}
             >
               {label}
             </button>
