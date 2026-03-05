@@ -4,11 +4,10 @@ import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
+import { isDisposableDomain, isPopularProvider, normalizeEmail } from "../utils/emailValidation";
 
-const ALLOWED_DOMAIN = "@svce.edu.in";
-
-const normalizeEmail = (value) => value.trim().toLowerCase();
-const isAllowedEmail = (value) => normalizeEmail(value).endsWith(ALLOWED_DOMAIN);
+const POPULAR_PROVIDER_ERROR = "Please use a popular email provider like Gmail, Outlook, Yahoo, iCloud, or Proton.";
+const DISPOSABLE_DOMAIN_ERROR = "Disposable email addresses are not supported. Please use your personal email.";
 
 function Login() {
   const navigate = useNavigate();
@@ -23,11 +22,29 @@ function Login() {
     navigate("/");
   };
 
+  const validateEmailForAuth = (formattedEmail) => {
+    if (!formattedEmail.includes("@")) {
+      setError("Please enter a valid email address.");
+      return false;
+    }
+
+    if (isDisposableDomain(formattedEmail)) {
+      setError(DISPOSABLE_DOMAIN_ERROR);
+      return false;
+    }
+
+    if (!isPopularProvider(formattedEmail)) {
+      setError(POPULAR_PROVIDER_ERROR);
+      return false;
+    }
+
+    return true;
+  };
+
   const emailLogin = async () => {
     const formattedEmail = normalizeEmail(email);
 
-    if (!isAllowedEmail(formattedEmail)) {
-      setError("Only @svce.edu.in email addresses are allowed.");
+    if (!validateEmailForAuth(formattedEmail)) {
       return;
     }
 
@@ -42,8 +59,7 @@ function Login() {
   const signupWithEmail = async () => {
     const formattedEmail = normalizeEmail(email);
 
-    if (!isAllowedEmail(formattedEmail)) {
-      setError("Only @svce.edu.in email addresses are allowed.");
+    if (!validateEmailForAuth(formattedEmail)) {
       return;
     }
 
@@ -94,7 +110,7 @@ function Login() {
 
         <label>
           Email
-          <input type="email" placeholder="you@svce.edu.in" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input type="email" placeholder="you@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
 
         <label>
