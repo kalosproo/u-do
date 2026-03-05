@@ -1498,6 +1498,26 @@ border-radius: 10px;
   opacity: 0.62;
 }
 
+
+.today-card.state-grace {
+  border-color: rgba(250, 204, 21, 0.45);
+}
+
+.today-card.state-frozen {
+  border-color: rgba(147, 197, 253, 0.55);
+}
+
+.today-card.state-recovery,
+.today-card.state-broken {
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.habit-line-row span small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
 .right-panel {
   display: grid;
   gap: 12px;
@@ -1846,6 +1866,10 @@ body {
 
 .login-error {
   color: #f5b8b8;
+}
+
+.login-info {
+  color: #b9ddff;
 }
 
 @media (max-width: 1024px) {
