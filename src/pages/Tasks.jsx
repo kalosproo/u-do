@@ -6,7 +6,7 @@ import {
   getDocs,
   updateDoc,
 } from "firebase/firestore";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { auth, db } from "../services/firebase";
 
 const KANBAN_COLUMNS = [
@@ -49,7 +49,7 @@ function Tasks() {
 
   const user = auth.currentUser;
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     if (!user) return;
 
     const querySnapshot = await getDocs(collection(db, "users", user.uid, "tasks"));
@@ -62,7 +62,7 @@ function Tasks() {
     );
 
     setTasks(taskList);
-  };
+  }, [user]);
 
   const addTask = async () => {
     if (!title.trim() || !user) return;
@@ -105,10 +105,14 @@ function Tasks() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (!user) return;
+
+    const timer = setTimeout(() => {
       fetchTasks();
-    }
-  }, [user]);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [fetchTasks, user]);
 
   const todayKey = new Date().toISOString().slice(0, 10);
 
