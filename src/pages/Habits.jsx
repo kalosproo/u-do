@@ -1,355 +1,125 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  updateDoc,
-} from "firebase/firestore";
-import { useEffect, useMemo, useState } from "react";
-import { auth, db } from "../services/firebase";
-
-const FILTER_OPTIONS = [
-  ["all", "All"],
-  ["daily", "Daily"],
-  ["weekly", "Weekly"],
-];
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-const toDateKey = (date) => {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const getLastDateKeys = (count, fromDate = new Date()) => {
-  return Array.from({ length: count }).map((_, index) => {
-    const d = new Date(fromDate);
-    d.setDate(fromDate.getDate() - (count - 1 - index));
-    return toDateKey(d);
-  });
-};
-
-const normalizeHabit = (raw) => ({
-  ...raw,
-  frequency: raw.frequency || "daily",
-  logs: raw.logs || {},
-  createdAt: raw.createdAt || new Date(),
-});
-
-const isCompletedOn = (habit, dateKey) => Boolean(habit.logs?.[dateKey]);
-
-const getStreak = (habit, todayKey) => {
-  let streak = 0;
-  const cursor = new Date(`${todayKey}T00:00:00`);
-
-  while (true) {
-    const key = toDateKey(cursor);
-    if (!isCompletedOn(habit, key)) break;
-    streak += 1;
-    cursor.setTime(cursor.getTime() - DAY_MS);
-  }
-
-  return streak;
-};
-
-const getCompletionRate = (habit, todayKey, days = 30) => {
-  const keys = getLastDateKeys(days, new Date(`${todayKey}T00:00:00`));
-  const completed = keys.filter((key) => isCompletedOn(habit, key)).length;
-  return Math.round((completed / days) * 100);
-};
-
-const getWeekDots = (habit, todayKey) => {
-  const keys = getLastDateKeys(7, new Date(`${todayKey}T00:00:00`));
-  return keys.map((key) => isCompletedOn(habit, key));
-};
-
-const getTenDayTrend = (habit, todayKey) => {
-  const keys = getLastDateKeys(10, new Date(`${todayKey}T00:00:00`));
-  return keys.map((key) => isCompletedOn(habit, key));
-};
-
-const getMonthDays = (baseDate) => {
-  const year = baseDate.getFullYear();
-  const month = baseDate.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startWeekday = firstDay.getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const cells = [];
-  for (let i = 0; i < startWeekday; i += 1) cells.push(null);
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = new Date(year, month, day);
-    cells.push(toDateKey(date));
-  }
-
-  return cells;
-};
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { auth } from "../services/firebase";
+import { completeHabit, createHabit, getHabits } from "../services/habits";
 
 function Habits() {
-  const [habits, setHabits] = useState([]);
-  const [title, setTitle] = useState("");
-  const [frequency, setFrequency] = useState("daily");
-  const [filter, setFilter] = useState("all");
-
   const user = auth.currentUser;
-  const todayKey = toDateKey(new Date());
+  const [habits, setHabits] = useState([]);
+  const [habitName, setHabitName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [completingHabitId, setCompletingHabitId] = useState("");
+  const [error, setError] = useState("");
 
-  const refreshHabits = async () => {
-    if (!user) return;
-
-    const snapshot = await getDocs(collection(db, "users", user.uid, "habits"));
-    const list = snapshot.docs.map((habitDoc) =>
-      normalizeHabit({
-        id: habitDoc.id,
-        ...habitDoc.data(),
-      })
-    );
-
-    setHabits(list);
-  };
-
-  const addHabit = async () => {
-    if (!title.trim() || !user) return;
-
-    await addDoc(collection(db, "users", user.uid, "habits"), {
-      title: title.trim(),
-      frequency,
-      logs: {},
-      createdAt: new Date(),
-    });
-
-    setTitle("");
-    setFrequency("daily");
-    refreshHabits();
-  };
-
-  const toggleToday = async (habit) => {
-    if (!user) return;
-
-    const nextLogs = { ...(habit.logs || {}) };
-    if (nextLogs[todayKey]) {
-      delete nextLogs[todayKey];
-    } else {
-      nextLogs[todayKey] = true;
+  const refreshHabits = useCallback(async () => {
+    if (!user) {
+      setHabits([]);
+      setLoading(false);
+      return;
     }
 
-    await updateDoc(doc(db, "users", user.uid, "habits", habit.id), {
-      logs: nextLogs,
-    });
-
-    refreshHabits();
-  };
-
-  const removeHabit = async (habitId) => {
-    if (!user) return;
-    await deleteDoc(doc(db, "users", user.uid, "habits", habitId));
-    refreshHabits();
-  };
-
-  useEffect(() => {
-    if (!user) return;
-
-    getDocs(collection(db, "users", user.uid, "habits")).then((snapshot) => {
-      const list = snapshot.docs.map((habitDoc) =>
-        normalizeHabit({
-          id: habitDoc.id,
-          ...habitDoc.data(),
-        })
-      );
-
-      setHabits(list);
-    });
+    setLoading(true);
+    try {
+      const fetchedHabits = await getHabits(user.uid);
+      setHabits(fetchedHabits);
+    } catch (fetchError) {
+      setError(fetchError.message || "Unable to load habits.");
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
-  const visibleHabits = useMemo(() => {
-    return habits.filter((habit) => {
-      if (filter === "all") return true;
-      return habit.frequency === filter;
-    });
-  }, [filter, habits]);
+  useEffect(() => {
+    refreshHabits();
+  }, [refreshHabits]);
 
-  const yesterdayDate = new Date(`${todayKey}T00:00:00`);
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  const yesterdayKey = toDateKey(yesterdayDate);
+  const handleCreateHabit = async () => {
+    if (!user) return;
 
-  const enrichedHabits = useMemo(
-    () =>
-      visibleHabits.map((habit) => {
-        const streak = getStreak(habit, todayKey);
-        const completionRate = getCompletionRate(habit, todayKey, 30);
-        const weekDots = getWeekDots(habit, todayKey);
-        const trend10 = getTenDayTrend(habit, todayKey);
-        const completedToday = isCompletedOn(habit, todayKey);
-        const missedYesterday = !completedToday && !isCompletedOn(habit, yesterdayKey);
+    setCreating(true);
+    setError("");
+    try {
+      await createHabit({ userId: user.uid, name: habitName });
+      setHabitName("");
+      await refreshHabits();
+    } catch (createError) {
+      setError(createError.message || "Unable to create habit.");
+    } finally {
+      setCreating(false);
+    }
+  };
 
-        return {
-          ...habit,
-          streak,
-          completionRate,
-          weekDots,
-          trend10,
-          completedToday,
-          missedYesterday,
-        };
-      }),
-    [todayKey, visibleHabits, yesterdayKey]
+  const handleCompleteHabit = async (habitId) => {
+    if (!user) return;
+
+    setCompletingHabitId(habitId);
+    setError("");
+
+    try {
+      const updatedHabit = await completeHabit({ userId: user.uid, habitId });
+      setHabits((currentHabits) =>
+        currentHabits.map((habit) => (habit.id === habitId ? { ...habit, ...updatedHabit } : habit))
+      );
+    } catch (completeError) {
+      setError(completeError.message || "Unable to complete habit.");
+    } finally {
+      setCompletingHabitId("");
+    }
+  };
+
+  const totalCompletions = useMemo(
+    () => habits.reduce((count, habit) => count + habit.completedDates.length, 0),
+    [habits]
   );
-
-  const monthCells = useMemo(() => getMonthDays(new Date()), []);
-
-  const monthlyProgress = useMemo(() => {
-    const monthKeys = monthCells.filter(Boolean);
-    if (!monthKeys.length) return 0;
-
-    const completeDays = monthKeys.filter((key) =>
-      enrichedHabits.some((habit) => isCompletedOn(habit, key))
-    ).length;
-
-    return Math.round((completeDays / monthKeys.length) * 100);
-  }, [enrichedHabits, monthCells]);
 
   return (
     <section className="habits-page">
-      <header className="habits-header glass-panel">
-        <h2>Habit Tracker</h2>
-        <div className="habits-filter-group">
-          {FILTER_OPTIONS.map(([value, label]) => (
-            <button
-              key={value}
-              className={`habit-filter-pill ${filter === value ? "active" : ""}`}
-              onClick={() => setFilter(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <header className="habits-simple-header">
+        <h2>Habit Streaks</h2>
+        <p>Build momentum one day at a time.</p>
       </header>
 
-      <div className="habits-add-bar glass-panel">
+      <div className="habits-simple-create">
         <input
-          placeholder="Enter new habit..."
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
+          type="text"
+          value={habitName}
+          placeholder="Habit name"
+          onChange={(event) => setHabitName(event.target.value)}
+          disabled={creating}
         />
-
-        <select value={frequency} onChange={(event) => setFrequency(event.target.value)}>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-        </select>
-
-        <button onClick={addHabit}>Add</button>
+        <button onClick={handleCreateHabit} disabled={creating}>
+          {creating ? "Creating..." : "Create Habit"}
+        </button>
       </div>
 
-      <div className="habits-grid">
-        <section className="today-panel glass-panel">
-          <h3>Today&apos;s Habits</h3>
+      {error && <p className="login-error">{error}</p>}
 
-          <div className="today-list">
-            {enrichedHabits.map((habit) => (
-              <article
-                key={habit.id}
-                className={`today-card ${habit.completedToday ? "today-done" : ""} ${
-                  habit.missedYesterday ? "today-muted" : ""
-                }`}
+      <div className="habits-simple-stats">
+        <span>{habits.length} habits</span>
+        <span>{totalCompletions} total completions</span>
+      </div>
+
+      {loading ? (
+        <p>Loading habits...</p>
+      ) : (
+        <div className="habit-cards">
+          {habits.map((habit) => (
+            <article key={habit.id} className="habit-card">
+              <h3>{habit.name}</h3>
+              <p>🔥 {habit.streak} day streak</p>
+              <p>🏆 best: {habit.longestStreak} days</p>
+              <button
+                onClick={() => handleCompleteHabit(habit.id)}
+                disabled={completingHabitId === habit.id}
               >
-                <div className="today-main">
-                  <button
-                    className={`habit-checkbox ${habit.completedToday ? "checked" : ""}`}
-                    onClick={() => toggleToday(habit)}
-                  >
-                    {habit.completedToday ? "✓" : ""}
-                  </button>
+                {completingHabitId === habit.id ? "Saving..." : "Complete Today"}
+              </button>
+            </article>
+          ))}
 
-                  <div>
-                    <p>{habit.title}</p>
-                    <small>Streak: {habit.streak} days</small>
-                  </div>
-                </div>
-
-                <div className="today-meta">
-                  <span>{habit.completionRate}%</span>
-                  <div className="week-dots" aria-hidden>
-                    {habit.weekDots.map((done, index) => (
-                      <span key={`${habit.id}-w-${index}`} className={done ? "dot-filled" : "dot-empty"} />
-                    ))}
-                  </div>
-                  <button className="habit-delete" onClick={() => removeHabit(habit.id)}>
-                    ×
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="right-panel">
-          <div className="analytics-panel glass-panel">
-            <h3>Habit Analytics</h3>
-            <div className="analytics-list">
-              {enrichedHabits.map((habit) => (
-                <article key={`${habit.id}-analytics`} className="analytics-card">
-                  <div>
-                    <p>{habit.title}</p>
-                    <small>Streak: {habit.streak} days</small>
-                  </div>
-                  <div className="analytics-trend">
-                    <div className="trend-dots" aria-hidden>
-                      {habit.trend10.map((done, index) => (
-                        <span key={`${habit.id}-t-${index}`} className={done ? "dot-filled" : "dot-empty"} />
-                      ))}
-                    </div>
-                    <strong>{habit.completionRate}%</strong>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          <div className="month-panel glass-panel">
-            <div className="month-header">
-              <h3>
-                {new Date().toLocaleDateString(undefined, {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </h3>
-              <strong>{monthlyProgress}%</strong>
-            </div>
-
-            <div className="month-weekdays">
-              {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
-                <span key={day}>{day}</span>
-              ))}
-            </div>
-
-            <div className="month-grid" aria-hidden>
-              {monthCells.map((dateKey, index) => {
-                if (!dateKey) {
-                  return <span key={`empty-${index}`} className="month-cell month-empty" />;
-                }
-
-                const completed = enrichedHabits.some((habit) => isCompletedOn(habit, dateKey));
-                const isToday = dateKey === todayKey;
-
-                return (
-                  <span
-                    key={dateKey}
-                    className={`month-cell ${completed ? "month-done" : "month-missed"} ${
-                      isToday ? "month-today" : ""
-                    }`}
-                  >
-                    {Number(dateKey.slice(8))}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      </div>
+          {!habits.length && <p>No habits yet. Create your first one.</p>}
+        </div>
+      )}
     </section>
   );
 }

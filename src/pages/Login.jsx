@@ -1,61 +1,48 @@
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, googleProvider } from "../services/firebase";
-import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
-
-const ALLOWED_DOMAIN = "@svce.edu.in";
-
-const normalizeEmail = (value) => value.trim().toLowerCase();
-const isAllowedEmail = (value) => normalizeEmail(value).endsWith(ALLOWED_DOMAIN);
+import { completeEmailLogin, sendOtpEmail } from "../services/emailOtpAuth";
 
 function Login() {
   const navigate = useNavigate();
-
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSignup, setIsSignup] = useState(false);
-  const [error, setError] = useState("");
+  const [status, setStatus] = useState("idle");
+  const [message, setMessage] = useState("");
 
-  const googleLogin = async () => {
-    await signInWithPopup(auth, googleProvider);
-    navigate("/");
-  };
+  useEffect(() => {
+    const finishLogin = async () => {
+      setStatus("checking-link");
 
-  const emailLogin = async () => {
-    const formattedEmail = normalizeEmail(email);
+      try {
+        const { signedIn } = await completeEmailLogin();
 
-    if (!isAllowedEmail(formattedEmail)) {
-      setError("Only @svce.edu.in email addresses are allowed.");
-      return;
-    }
+        if (signedIn) {
+          setStatus("success");
+          navigate("/", { replace: true });
+          return;
+        }
 
-    try {
-      await signInWithEmailAndPassword(auth, formattedEmail, password);
-      navigate("/");
-    } catch {
-      setError("Invalid email or password");
-    }
-  };
-
-  const signupWithEmail = async () => {
-    const formattedEmail = normalizeEmail(email);
-
-    if (!isAllowedEmail(formattedEmail)) {
-      setError("Only @svce.edu.in email addresses are allowed.");
-      return;
-    }
-
-    try {
-      await createUserWithEmailAndPassword(auth, formattedEmail, password);
-      navigate("/");
-    } catch (err) {
-      if (err.code === "auth/email-already-in-use") {
-        setError("This email is already registered. Please login.");
-      } else {
-        setError("Something went wrong. Try again.");
+        setStatus("idle");
+      } catch (error) {
+        setStatus("error");
+        setMessage(error.message || "Unable to complete login. Please try again.");
       }
+    };
+
+    finishLogin();
+  }, [navigate]);
+
+  const handleSendOtp = async () => {
+    setStatus("sending");
+    setMessage("");
+
+    try {
+      await sendOtpEmail(email);
+      setStatus("sent");
+      setMessage("Check your email to continue login");
+    } catch (error) {
+      setStatus("error");
+      setMessage(error.message || "Failed to send login link. Please try again.");
     }
   };
 
@@ -63,61 +50,29 @@ function Login() {
     <section className="login-page">
       <div className="login-card">
         <BrandLogo />
-        <p>Login to continue your system.</p>
+        <h2>Login</h2>
+        <p>Enter your email</p>
 
-        <div className="login-tabs" role="tablist" aria-label="Auth mode">
-          <button
-            onClick={() => {
-              setIsSignup(false);
-              setError("");
-            }}
-            className={!isSignup ? "active" : ""}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => {
-              setIsSignup(true);
-              setError("");
-            }}
-            className={isSignup ? "active" : ""}
-          >
-            Sign Up
-          </button>
-        </div>
+        <label htmlFor="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          disabled={status === "sending" || status === "checking-link"}
+        />
 
-        <button className="login-google" onClick={googleLogin}>
-          Continue with Google
+        <button
+          className="login-primary"
+          onClick={handleSendOtp}
+          disabled={status === "sending" || status === "checking-link"}
+        >
+          {status === "sending" ? "Sending..." : "Send OTP"}
         </button>
 
-        <div className="login-divider" />
-
-        <label>
-          Email
-          <input type="email" placeholder="you@svce.edu.in" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-
-        <label>
-          Password
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-
-        {error && <p className="login-error">{error}</p>}
-
-        {isSignup ? (
-          <button className="login-primary" onClick={signupWithEmail}>
-            Create Account
-          </button>
-        ) : (
-          <button className="login-primary" onClick={emailLogin}>
-            Login
-          </button>
-        )}
+        {status === "checking-link" && <p>Completing sign-in...</p>}
+        {message && <p className={status === "error" ? "login-error" : "login-success"}>{message}</p>}
       </div>
     </section>
   );

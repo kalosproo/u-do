@@ -2175,3 +2175,97 @@ body {
 * {
   transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Modern auth + streak UI */
+.login-page,
+.habits-page {
+  min-height: 100vh;
+  background: #050505;
+  color: #ffffff;
+}
+
+.login-page {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(420px, 100%);
+  background: #0e0e0e;
+  border: 1px solid #1e1e1e;
+  border-radius: 16px;
+  padding: 24px;
+  display: grid;
+  gap: 12px;
+}
+
+.login-card input {
+  background: #111111;
+  border: 1px solid #2a2a2a;
+  color: #ffffff;
+}
+
+.login-primary {
+  background: #ffffff;
+  color: #000000;
+}
+
+.login-success {
+  color: #8ef0b4;
+}
+
+.login-error {
+  color: #ff8b8b;
+}
+
+.habits-page {
+  padding: 28px;
+}
+
+.habits-simple-header p {
+  color: #9f9f9f;
+  margin-top: 4px;
+}
+
+.habits-simple-create {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+.habits-simple-create input {
+  background: #101010;
+  border: 1px solid #292929;
+  color: #ffffff;
+}
+
+.habits-simple-create button,
+.habit-card button {
+  background: #ffffff;
+  color: #000000;
+}
+
+.habits-simple-stats {
+  margin-top: 16px;
+  color: #b0b0b0;
+  display: flex;
+  gap: 12px;
+}
+
+.habit-cards {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.habit-card {
+  background: #0f0f0f;
+  border: 1px solid #212121;
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
