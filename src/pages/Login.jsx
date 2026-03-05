@@ -3,28 +3,10 @@ import { auth, googleProvider } from "../services/firebase";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
-import { authorizeAuthAttempt, POLICY_CODES } from "../services/authPolicy";
+import { isDisposableDomain, isPopularProvider, normalizeEmail } from "../utils/emailValidation";
 
-const normalizeEmail = (value) => value.trim().toLowerCase();
-
-const POLICY_ERROR_MESSAGES = {
-  [POLICY_CODES.INVALID_EMAIL]: "Please enter a valid email address.",
-  [POLICY_CODES.DISPOSABLE_EMAIL_BLOCKED]: "Disposable email providers are blocked. Use a permanent email address.",
-  [POLICY_CODES.DOMAIN_NOT_ALLOWED]: "This email provider is not supported. Use a supported domain to continue.",
-  [POLICY_CODES.RATE_LIMITED]: "Too many attempts were detected. Please wait a bit and try again.",
-};
-
-const getErrorMessage = (err, fallback) => {
-  if (err?.policyCode && POLICY_ERROR_MESSAGES[err.policyCode]) {
-    return POLICY_ERROR_MESSAGES[err.policyCode];
-  }
-
-  if (err?.code === "auth/email-already-in-use") {
-    return "This email is already registered. Please login.";
-  }
-
-  return fallback;
-};
+const POPULAR_PROVIDER_ERROR = "Please use a popular email provider like Gmail, Outlook, Yahoo, iCloud, or Proton.";
+const DISPOSABLE_DOMAIN_ERROR = "Disposable email addresses are not supported. Please use your personal email.";
 
 function Login() {
   const navigate = useNavigate();
@@ -40,17 +22,30 @@ function Login() {
       mode,
     });
 
-    return normalizedEmail;
+  const validateEmailForAuth = (formattedEmail) => {
+    if (!formattedEmail.includes("@")) {
+      setError("Please enter a valid email address.");
+      return false;
+    }
+
+    if (isDisposableDomain(formattedEmail)) {
+      setError(DISPOSABLE_DOMAIN_ERROR);
+      return false;
+    }
+
+    if (!isPopularProvider(formattedEmail)) {
+      setError(POPULAR_PROVIDER_ERROR);
+      return false;
+    }
+
+    return true;
   };
 
-  const googleLogin = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await runPolicyCheck(result.user.email || "", "google-login");
-      navigate("/");
-    } catch (err) {
-      await signOut(auth);
-      setError(getErrorMessage(err, "Unable to sign in with Google. Please try again."));
+  const emailLogin = async () => {
+    const formattedEmail = normalizeEmail(email);
+
+    if (!validateEmailForAuth(formattedEmail)) {
+      return;
     }
   };
 
@@ -65,6 +60,12 @@ function Login() {
   };
 
   const signupWithEmail = async () => {
+    const formattedEmail = normalizeEmail(email);
+
+    if (!validateEmailForAuth(formattedEmail)) {
+      return;
+    }
+
     try {
       const formattedEmail = await runPolicyCheck(email, "signup");
       await createUserWithEmailAndPassword(auth, formattedEmail, password);
@@ -109,7 +110,7 @@ function Login() {
 
         <label>
           Email
-          <input type="email" placeholder="you@svce.edu.in" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input type="email" placeholder="you@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
 
         <label>
