@@ -101,9 +101,29 @@ function Login() {
     setInfo("");
   };
 
-  const googleLogin = async () => {
-    await signInWithPopup(auth, googleProvider);
-    navigate("/");
+  const runPolicyCheck = async (authEmail, mode) => {
+    const { normalizedEmail } = await authorizeAuthAttempt({
+      email: normalizeEmail(authEmail),
+      mode,
+    });
+
+  const validateEmailForAuth = (formattedEmail) => {
+    if (!formattedEmail.includes("@")) {
+      setError("Please enter a valid email address.");
+      return false;
+    }
+
+    if (isDisposableDomain(formattedEmail)) {
+      setError(DISPOSABLE_DOMAIN_ERROR);
+      return false;
+    }
+
+    if (!isPopularProvider(formattedEmail)) {
+      setError(POPULAR_PROVIDER_ERROR);
+      return false;
+    }
+
+    return true;
   };
 
   const startOtpVerification = async (formattedEmail) => {
@@ -133,8 +153,11 @@ function Login() {
       setError(emailProviderError);
       return;
     }
+  };
 
+  const emailLogin = async () => {
     try {
+      const formattedEmail = await runPolicyCheck(email, "login");
       await signInWithEmailAndPassword(auth, formattedEmail, password);
       await startOtpVerification(formattedEmail);
     } catch {
@@ -173,14 +196,11 @@ function Login() {
     }
 
     try {
+      const formattedEmail = await runPolicyCheck(email, "signup");
       await createUserWithEmailAndPassword(auth, formattedEmail, password);
       navigate("/");
     } catch (err) {
-      if (err.code === "auth/email-already-in-use") {
-        setError("This email is already registered. Please login.");
-      } else {
-        setError("Something went wrong. Try again.");
-      }
+      setError(getErrorMessage(err, "Something went wrong. Try again."));
     }
   };
 
