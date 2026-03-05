@@ -1848,6 +1848,42 @@ body {
   color: #f5b8b8;
 }
 
+
+.login-info {
+  color: #b6d4fe;
+  font-size: 13px;
+}
+
+.login-secondary {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--wire-muted);
+}
+
+.login-otp-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: var(--wire-muted);
+  font-size: 13px;
+}
+
+.login-otp-link {
+  background: transparent;
+  border: none;
+  color: #b6d4fe;
+  padding: 0;
+}
+
+.login-otp-link:disabled {
+  color: var(--wire-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 @media (max-width: 1024px) {
   .dashboard-layout-grid {
     grid-template-columns: 1fr;
