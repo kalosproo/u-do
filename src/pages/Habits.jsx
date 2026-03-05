@@ -6,60 +6,26 @@ import {
   getDocs,
   updateDoc,
 } from "firebase/firestore";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { auth, db } from "../services/firebase";
-import {
-  buildHabitMetadata,
-  getHabitStreakSnapshot,
-  getRecentWindowKeys,
-  isHabitCompletedInWindow,
-  toDateKey,
-} from "../utils/streaks";
+import { toDateKey } from "../utils/streaks";
 
 const FILTER_OPTIONS = [
   ["all", "All"],
   ["daily", "Daily"],
   ["weekly", "Weekly"],
+  ["completed", "Completed"],
+  ["pending", "Pending"],
 ];
 
 const normalizeHabit = (raw) => ({
   ...raw,
   frequency: raw.frequency || "daily",
   logs: raw.logs || {},
-  streakMeta: raw.streakMeta || null,
   createdAt: raw.createdAt || new Date(),
 });
 
 const isCompletedOn = (habit, dateKey) => Boolean(habit.logs?.[dateKey]);
-
-const getCompletionRate = (habit, frequency, todayDate = new Date(), windows = 30) => {
-  const keys = getRecentWindowKeys(frequency, windows, todayDate);
-  const completed = keys.filter((windowKey) => isHabitCompletedInWindow(habit, windowKey, frequency)).length;
-  return Math.round((completed / windows) * 100);
-};
-
-const getWindowDots = (habit, frequency, count, todayDate = new Date()) => {
-  const keys = getRecentWindowKeys(frequency, count, todayDate);
-  return keys.map((windowKey) => isHabitCompletedInWindow(habit, windowKey, frequency));
-};
-
-const getMonthDays = (baseDate) => {
-  const year = baseDate.getFullYear();
-  const month = baseDate.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startWeekday = firstDay.getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const cells = [];
-  for (let i = 0; i < startWeekday; i += 1) cells.push(null);
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = new Date(year, month, day);
-    cells.push(toDateKey(date));
-  }
-
-  return cells;
-};
 
 function Habits() {
   const [habits, setHabits] = useState([]);
@@ -70,7 +36,7 @@ function Habits() {
   const user = auth.currentUser;
   const todayKey = toDateKey(new Date());
 
-  const refreshHabits = async () => {
+  const refreshHabits = useCallback(async () => {
     if (!user) return;
 
     const snapshot = await getDocs(collection(db, "users", user.uid, "habits"));
@@ -82,21 +48,26 @@ function Habits() {
     );
 
     setHabits(list);
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const timer = setTimeout(() => {
+      refreshHabits();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [refreshHabits, user]);
 
   const addHabit = async () => {
     if (!title.trim() || !user) return;
 
-    const habit = {
+    await addDoc(collection(db, "users", user.uid, "habits"), {
       title: title.trim(),
       frequency,
       logs: {},
       createdAt: new Date(),
-    };
-
-    await addDoc(collection(db, "users", user.uid, "habits"), {
-      ...habit,
-      streakMeta: buildHabitMetadata(habit),
     });
 
     setTitle("");
@@ -114,10 +85,8 @@ function Habits() {
       nextLogs[todayKey] = true;
     }
 
-    const nextHabit = { ...habit, logs: nextLogs };
     await updateDoc(doc(db, "users", user.uid, "habits", habit.id), {
       logs: nextLogs,
-      streakMeta: buildHabitMetadata(nextHabit),
     });
 
     refreshHabits();
@@ -129,68 +98,29 @@ function Habits() {
     refreshHabits();
   };
 
-  useEffect(() => {
-    if (!user) return;
-
-    getDocs(collection(db, "users", user.uid, "habits")).then((snapshot) => {
-      const list = snapshot.docs.map((habitDoc) =>
-        normalizeHabit({
-          id: habitDoc.id,
-          ...habitDoc.data(),
-        })
-      );
-
-      setHabits(list);
-    });
-  }, [user]);
-
   const visibleHabits = useMemo(() => {
     return habits.filter((habit) => {
+      const completedToday = isCompletedOn(habit, todayKey);
+
       if (filter === "all") return true;
+      if (filter === "completed") return completedToday;
+      if (filter === "pending") return !completedToday;
       return habit.frequency === filter;
     });
-  }, [filter, habits]);
+  }, [filter, habits, todayKey]);
 
-  const enrichedHabits = useMemo(
-    () =>
-      visibleHabits.map((habit) => {
-        const snapshot = getHabitStreakSnapshot(habit);
-        const streakMeta = buildHabitMetadata(habit);
-        const completionRate = getCompletionRate(habit, habit.frequency, new Date(), 30);
-        const weekDots = getWindowDots(habit, habit.frequency, 7, new Date());
-        const trend10 = getWindowDots(habit, habit.frequency, 10, new Date());
-        const completedToday = isCompletedOn(habit, todayKey);
+  const summary = useMemo(() => {
+    const total = habits.length;
+    const completed = habits.filter((habit) => isCompletedOn(habit, todayKey)).length;
+    const pending = total - completed;
 
-        return {
-          ...habit,
-          streak: snapshot.currentStreak,
-          completionRate,
-          weekDots,
-          trend10,
-          completedToday,
-          streakMeta,
-        };
-      }),
-    [todayKey, visibleHabits]
-  );
-
-  const monthCells = useMemo(() => getMonthDays(new Date()), []);
-
-  const monthlyProgress = useMemo(() => {
-    const monthKeys = monthCells.filter(Boolean);
-    if (!monthKeys.length) return 0;
-
-    const completeDays = monthKeys.filter((key) =>
-      enrichedHabits.some((habit) => isCompletedOn(habit, key))
-    ).length;
-
-    return Math.round((completeDays / monthKeys.length) * 100);
-  }, [enrichedHabits, monthCells]);
+    return { total, completed, pending };
+  }, [habits, todayKey]);
 
   return (
     <section className="habits-page">
       <header className="habits-header glass-panel">
-        <h2>Habit Tracker</h2>
+        <h2>Habits</h2>
         <div className="habits-filter-group">
           {FILTER_OPTIONS.map(([value, label]) => (
             <button
@@ -216,123 +146,52 @@ function Habits() {
           <option value="weekly">Weekly</option>
         </select>
 
-        <button onClick={addHabit}>Add</button>
+        <button onClick={addHabit}>Add Habit</button>
       </div>
 
-      <div className="habits-grid">
-        <section className="today-panel glass-panel">
-          <h3>Today&apos;s Habits</h3>
+      <section className="glass-panel" style={{ marginBottom: "16px", display: "flex", gap: "16px" }}>
+        <p>Total: <strong>{summary.total}</strong></p>
+        <p>Done Today: <strong>{summary.completed}</strong></p>
+        <p>Pending: <strong>{summary.pending}</strong></p>
+      </section>
 
-          <div className="today-list">
-            {enrichedHabits.map((habit) => (
-              <article
-                key={habit.id}
-                className={`today-card state-${habit.streakMeta.streakState} ${habit.completedToday ? "today-done" : ""}`}
-              >
-                <div className="today-main">
-                  <button
-                    className={`habit-checkbox ${habit.completedToday ? "checked" : ""}`}
-                    onClick={() => toggleToday(habit)}
-                  >
-                    {habit.completedToday ? "✓" : ""}
-                  </button>
+      <section className="today-panel glass-panel">
+        <h3>Habit List</h3>
+        <div className="today-list">
+          {visibleHabits.length === 0 ? (
+            <p className="text-muted">No habits found for this filter.</p>
+          ) : (
+            visibleHabits.map((habit) => {
+              const completedToday = isCompletedOn(habit, todayKey);
 
-                  <div>
-                    <p>{habit.title}</p>
-                    <small>
-                      🔥 {habit.frequency} streak {habit.streakMeta.currentStreak} • best {habit.streakMeta.bestStreak}
-                    </small>
-                    <small>
-                      🛡️ freezes {habit.streakMeta.freezesLeft}/{habit.streakMeta.freezeAllowance} • {habit.streakMeta.streakState}
-                    </small>
-                  </div>
-                </div>
+              return (
+                <article key={habit.id} className={`today-card ${completedToday ? "today-done" : ""}`}>
+                  <div className="today-main">
+                    <button
+                      className={`habit-checkbox ${completedToday ? "checked" : ""}`}
+                      onClick={() => toggleToday(habit)}
+                      aria-label={`Toggle ${habit.title}`}
+                    >
+                      {completedToday ? "✓" : ""}
+                    </button>
 
-                <div className="today-meta">
-                  <span>{habit.completionRate}%</span>
-                  <div className="week-dots" aria-hidden>
-                    {habit.weekDots.map((done, index) => (
-                      <span key={`${habit.id}-w-${index}`} className={done ? "dot-filled" : "dot-empty"} />
-                    ))}
-                  </div>
-                  <button className="habit-delete" onClick={() => removeHabit(habit.id)}>
-                    ×
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="right-panel">
-          <div className="analytics-panel glass-panel">
-            <h3>Habit Analytics</h3>
-            <div className="analytics-list">
-              {enrichedHabits.map((habit) => (
-                <article key={`${habit.id}-analytics`} className="analytics-card">
-                  <div>
-                    <p>{habit.title}</p>
-                    <small>
-                      {habit.streakMeta.currentWindowLabel} • {habit.streakMeta.missedWindows} miss window(s)
-                    </small>
-                    <small>
-                      Badges: {habit.streakMeta.milestoneHistory.map((entry) => `🏅${entry.milestone}`).join(" ") || "none"}
-                    </small>
-                  </div>
-                  <div className="analytics-trend">
-                    <div className="trend-dots" aria-hidden>
-                      {habit.trend10.map((done, index) => (
-                        <span key={`${habit.id}-t-${index}`} className={done ? "dot-filled" : "dot-empty"} />
-                      ))}
+                    <div>
+                      <p>{habit.title}</p>
+                      <small>{habit.frequency}</small>
                     </div>
-                    <strong>{habit.streakMeta.nextMilestone ? `🏁 ${habit.streakMeta.nextMilestone - habit.streakMeta.currentStreak} left` : "🏆 Max"}</strong>
+                  </div>
+
+                  <div className="today-meta">
+                    <button className="habit-delete" onClick={() => removeHabit(habit.id)}>
+                      ×
+                    </button>
                   </div>
                 </article>
-              ))}
-            </div>
-          </div>
-
-          <div className="month-panel glass-panel">
-            <div className="month-header">
-              <h3>
-                {new Date().toLocaleDateString(undefined, {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </h3>
-              <strong>{monthlyProgress}%</strong>
-            </div>
-
-            <div className="month-weekdays">
-              {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
-                <span key={day}>{day}</span>
-              ))}
-            </div>
-
-            <div className="month-grid" aria-hidden>
-              {monthCells.map((dateKey, index) => {
-                if (!dateKey) {
-                  return <span key={`empty-${index}`} className="month-cell month-empty" />;
-                }
-
-                const completed = enrichedHabits.some((habit) => isCompletedOn(habit, dateKey));
-                const isToday = dateKey === todayKey;
-
-                return (
-                  <span
-                    key={dateKey}
-                    className={`month-cell ${completed ? "month-done" : "month-missed"} ${
-                      isToday ? "month-today" : ""
-                    }`}
-                  >
-                    {Number(dateKey.slice(8))}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      </div>
+              );
+            })
+          )}
+        </div>
+      </section>
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import { FiChevronLeft, FiChevronRight, FiPlus, FiTrash2 } from "react-icons/fi";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { auth, db } from "../services/firebase";
 import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 
@@ -111,7 +111,7 @@ function Planner() {
     return `${year}-${month}-${day}`;
   };
 
-  const fetchPlans = async () => {
+  const fetchPlans = useCallback(async () => {
     if (!user) return;
 
     const snapshot = await getDocs(collection(db, "users", user.uid, "planner"));
@@ -124,7 +124,7 @@ function Planner() {
     }));
 
     setPlans(list);
-  };
+  }, [user]);
 
   const addTaskToDate = async (date) => {
     if (!newTaskTitle.trim() || !user) return;
@@ -179,10 +179,13 @@ function Planner() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (!user) return;
+    const timer = setTimeout(() => {
       fetchPlans();
-    }
-  }, [user]);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [fetchPlans, user]);
 
 
   const getStartOfWeek = (date) => {
