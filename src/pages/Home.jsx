@@ -1,28 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "../services/firebase";
 import { collection, getDocs } from "firebase/firestore";
-
-const toDateKey = (date) => {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = `${d.getMonth() + 1}`.padStart(2, "0");
-  const day = `${d.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const getStreak = (logs, todayKey) => {
-  let streak = 0;
-  const cursor = new Date(`${todayKey}T00:00:00`);
-
-  while (true) {
-    const key = toDateKey(cursor);
-    if (!logs?.[key]) break;
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-
-  return streak;
-};
+import { buildHabitMetadata, getLastDateKeys, toDateKey } from "../utils/streaks";
 
 function Home() {
   const [loading, setLoading] = useState(true);
@@ -92,15 +71,14 @@ function Home() {
     const habitPreview = habits
       .map((habit) => {
         const logs = habit.logs || {};
+        const streakMeta = buildHabitMetadata(habit);
+        const keys = getLastDateKeys(7, new Date(`${todayKey}T00:00:00`));
         return {
           id: habit.id,
           title: habit.title,
-          streak: getStreak(logs, todayKey),
-          dots: Array.from({ length: 7 }).map((_, index) => {
-            const date = new Date(`${todayKey}T00:00:00`);
-            date.setDate(date.getDate() - (6 - index));
-            return Boolean(logs[toDateKey(date)]);
-          }),
+          frequency: habit.frequency || "daily",
+          streakMeta,
+          dots: keys.map((key) => Boolean(logs[key])),
         };
       })
       .slice(0, 3);
@@ -175,13 +153,16 @@ function Home() {
               ) : (
                 summary.habitPreview.map((habit) => (
                   <div key={habit.id} className="habit-line-row">
-                    <span>{habit.title}</span>
+                    <span>
+                      {habit.title}
+                      <small>🔥 {habit.frequency} • {habit.streakMeta.streakState} • 🛡️ {habit.streakMeta.freezesLeft}</small>
+                    </span>
                     <div className="tiny-dots">
                       {habit.dots.map((done, idx) => (
                         <em key={`${habit.id}-${idx}`} className={done ? "filled" : "empty"} />
                       ))}
                     </div>
-                    <strong>{habit.streak}</strong>
+                    <strong>🔥 {habit.streakMeta.currentStreak}</strong>
                   </div>
                 ))
               )}
