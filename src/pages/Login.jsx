@@ -4,6 +4,7 @@ import { signInWithPopup } from "firebase/auth";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
+import { isDisposableDomain, isPopularProvider, normalizeEmail } from "../utils/emailValidation";
 
 const POPULAR_EMAIL_DOMAINS = new Set([
   "gmail.com",
@@ -94,9 +95,29 @@ function Login() {
 
   const emailProviderError = useMemo(() => validateEmailProvider(email), [email]);
 
-  const googleLogin = async () => {
-    await signInWithPopup(auth, googleProvider);
-    navigate("/");
+  const runPolicyCheck = async (authEmail, mode) => {
+    const { normalizedEmail } = await authorizeAuthAttempt({
+      email: normalizeEmail(authEmail),
+      mode,
+    });
+
+  const validateEmailForAuth = (formattedEmail) => {
+    if (!formattedEmail.includes("@")) {
+      setError("Please enter a valid email address.");
+      return false;
+    }
+
+    if (isDisposableDomain(formattedEmail)) {
+      setError(DISPOSABLE_DOMAIN_ERROR);
+      return false;
+    }
+
+    if (!isPopularProvider(formattedEmail)) {
+      setError(POPULAR_PROVIDER_ERROR);
+      return false;
+    }
+
+    return true;
   };
 
   const beginOtpStep = async (credentialResult, formattedEmail) => {
@@ -125,7 +146,9 @@ function Login() {
       setError(emailProviderError);
       return;
     }
+  };
 
+  const emailLogin = async () => {
     try {
       const credentialResult = await signInWithEmailAndPassword(auth, formattedEmail, password);
       await beginOtpStep(credentialResult, formattedEmail);
@@ -169,14 +192,11 @@ function Login() {
     }
 
     try {
+      const formattedEmail = await runPolicyCheck(email, "signup");
       await createUserWithEmailAndPassword(auth, formattedEmail, password);
       navigate("/");
     } catch (err) {
-      if (err.code === "auth/email-already-in-use") {
-        setError("This email is already registered. Please login.");
-      } else {
-        setError("Something went wrong. Try again.");
-      }
+      setError(getErrorMessage(err, "Something went wrong. Try again."));
     }
   };
 
