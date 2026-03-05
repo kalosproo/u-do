@@ -8,7 +8,13 @@ import {
 } from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "../services/firebase";
-import { buildHabitMetadata, getHabitStreakSnapshot, getLastDateKeys, toDateKey } from "../utils/streaks";
+import {
+  buildHabitMetadata,
+  getHabitStreakSnapshot,
+  getRecentWindowKeys,
+  isHabitCompletedInWindow,
+  toDateKey,
+} from "../utils/streaks";
 
 const FILTER_OPTIONS = [
   ["all", "All"],
@@ -26,20 +32,15 @@ const normalizeHabit = (raw) => ({
 
 const isCompletedOn = (habit, dateKey) => Boolean(habit.logs?.[dateKey]);
 
-const getCompletionRate = (habit, todayKey, days = 30) => {
-  const keys = getLastDateKeys(days, new Date(`${todayKey}T00:00:00`));
-  const completed = keys.filter((key) => isCompletedOn(habit, key)).length;
-  return Math.round((completed / days) * 100);
+const getCompletionRate = (habit, frequency, todayDate = new Date(), windows = 30) => {
+  const keys = getRecentWindowKeys(frequency, windows, todayDate);
+  const completed = keys.filter((windowKey) => isHabitCompletedInWindow(habit, windowKey, frequency)).length;
+  return Math.round((completed / windows) * 100);
 };
 
-const getWeekDots = (habit, todayKey) => {
-  const keys = getLastDateKeys(7, new Date(`${todayKey}T00:00:00`));
-  return keys.map((key) => isCompletedOn(habit, key));
-};
-
-const getTenDayTrend = (habit, todayKey) => {
-  const keys = getLastDateKeys(10, new Date(`${todayKey}T00:00:00`));
-  return keys.map((key) => isCompletedOn(habit, key));
+const getWindowDots = (habit, frequency, count, todayDate = new Date()) => {
+  const keys = getRecentWindowKeys(frequency, count, todayDate);
+  return keys.map((windowKey) => isHabitCompletedInWindow(habit, windowKey, frequency));
 };
 
 const getMonthDays = (baseDate) => {
@@ -155,9 +156,9 @@ function Habits() {
       visibleHabits.map((habit) => {
         const snapshot = getHabitStreakSnapshot(habit);
         const streakMeta = buildHabitMetadata(habit);
-        const completionRate = getCompletionRate(habit, todayKey, 30);
-        const weekDots = getWeekDots(habit, todayKey);
-        const trend10 = getTenDayTrend(habit, todayKey);
+        const completionRate = getCompletionRate(habit, habit.frequency, new Date(), 30);
+        const weekDots = getWindowDots(habit, habit.frequency, 7, new Date());
+        const trend10 = getWindowDots(habit, habit.frequency, 10, new Date());
         const completedToday = isCompletedOn(habit, todayKey);
 
         return {

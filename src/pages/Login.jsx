@@ -110,6 +110,14 @@ function Login() {
     setInfo("");
   };
 
+  const emailProviderError = useMemo(() => validateEmailProvider(email), [email]);
+  const isOtpMode = !isSignup && Boolean(otpSession);
+
+  const resetMessages = () => {
+    setError("");
+    setInfo("");
+  };
+
   const runPolicyCheck = async (authEmail, mode) => {
     const { normalizedEmail } = await authorizeAuthAttempt({
       email: normalizeEmail(authEmail),
@@ -133,6 +141,25 @@ function Login() {
     }
 
     return true;
+  };
+
+  const startOtpVerification = async (formattedEmail) => {
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const sent = await sendOtpEmail({ email: formattedEmail, otp });
+
+    setOtpSession({
+      otp,
+      email: formattedEmail,
+      expiresAt: Date.now() + OTP_EXPIRY_MS,
+    });
+    setOtpInput("");
+
+    if (sent) {
+      setInfo("OTP sent to your email. Enter the 6-digit code to continue.");
+      return;
+    }
+
+    setInfo(`OTP delivery is in demo mode. Use code: ${otp}`);
   };
 
   const startOtpVerification = async (formattedEmail) => {

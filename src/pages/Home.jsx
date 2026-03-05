@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "../services/firebase";
 import { collection, getDocs } from "firebase/firestore";
-import { buildHabitMetadata, getLastDateKeys, toDateKey } from "../utils/streaks";
+import {
+  buildHabitMetadata,
+  getRecentWindowKeys,
+  isHabitCompletedInWindow,
+  toDateKey,
+} from "../utils/streaks";
 
 function Home() {
   const [loading, setLoading] = useState(true);
@@ -72,13 +77,14 @@ function Home() {
       .map((habit) => {
         const logs = habit.logs || {};
         const streakMeta = buildHabitMetadata(habit);
-        const keys = getLastDateKeys(7, new Date(`${todayKey}T00:00:00`));
+        const frequency = habit.frequency || "daily";
+        const keys = getRecentWindowKeys(frequency, 7, new Date(`${todayKey}T00:00:00`));
         return {
           id: habit.id,
           title: habit.title,
-          frequency: habit.frequency || "daily",
+          frequency,
           streakMeta,
-          dots: keys.map((key) => Boolean(logs[key])),
+          dots: keys.map((windowKey) => isHabitCompletedInWindow({ ...habit, logs }, windowKey, frequency)),
         };
       })
       .slice(0, 3);

@@ -73,6 +73,9 @@ const getWindowMeta = (dateValue, frequency) => {
   };
 };
 
+export const getWindowKeyForDate = (dateValue, frequency = "daily") =>
+  getWindowMeta(dateValue, frequency).key;
+
 const buildWindows = (frequency, todayDate) => {
   const { lookbackWindows } = getFrequencyRules(frequency);
   const windows = [];
@@ -199,6 +202,14 @@ export const getHabitStreakSnapshot = (habit, todayDate = new Date()) => {
   };
 };
 
+export const isHabitCompletedInWindow = (habit, windowKey, frequency = habit.frequency || "daily") => {
+  const logs = habit.logs || {};
+  return Object.entries(logs).some(([dateKey, done]) => {
+    if (!done) return false;
+    return getWindowKeyForDate(new Date(`${dateKey}T00:00:00`), frequency) === windowKey;
+  });
+};
+
 export const buildHabitMetadata = (habit, todayDate = new Date()) => {
   const snapshot = getHabitStreakSnapshot(habit, todayDate);
   const existingMeta = habit.streakMeta || {};
@@ -257,3 +268,16 @@ export const getLastDateKeys = (count, fromDate = new Date()) => Array.from({ le
   d.setDate(fromDate.getDate() - (count - 1 - index));
   return toDateKey(d);
 });
+
+export const getRecentWindowKeys = (frequency = "daily", count = 7, fromDate = new Date()) => {
+  const keys = [];
+  const cursor = new Date(fromDate);
+  cursor.setHours(0, 0, 0, 0);
+
+  for (let index = 0; index < count; index += 1) {
+    keys.unshift(getWindowKeyForDate(cursor, frequency));
+    cursor.setDate(cursor.getDate() - (frequency === "weekly" ? 7 : 1));
+  }
+
+  return keys;
+};
