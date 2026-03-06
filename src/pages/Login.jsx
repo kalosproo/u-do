@@ -2,32 +2,17 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithP
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
-import { POLICY_CODES, authorizeAuthAttempt } from "../services/authPolicy";
 import { auth, googleProvider } from "../services/firebase";
 
 const normalizeEmail = (value) => value.trim().toLowerCase();
 
-const validateEmailDomain = (email) => {
-  const [, domain = ""] = normalizeEmail(email).split("@");
+const validateEmail = (email) => {
+  const normalized = normalizeEmail(email);
+  const hasAt = normalized.includes("@");
+  const [, domain = ""] = normalized.split("@");
 
-  if (!domain) return "Enter a valid email address.";
-  if (domain !== "svce.edu.in") return "Only @svce.edu.in email addresses are allowed.";
+  if (!hasAt || !domain) return "Enter a valid email address.";
   return "";
-};
-
-const getPolicyErrorMessage = (policyCode) => {
-  switch (policyCode) {
-    case POLICY_CODES.INVALID_EMAIL:
-      return "Please enter a valid email address.";
-    case POLICY_CODES.DISPOSABLE_EMAIL_BLOCKED:
-      return "Temporary/disposable emails are not allowed.";
-    case POLICY_CODES.DOMAIN_NOT_ALLOWED:
-      return "Only @svce.edu.in email addresses are allowed.";
-    case POLICY_CODES.RATE_LIMITED:
-      return "Too many login attempts. Please try again later.";
-    default:
-      return "Unable to verify this sign in attempt.";
-  }
 };
 
 function Login() {
@@ -42,36 +27,17 @@ function Login() {
     setError("");
   };
 
-  const runPolicyCheck = async (authEmail, mode) => {
-    const normalizedEmail = normalizeEmail(authEmail);
-
-    try {
-      const { normalizedEmail: approvedEmail } = await authorizeAuthAttempt({
-        email: normalizedEmail,
-        mode,
-      });
-
-      return approvedEmail || normalizedEmail;
-    } catch (err) {
-      if (err?.policyCode) {
-        throw new Error(getPolicyErrorMessage(err.policyCode));
-      }
-
-      throw new Error("Could not verify email policy. Try again.");
-    }
-  };
-
   const emailLogin = async () => {
     resetMessages();
 
-    const validationError = validateEmailDomain(email);
+    const validationError = validateEmail(email);
     if (validationError) {
       setError(validationError);
       return;
     }
 
     try {
-      const formattedEmail = await runPolicyCheck(email, "login");
+      const formattedEmail = normalizeEmail(email);
       await signInWithEmailAndPassword(auth, formattedEmail, password);
       navigate("/");
     } catch (err) {
@@ -82,14 +48,14 @@ function Login() {
   const signupWithEmail = async () => {
     resetMessages();
 
-    const validationError = validateEmailDomain(email);
+    const validationError = validateEmail(email);
     if (validationError) {
       setError(validationError);
       return;
     }
 
     try {
-      const formattedEmail = await runPolicyCheck(email, "signup");
+      const formattedEmail = normalizeEmail(email);
       await createUserWithEmailAndPassword(auth, formattedEmail, password);
       navigate("/");
     } catch (err) {
@@ -129,7 +95,7 @@ function Login() {
 
         <label>
           Email
-          <input type="email" placeholder="you@svce.edu.in" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
 
         <label>

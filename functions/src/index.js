@@ -36,14 +36,14 @@ const enforceEmailPolicy = (email) => {
     throwPolicyError(EMAIL_POLICY.errorCodes.INVALID_EMAIL, "Email address is invalid.");
   }
 
-  if (EMAIL_POLICY.blockedDisposableDomains.includes(domain)) {
+  if (EMAIL_POLICY.blockedDisposableDomains.length > 0 && EMAIL_POLICY.blockedDisposableDomains.includes(domain)) {
     throwPolicyError(
       EMAIL_POLICY.errorCodes.DISPOSABLE_EMAIL_BLOCKED,
       "Disposable email addresses are not allowed.",
     );
   }
 
-  if (!EMAIL_POLICY.allowedProviders.includes(domain)) {
+  if (EMAIL_POLICY.allowedProviders.length > 0 && !EMAIL_POLICY.allowedProviders.includes(domain)) {
     throwPolicyError(EMAIL_POLICY.errorCodes.DOMAIN_NOT_ALLOWED, "Email domain is not allowed.");
   }
 
