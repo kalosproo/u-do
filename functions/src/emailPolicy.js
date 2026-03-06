@@ -1,16 +1,6 @@
 // Backend copy of email policy for server-side enforcement.
 export const EMAIL_POLICY = {
   allowedProviders: [
-    "gmail.com",
-    "outlook.com",
-    "hotmail.com",
-    "live.com",
-    "icloud.com",
-    "yahoo.com",
-    "proton.me",
-    "protonmail.com",
-    "aol.com",
-    "zoho.com",
     "svce.edu.in",
   ],
   blockedDisposableDomains: [
