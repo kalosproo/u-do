@@ -1,5 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { auth, db } from "../services/firebase";
 
 const FILTER_OPTIONS = [
@@ -34,9 +34,10 @@ const getMonthCells = (baseDate) => {
 };
 
 const normalizeHabit = (raw) => ({
-  ...raw,
-  frequency: raw.frequency || "daily",
-  logs: raw.logs || {},
+  id: raw.id,
+  title: raw.title || "Untitled",
+  frequency: raw.frequency || raw.type || "daily",
+  logs: raw.logs || raw.completedDays || {},
   createdAt: raw.createdAt || new Date(),
 });
 
@@ -65,8 +66,8 @@ const completionRate30 = (habit, today = new Date()) => {
 function Habits() {
   const [habits, setHabits] = useState([]);
   const [title, setTitle] = useState("");
-  const [habitType, setHabitType] = useState("strict");
-  const [reminderTime, setReminderTime] = useState("");
+  const [frequency, setFrequency] = useState("daily");
+  const [filter, setFilter] = useState("all");
 
   const user = auth.currentUser;
   const today = useMemo(() => new Date(), []);
@@ -92,72 +93,32 @@ function Habits() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return;
-
-    const timer = setTimeout(() => {
-      fetchHabits();
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [fetchHabits, user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const timer = setTimeout(async () => {
-      const snapshot = await getDocs(collection(db, "users", user.uid, "habits"));
-      const list = snapshot.docs.map((habitDoc) =>
-        normalizeHabit({
-          id: habitDoc.id,
-          ...habitDoc.data(),
-        })
-      );
-
-      setHabits(list);
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [user]);
+    fetchHabits();
+  }, [fetchHabits]);
 
   const addHabit = async () => {
     if (!title.trim() || !user) return;
 
     await addDoc(collection(db, "users", user.uid, "habits"), {
       title: title.trim(),
-      type: habitType,
-      reminderTime: reminderTime || null,
-      streak: 0,
-      completedDays: {},
+      frequency,
       createdAt: new Date(),
+      logs: {},
     });
 
     setTitle("");
-    setReminderTime("");
-    setHabitType("strict");
+    setFrequency("daily");
     fetchHabits();
   };
 
-  const toggleHabitForToday = async (habit, day) => {
-    if (!user || day !== today) return;
+  const toggleToday = async (habit) => {
+    if (!user) return;
 
-    const completedDays = { ...(habit.completedDays || {}) };
-    const alreadyDone = completedDays[day] === true;
-    let newStreak = Number(habit.streak || 0);
-
-    if (alreadyDone) {
-      delete completedDays[day];
-      newStreak = Math.max(newStreak - 1, 0);
+    const nextLogs = { ...(habit.logs || {}) };
+    if (nextLogs[todayKey]) {
+      delete nextLogs[todayKey];
     } else {
-      completedDays[day] = true;
-
-      if (habit.type === "strict") {
-        const yesterday = new Date(day);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yKey = getDateKey(yesterday);
-        newStreak = habit.completedDays?.[yKey] ? newStreak + 1 : 1;
-      } else {
-        newStreak = Object.keys(completedDays).length;
-      }
+      nextLogs[todayKey] = true;
     }
 
     await updateDoc(doc(db, "users", user.uid, "habits", habit.id), {
@@ -167,15 +128,16 @@ function Habits() {
     fetchHabits();
   };
 
-  const deleteHabitItem = async (habitId) => {
+  const removeHabit = async (habitId) => {
     if (!user) return;
     await deleteDoc(doc(db, "users", user.uid, "habits", habitId));
     fetchHabits();
   };
 
-  const visibleHabits = useMemo(() => {
-    return habits.filter((habit) => (filter === "all" ? true : habit.frequency === filter));
-  }, [filter, habits]);
+  const visibleHabits = useMemo(
+    () => habits.filter((habit) => (filter === "all" ? true : habit.frequency === filter)),
+    [filter, habits]
+  );
 
   const enrichedHabits = useMemo(
     () =>
@@ -201,25 +163,17 @@ function Habits() {
     return Math.round((completeDays / keys.length) * 100);
   }, [habits, monthCells]);
 
-      <table>
-        <thead>
-          <tr>
-            <th>Habit</th>
-            {days.map((day) => (
-              <th key={day}>{day.slice(8)}</th>
-            ))}
-          </tr>
-        </thead>
-
-        <tbody>
-          {habits.map((habit) => (
-            <tr
-              key={habit.id}
-              style={{
-                borderBottom: "1px solid rgba(255,255,255,0.05)",
-                height: "44px",
-                backgroundColor: isReminderMissed(habit) ? "rgba(255, 0, 0, 0.08)" : "transparent",
-              }}
+  return (
+    <section className="habits-page">
+      <header className="habits-header glass-panel">
+        <h2>Habit Tracker</h2>
+        <div className="habits-filter-group" role="tablist" aria-label="Habit filter">
+          {FILTER_OPTIONS.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={`habit-filter-pill ${filter === value ? "active" : ""}`}
+              onClick={() => setFilter(value)}
             >
               {label}
             </button>
@@ -229,9 +183,12 @@ function Habits() {
 
       <div className="habits-add-bar glass-panel">
         <input
-          placeholder="Enter habit name..."
+          placeholder="Habit name"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") addHabit();
+          }}
         />
 
         <select value={frequency} onChange={(event) => setFrequency(event.target.value)}>
@@ -239,7 +196,9 @@ function Habits() {
           <option value="weekly">Weekly</option>
         </select>
 
-        <button onClick={addHabit}>Add</button>
+        <button type="button" onClick={addHabit}>
+          Add
+        </button>
       </div>
 
       <div className="habits-grid">
@@ -255,6 +214,7 @@ function Habits() {
               >
                 <div className="today-main">
                   <button
+                    type="button"
                     className={`habit-checkbox ${habit.completedToday ? "checked" : ""}`}
                     onClick={() => toggleToday(habit)}
                   >
@@ -274,7 +234,7 @@ function Habits() {
                 </div>
 
                 <div className="today-meta">
-                  <button className="habit-delete" onClick={() => removeHabit(habit.id)}>
+                  <button type="button" className="habit-delete" onClick={() => removeHabit(habit.id)}>
                     ×
                   </button>
                 </div>
@@ -291,7 +251,7 @@ function Habits() {
                 <article key={`${habit.id}-analytics`} className="analytics-card">
                   <div>
                     <p>{habit.title}</p>
-                    <small>Streak: {habit.streak} days</small>
+                    <small>Streak: {habit.streak} day{habit.streak === 1 ? "" : "s"}</small>
                     <div className="trend-dots" aria-hidden>
                       {habit.trend10.map((done, index) => (
                         <span key={`${habit.id}-t-${index}`} className={done ? "dot-filled" : "dot-empty"} />
@@ -319,8 +279,8 @@ function Habits() {
             </div>
 
             <div className="month-weekdays">
-              {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
-                <span key={day}>{day}</span>
+              {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+                <span key={`${day}-${index}`}>{day}</span>
               ))}
             </div>
 
