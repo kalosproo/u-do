@@ -161,14 +161,14 @@ function Home() {
                   <div key={habit.id} className="habit-line-row">
                     <span>
                       {habit.title}
-                      <small>🔥 {habit.frequency} • {habit.streakMeta.streakState} • 🛡️ {habit.streakMeta.freezesLeft}</small>
+                      <small>{habit.frequency} • {habit.streakMeta.streakState} • freezes {habit.streakMeta.freezesLeft}</small>
                     </span>
                     <div className="tiny-dots">
                       {habit.dots.map((done, idx) => (
                         <em key={`${habit.id}-${idx}`} className={done ? "filled" : "empty"} />
                       ))}
                     </div>
-                    <strong>🔥 {habit.streakMeta.currentStreak}</strong>
+                    <strong>{habit.streakMeta.currentStreak}</strong>
                   </div>
                 ))
               )}
