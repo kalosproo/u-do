@@ -647,6 +647,16 @@ body {
   color: white;
   border-color: rgba(255,255,255,0.2);
 }
+
+.voice-command-btn {
+  background: linear-gradient(90deg, #3c63ff, #7858ff);
+}
+
+.voice-status {
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 8px;
+}
 /*finance category card fix*/
 .category-breakdown ul {
   padding: 12px 0;
