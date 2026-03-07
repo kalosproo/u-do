@@ -647,6 +647,16 @@ body {
   color: white;
   border-color: rgba(255,255,255,0.2);
 }
+
+.voice-command-btn {
+  background: linear-gradient(90deg, #3c63ff, #7858ff);
+}
+
+.voice-status {
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 8px;
+}
 /*finance category card fix*/
 .category-breakdown ul {
   padding: 12px 0;
@@ -2198,4 +2208,33 @@ body {
 /* buttery smooth motion across app */
 * {
   transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-assistant {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: min(520px, calc(100vw - 32px));
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(15, 16, 22, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  z-index: 50;
+}
+
+.assistant-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.assistant-controls {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.assistant-controls input {
+  margin: 0;
 }

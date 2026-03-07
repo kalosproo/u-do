@@ -19,6 +19,69 @@ const EXPENSE_CATEGORIES = [
 
 const INCOME_CATEGORIES = ["Salary", "Freelance", "Gift", "Other"];
 
+const SPEECH_RECOGNITION_SUPPORTED =
+  typeof window !== "undefined" &&
+  ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
+
+const toTitleCase = (value) =>
+  value
+    .toLowerCase()
+    .split(" ")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const detectType = (command) => {
+  if (/(income|earned|salary|received|credit)/.test(command)) {
+    return "income";
+  }
+
+  return "expense";
+};
+
+const detectAmount = (command) => {
+  const amountMatch = command.match(/(?:rs\.?|rupees?|inr)?\s*(\d+(?:\.\d+)?)/i);
+  return amountMatch?.[1] || "";
+};
+
+const detectCategory = (command, categories) => {
+  const matchedCategory = categories.find((cat) => command.includes(cat.toLowerCase()));
+  return matchedCategory || "";
+};
+
+const detectTitle = (command, chosenCategory) => {
+  const addPattern =
+    /(?:i\s*)?(?:spent|paid|add|added|record|recorded|earned|received)\s+(?:rs\.?|rupees?|inr)?\s*\d+(?:\.\d+)?\s*(?:on|for|towards|from)?\s*(.*)/i;
+  const titleMatch = command.match(addPattern);
+
+  if (titleMatch?.[1]) {
+    const cleanedTitle = titleMatch[1].replace(/today|yesterday|this month|last month/gi, "").trim();
+    if (cleanedTitle) {
+      return toTitleCase(cleanedTitle);
+    }
+  }
+
+  if (chosenCategory) {
+    return chosenCategory;
+  }
+
+  return "Voice Transaction";
+};
+
+const parseVoiceCommand = (rawCommand) => {
+  const command = rawCommand.toLowerCase().trim();
+  const detectedType = detectType(command);
+  const categories = detectedType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const parsedAmount = detectAmount(command);
+  const parsedCategory = detectCategory(command, categories);
+
+  return {
+    type: detectedType,
+    amount: parsedAmount,
+    category: parsedCategory,
+    title: detectTitle(command, parsedCategory),
+  };
+};
+
 const convertExpensesToCSV = (expenses) => {
   if (!expenses.length) return "";
 
@@ -37,6 +100,7 @@ function Finance() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [expenses, setExpenses] = useState([]);
   const [type, setType] = useState("expense");
+  const [voiceStatus, setVoiceStatus] = useState("");
 
   const categories = useMemo(
     () => (type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
@@ -90,19 +154,19 @@ function Finance() {
     return () => clearTimeout(timer);
   }, [fetchExpenses, user]);
 
-  const addExpense = async () => {
-    if (!title || !amount || !category || !user) {
+  const saveExpense = useCallback(async ({ entryTitle, entryAmount, entryCategory, entryType, entryDate }) => {
+    if (!entryTitle || !entryAmount || !entryCategory || !user) {
       alert("Please fill all fields");
-      return;
+      return false;
     }
 
     const newExpense = {
       id: crypto.randomUUID(),
-      title,
-      amount: Number(amount),
-      type,
-      category,
-      date,
+      title: entryTitle,
+      amount: Number(entryAmount),
+      type: entryType,
+      category: entryCategory,
+      date: entryDate,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -117,11 +181,94 @@ function Finance() {
       await addDoc(collection(db, "users", user.uid, "expenses"), newExpense);
     }
 
+    return true;
+  }, [expenses, saveExpensesToLocal, user]);
+
+  const addExpense = async () => {
+    const ok = await saveExpense({
+      entryTitle: title,
+      entryAmount: amount,
+      entryCategory: category,
+      entryType: type,
+      entryDate: date,
+    });
+
+    if (!ok) return;
+
     setTitle("");
     setAmount("");
     setCategory("");
     setType("expense");
   };
+
+  const handleVoiceCommand = () => {
+    if (!SPEECH_RECOGNITION_SUPPORTED) {
+      setVoiceStatus("Voice input is not supported in this browser.");
+      return;
+    }
+
+    const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognitionClass();
+
+    recognition.lang = "en-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setVoiceStatus("Listening... try: I spent 60 rupees on fuel");
+    };
+
+    recognition.onerror = () => {
+      setVoiceStatus("Could not understand audio. Please try again.");
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || "";
+      const parsed = parseVoiceCommand(transcript);
+
+      if (!parsed.amount) {
+        setVoiceStatus(`Heard: "${transcript}". Could not detect amount.`);
+        return;
+      }
+
+      setType(parsed.type);
+      setAmount(parsed.amount);
+      setTitle(parsed.title);
+      setCategory(parsed.category);
+      setVoiceStatus(
+        `Heard: "${transcript}". Filled ${parsed.type} ₹${parsed.amount}${
+          parsed.category ? ` in ${parsed.category}` : ""
+        }.`
+      );
+    };
+
+    recognition.start();
+  };
+
+
+  useEffect(() => {
+    const handleAssistantFinance = async (event) => {
+      const data = event.detail || {};
+      if (data.type) setType(data.type);
+      if (data.amount) setAmount(String(data.amount));
+      if (data.title) setTitle(data.title);
+      if (data.category) setCategory(data.category);
+      if (data.date) setDate(data.date);
+
+      if (data.autoAdd) {
+        await saveExpense({
+          entryTitle: data.title,
+          entryAmount: data.amount,
+          entryCategory: data.category,
+          entryType: data.type || "expense",
+          entryDate: data.date || date,
+        });
+      }
+    };
+
+    window.addEventListener("udo-assistant-finance", handleAssistantFinance);
+    return () => window.removeEventListener("udo-assistant-finance", handleAssistantFinance);
+  }, [date, saveExpense]);
 
   const deleteExpense = async (id) => {
     if (!id || !user) return;
@@ -232,7 +379,11 @@ function Finance() {
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
 
             <button onClick={addExpense}>{type === "income" ? "Add Income" : "Add Expense"}</button>
+            <button onClick={handleVoiceCommand} className="voice-command-btn">
+              🎤 AI Voice Command
+            </button>
             <button onClick={downloadFinanceCSV}>Export CSV</button>
+            {voiceStatus ? <p className="voice-status">{voiceStatus}</p> : null}
           </div>
 
           <div className="card category-breakdown">

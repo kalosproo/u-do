@@ -11,6 +11,7 @@ import Tasks from "./pages/Tasks";
 import Habits from "./pages/Habits";
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
+import AppAssistant from "./components/AppAssistant";
 
 function Protected({ user, children }) {
   if (!user) return <Navigate to="/login" replace />;
@@ -106,6 +107,8 @@ function App() {
         />
       </Routes>
     </main>
+
+    {user ? <AppAssistant /> : null}
   </BrowserRouter>
 )};
 export default App;

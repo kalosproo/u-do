@@ -64,22 +64,31 @@ function Tasks() {
     setTasks(taskList);
   }, [user]);
 
-  const addTask = async () => {
-    if (!title.trim() || !user) return;
+  const createTask = useCallback(async ({ taskTitle, taskDueDate, taskPriority }) => {
+    if (!taskTitle.trim() || !user) return;
 
     await addDoc(collection(db, "users", user.uid, "tasks"), {
-      title: title.trim(),
-      dueDate,
-      priority,
+      title: taskTitle.trim(),
+      dueDate: taskDueDate,
+      priority: taskPriority,
       status: "todo",
       completed: false,
       createdAt: new Date(),
     });
 
+    fetchTasks();
+  }, [fetchTasks, user]);
+
+  const addTask = async () => {
+    await createTask({
+      taskTitle: title,
+      taskDueDate: dueDate,
+      taskPriority: priority,
+    });
+
     setTitle("");
     setDueDate("");
     setPriority("medium");
-    fetchTasks();
   };
 
   const deleteTask = async (id) => {
@@ -103,6 +112,27 @@ function Tasks() {
     const nextStatus = task.status === "done" ? "todo" : "done";
     await updateTaskStatus(task, nextStatus);
   };
+
+
+  useEffect(() => {
+    const handleAssistantTask = async (event) => {
+      const data = event.detail || {};
+      if (data.title) setTitle(data.title);
+      if (data.dueDate) setDueDate(data.dueDate);
+      if (data.priority) setPriority(data.priority);
+
+      if (data.autoAdd) {
+        await createTask({
+          taskTitle: data.title || "New Task",
+          taskDueDate: data.dueDate || "",
+          taskPriority: data.priority || "medium",
+        });
+      }
+    };
+
+    window.addEventListener("udo-assistant-task", handleAssistantTask);
+    return () => window.removeEventListener("udo-assistant-task", handleAssistantTask);
+  }, [createTask]);
 
   useEffect(() => {
     if (!user) return;
