@@ -126,14 +126,14 @@ function Planner() {
     setPlans(list);
   }, [user]);
 
-  const addTaskToDate = async (date) => {
-    if (!newTaskTitle.trim() || !user) return;
+  const createPlan = useCallback(async ({ planTitle, planDate }) => {
+    if (!planTitle.trim() || !user) return;
 
-    const dateKey = formatDateKey(date);
+    const dateKey = formatDateKey(planDate);
     const dayPlans = plans.filter((plan) => plan.date === dateKey && !plan.completed);
 
     await addDoc(collection(db, "users", user.uid, "planner"), {
-      title: newTaskTitle.trim(),
+      title: planTitle.trim(),
       date: dateKey,
       priority: "medium",
       completed: false,
@@ -141,9 +141,14 @@ function Planner() {
       createdAt: new Date(),
     });
 
+    fetchPlans();
+  }, [fetchPlans, plans, user]);
+
+  const addTaskToDate = async (date) => {
+    await createPlan({ planTitle: newTaskTitle, planDate: date });
+
     setNewTaskTitle("");
     setActiveInputDate(null);
-    fetchPlans();
   };
 
   const updateTask = async (planId) => {
@@ -177,6 +182,25 @@ function Planner() {
     await deleteDoc(doc(db, "users", user.uid, "planner", planId));
     fetchPlans();
   };
+
+
+  useEffect(() => {
+    const handleAssistantPlan = async (event) => {
+      const data = event.detail || {};
+      if (data.title) setNewTaskTitle(data.title);
+      if (data.date) setActiveInputDate(data.date);
+
+      if (data.autoAdd) {
+        await createPlan({
+          planTitle: data.title || "New Plan",
+          planDate: data.date || new Date(),
+        });
+      }
+    };
+
+    window.addEventListener("udo-assistant-plan", handleAssistantPlan);
+    return () => window.removeEventListener("udo-assistant-plan", handleAssistantPlan);
+  }, [createPlan]);
 
   useEffect(() => {
     if (!user) return;

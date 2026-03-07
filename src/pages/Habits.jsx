@@ -96,20 +96,44 @@ function Habits() {
     fetchHabits();
   }, [fetchHabits]);
 
-  const addHabit = async () => {
-    if (!title.trim() || !user) return;
+  const createHabit = useCallback(async ({ habitTitle, habitFrequency }) => {
+    if (!habitTitle.trim() || !user) return;
 
     await addDoc(collection(db, "users", user.uid, "habits"), {
-      title: title.trim(),
-      frequency,
+      title: habitTitle.trim(),
+      frequency: habitFrequency,
       createdAt: new Date(),
       logs: {},
     });
 
+    fetchHabits();
+  }, [fetchHabits, user]);
+
+  const addHabit = async () => {
+    await createHabit({ habitTitle: title, habitFrequency: frequency });
+
     setTitle("");
     setFrequency("daily");
-    fetchHabits();
   };
+
+
+  useEffect(() => {
+    const handleAssistantHabit = async (event) => {
+      const data = event.detail || {};
+      if (data.title) setTitle(data.title);
+      if (data.frequency) setFrequency(data.frequency);
+
+      if (data.autoAdd) {
+        await createHabit({
+          habitTitle: data.title || "New Habit",
+          habitFrequency: data.frequency || "daily",
+        });
+      }
+    };
+
+    window.addEventListener("udo-assistant-habit", handleAssistantHabit);
+    return () => window.removeEventListener("udo-assistant-habit", handleAssistantHabit);
+  }, [createHabit]);
 
   const toggleToday = async (habit) => {
     if (!user) return;
