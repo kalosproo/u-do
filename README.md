@@ -42,17 +42,18 @@ This branch includes the refreshed U.Do app branding and login behavior:
 - Email/password auth restricted to `@svce.edu.in` addresses.
 
 
-## Gemini API setup
+## DeepSeek API setup
 
-To run the U.Do Assistant, set your Gemini API key in a local env file:
+To run the U.Do Assistant, set your DeepSeek API key in a local env file:
 
-1. Copy `.env.example` to `.env.local`.
-2. Replace `VITE_GEMINI_API` with your real key.
-3. Restart the dev server.
+1. Create or edit `.env.local`.
+2. Add `VITE_DEEPSEEK_API_KEY` with your real key.
+3. (Optional) Set `VITE_DEEPSEEK_MODEL` to override the default model (`deepseek-chat`).
+4. Restart the dev server.
 
 ```bash
 cp .env.example .env.local
-# edit .env.local and paste your key
+echo "VITE_DEEPSEEK_API_KEY=your_key_here" >> .env.local
 npm run dev
 ```
 
