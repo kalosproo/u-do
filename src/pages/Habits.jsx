@@ -93,7 +93,11 @@ function Habits() {
   }, [user]);
 
   useEffect(() => {
-    fetchHabits();
+    const timer = setTimeout(() => {
+      fetchHabits();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [fetchHabits]);
 
   const addHabit = async () => {

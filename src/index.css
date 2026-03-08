@@ -2199,3 +2199,96 @@ body {
 * {
   transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+.assistant-card {
+  gap: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.assistant-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.assistant-header-row small {
+  color: #a0a4b8;
+  font-size: 12px;
+}
+
+.assistant-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assistant-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.assistant-response {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 100px;
+  color: #d8dbe7;
+}
+
+.assistant-cta-row {
+  display: flex;
+  gap: 10px;
+}
+
+.assistant-apply-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.assistant-status {
+  font-size: 12px;
+  color: #a9f0c6;
+}
+
+.assistant-summary {
+  margin-bottom: 10px;
+}
+
+.assistant-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.assistant-action-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 10px;
+}
+
+.assistant-action-list li span {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: #a0a4b8;
+}
+
+.assistant-action-list li small {
+  color: #d2d7ea;
+  font-size: 12px;
+}
+
+.assistant-motivation {
+  margin-top: 8px;
+  display: block;
+  color: #9ed7ff;
+}
