@@ -7,7 +7,6 @@ import {
   isHabitCompletedInWindow,
   toDateKey,
 } from "../utils/streaks";
-import AIAssistant from "../components/AIAssistant";
 
 function Home() {
   const [loading, setLoading] = useState(true);
@@ -105,35 +104,6 @@ function Home() {
 
 
 
-  const assistantContext = useMemo(() => ({
-    tasks: {
-      totalTasks: summary.totalTasks,
-      completedTasks: summary.completedTasks,
-      pendingTasks: summary.pendingTasks,
-      overdueTasks: tasks.filter((task) => (task.dueDate || "") < todayKey && !(task.status === "done" || task.completed)).length,
-    },
-    planner: {
-      todaysPlans: summary.todayPlans,
-      upcoming: summary.upcomingPlans.map((plan) => ({
-        title: plan.title,
-        date: plan.date || null,
-        time: plan.time || null,
-      })),
-    },
-    finance: {
-      todayBalanceChange: summary.todayAmount,
-      monthlyBalanceChange: summary.monthAmount,
-      spendRatio: summary.progress,
-    },
-    habits: summary.habitPreview.map((habit) => ({
-      title: habit.title,
-      frequency: habit.frequency,
-      currentStreak: habit.streakMeta.currentStreak,
-      streakState: habit.streakMeta.streakState,
-      freezesLeft: habit.streakMeta.freezesLeft,
-    })),
-  }), [summary, tasks, todayKey]);
-
   if (loading) {
     return <section className="dashboard-page"><p>Loading dashboard...</p></section>;
   }
@@ -206,8 +176,6 @@ function Home() {
               )}
             </div>
           </article>
-
-          <AIAssistant context={assistantContext} />
         </div>
       </div>
     </section>

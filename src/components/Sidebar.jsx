@@ -3,6 +3,7 @@ import { signOut } from "firebase/auth";
 import { FiGrid, FiDollarSign, FiCalendar, FiCheckSquare, FiActivity, FiLogOut } from "react-icons/fi";
 import { auth } from "../services/firebase";
 import BrandLogo from "./BrandLogo";
+import AIAssistant from "./AIAssistant";
 
 const links = [
   { to: "/", label: "Home", icon: <FiGrid /> },
@@ -44,6 +45,8 @@ function Sidebar() {
             </NavLink>
           ))}
         </nav>
+
+        <AIAssistant />
       </div>
 
       <div className="sidebar-bottom">
