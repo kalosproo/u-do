@@ -26,11 +26,14 @@ Return valid JSON only with this exact shape:
   "summary": "short plan summary",
   "actions": [
     {
-      "type": "task" | "plan" | "habit",
+      "type": "task" | "plan" | "habit" | "finance",
       "title": "specific action title",
       "date": "YYYY-MM-DD or empty string",
       "priority": "low" | "medium" | "high",
       "frequency": "daily" | "weekly",
+      "amount": 0,
+      "category": "category name",
+      "transactionType": "income" | "expense",
       "why": "one line reason"
     }
   ],
@@ -38,13 +41,14 @@ Return valid JSON only with this exact shape:
 }
 
 Rules:
-- Keep actions between 3 and 5.
+- Keep actions between 3 and 6.
 - Include at least one task or plan action.
-- Include at least one habit action.
+- Include at least one habit or finance action.
 - Keep title practical and actionable.
 - For type task, use due date when possible.
 - For type plan, include date when possible.
 - For type habit, include frequency.
+- For type finance, include amount, category and transactionType.
 - No markdown. JSON only.`;
 }
 
@@ -56,15 +60,18 @@ function normalizePlan(raw) {
     motivation: typeof raw?.motivation === "string" ? raw.motivation.trim() : "You are closer than you think.",
     actions: actions
       .map((action) => ({
-        type: ["task", "plan", "habit"].includes(action?.type) ? action.type : "task",
+        type: ["task", "plan", "habit", "finance"].includes(action?.type) ? action.type : "task",
         title: typeof action?.title === "string" ? action.title.trim() : "Untitled action",
         date: typeof action?.date === "string" ? action.date.trim() : "",
         priority: ["low", "medium", "high"].includes(action?.priority) ? action.priority : "medium",
         frequency: action?.frequency === "weekly" ? "weekly" : "daily",
+        amount: Number(action?.amount) || 0,
+        category: typeof action?.category === "string" && action.category.trim() ? action.category.trim() : "General",
+        transactionType: action?.transactionType === "income" ? "income" : "expense",
         why: typeof action?.why === "string" ? action.why.trim() : "Recommended by assistant.",
       }))
       .filter((action) => action.title)
-      .slice(0, 5),
+      .slice(0, 6),
   };
 }
 

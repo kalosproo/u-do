@@ -2292,3 +2292,11 @@ body {
   display: block;
   color: #9ed7ff;
 }
+
+.assistant-cta-row {
+  flex-wrap: wrap;
+}
+
+.assistant-cta-row button {
+  min-width: 150px;
+}
