@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const API_KEY = "AIzaSyC8sHi30aQWvZ7x7YFlyHZ6tE3RHF8CaL8";
+const API_KEY = import.meta.env.VITE_GEMINI_API || "";
 const MODEL_NAME = "gemini-1.5-flash";
 
 function getModel() {
@@ -75,6 +75,29 @@ function normalizePlan(raw) {
   };
 }
 
+function formatAssistantError(error) {
+  const status = error?.status || error?.cause?.status;
+  const message = (error?.message || "").toLowerCase();
+
+  if (!API_KEY) {
+    return "Gemini API key not found. Add VITE_GEMINI_API to your .env file and restart the app.";
+  }
+
+  if (status === 401 || status === 403 || message.includes("api key") || message.includes("permission")) {
+    return "Assistant access is blocked. Check your Gemini API key and API restrictions.";
+  }
+
+  if (status === 429 || message.includes("quota") || message.includes("rate")) {
+    return "Assistant usage limit reached. Please wait a moment and try again.";
+  }
+
+  if (message.includes("json") || message.includes("unexpected token")) {
+    return "Assistant returned an invalid response. Please try again.";
+  }
+
+  return "U.Do Assistant is temporarily unavailable. Please try again in a moment.";
+}
+
 export async function generateAssistantPlan(question, context = {}) {
   const cleanedQuestion = question?.trim();
 
@@ -114,9 +137,7 @@ export async function generateAssistantPlan(question, context = {}) {
         actions: [],
         motivation: "Keep going — consistency compounds.",
       },
-      error: !API_KEY
-        ? "Gemini API key not found. Add VITE_GEMINI_API to your .env file and restart the app."
-        : "U.Do Assistant is temporarily unavailable. Please try again in a moment.",
+      error: formatAssistantError(error),
     };
   }
 }
