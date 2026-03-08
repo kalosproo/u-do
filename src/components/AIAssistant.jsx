@@ -12,10 +12,6 @@ const QUICK_ACTIONS = [
 function summarizeWorkspace({ tasks, plans, expenses, habits }) {
   const today = new Date().toISOString().slice(0, 10);
   const completedTasks = tasks.filter((task) => task.status === "done" || task.completed).length;
-  const todayPlans = plans.filter((plan) => plan.date === today).length;
-  const todayBalanceChange = expenses
-    .filter((entry) => entry.date === today)
-    .reduce((sum, entry) => sum + (entry.type === "income" ? Number(entry.amount || 0) : -Number(entry.amount || 0)), 0);
 
   return {
     tasks: {
@@ -24,18 +20,14 @@ function summarizeWorkspace({ tasks, plans, expenses, habits }) {
       pendingTasks: Math.max(0, tasks.length - completedTasks),
     },
     planner: {
-      todaysPlans: todayPlans,
+      todaysPlans: plans.filter((plan) => plan.date === today).length,
       upcoming: plans
         .filter((plan) => !plan.completed)
         .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
         .slice(0, 3)
-        .map((plan) => ({
-          title: plan.title,
-          date: plan.date || "",
-        })),
+        .map((plan) => ({ title: plan.title, date: plan.date || "" })),
     },
     finance: {
-      todayBalanceChange,
       spendRatio: expenses.length
         ? Math.min(
             100,
@@ -55,22 +47,18 @@ function summarizeWorkspace({ tasks, plans, expenses, habits }) {
 }
 
 function AIAssistant() {
+  const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [plan, setPlan] = useState(null);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
 
-  const fallbackQuestion = useMemo(
-    () => "Create a high-impact plan for my day and add it to my workspace.",
-    []
-  );
+  const fallbackQuestion = useMemo(() => "Create a high-impact plan for my day and add it to my workspace.", []);
 
   const fetchWorkspaceContext = useCallback(async () => {
     const user = auth.currentUser;
-    if (!user) {
-      throw new Error("Please login first.");
-    }
+    if (!user) throw new Error("Please login first.");
 
     const [taskSnap, planSnap, expenseSnap, habitSnap] = await Promise.all([
       getDocs(collection(db, "users", user.uid, "tasks")),
@@ -139,16 +127,17 @@ function AIAssistant() {
 
   const applyActions = async (actions) => {
     if (!actions?.length) return 0;
-
     let successCount = 0;
+
     for (const action of actions) {
       try {
         await applySingleAction(action);
         successCount += 1;
       } catch {
-        // continue with remaining actions
+        // continue remaining actions
       }
     }
+
     return successCount;
   };
 
@@ -169,8 +158,6 @@ function AIAssistant() {
       if (autoApply && response.plan?.actions?.length) {
         setApplying(true);
         const applied = await applyActions(response.plan.actions);
-        setApplying(false);
-
         setStatus(
           applied
             ? `Completed: ${applied} actions were added to your workspace.`
@@ -186,70 +173,74 @@ function AIAssistant() {
   };
 
   return (
-    <section className="sidebar-assistant" aria-label="U.Do assistant panel">
-      <div className="assistant-header-row">
-        <h4>U.Do Assistant</h4>
-        <small>Premium AI</small>
-      </div>
+    <>
+      <button type="button" className="assistant-launch-btn" onClick={() => setIsOpen(true)}>
+        Open AI Assistant
+      </button>
 
-      <p className="assistant-muted">
-        Describe your goal once. I will generate and apply optimized actions to your workspace.
-      </p>
+      {isOpen ? (
+        <div className="assistant-overlay" role="dialog" aria-modal="true" aria-label="U.Do Assistant">
+          <section className="assistant-popup">
+            <div className="assistant-popup-header">
+              <h4>U.Do Assistant</h4>
+              <button type="button" className="assistant-close-btn" onClick={() => setIsOpen(false)}>
+                ✕
+              </button>
+            </div>
 
-      <div className="assistant-quick-actions">
-        {QUICK_ACTIONS.map((prompt) => (
-          <button key={prompt} type="button" className="assistant-chip" onClick={() => handleAsk(prompt, true)}>
-            {prompt}
-          </button>
-        ))}
-      </div>
+            <p className="assistant-muted">Ask once, and I can generate and apply actions for your workspace.</p>
 
-      <textarea
-        className="assistant-input"
-        placeholder="Example: Plan my day with top priorities and auto add everything"
-        value={question}
-        onChange={(event) => setQuestion(event.target.value)}
-        rows={3}
-      />
+            <div className="assistant-quick-actions">
+              {QUICK_ACTIONS.map((prompt) => (
+                <button key={prompt} type="button" className="assistant-chip" onClick={() => handleAsk(prompt, true)}>
+                  {prompt}
+                </button>
+              ))}
+            </div>
 
-      <div className="assistant-cta-row">
-        <button type="button" onClick={() => handleAsk(question, true)} disabled={loading || applying}>
-          {loading || applying ? "Processing..." : "Generate + Apply"}
-        </button>
+            <textarea
+              className="assistant-input"
+              placeholder="Example: Plan my day with top priorities and auto add everything"
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              rows={3}
+            />
 
-        <button
-          type="button"
-          className="assistant-apply-btn"
-          onClick={() => handleAsk(question, false)}
-          disabled={loading || applying}
-        >
-          Generate Only
-        </button>
-      </div>
+            <div className="assistant-cta-row">
+              <button type="button" onClick={() => handleAsk(question, true)} disabled={loading || applying}>
+                {loading || applying ? "Processing..." : "Generate + Apply"}
+              </button>
+              <button type="button" className="assistant-apply-btn" onClick={() => handleAsk(question, false)} disabled={loading || applying}>
+                Generate Only
+              </button>
+            </div>
 
-      {status ? <p className="assistant-status">{status}</p> : null}
+            {status ? <p className="assistant-status">{status}</p> : null}
 
-      <div className="assistant-response">
-        <p className="assistant-summary">{plan?.summary || "Your assistant output appears here."}</p>
+            <div className="assistant-response">
+              <p className="assistant-summary">{plan?.summary || "Your assistant output appears here."}</p>
 
-        {plan?.actions?.length ? (
-          <ul className="assistant-action-list">
-            {plan.actions.map((action, index) => (
-              <li key={`${action.type}-${action.title}-${index}`}>
-                <strong>{action.title}</strong>
-                <span>
-                  {action.type.toUpperCase()}
-                  {action.date ? ` • ${action.date}` : ""}
-                </span>
-                <small>{action.why}</small>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+              {plan?.actions?.length ? (
+                <ul className="assistant-action-list">
+                  {plan.actions.map((action, index) => (
+                    <li key={`${action.type}-${action.title}-${index}`}>
+                      <strong>{action.title}</strong>
+                      <span>
+                        {action.type.toUpperCase()}
+                        {action.date ? ` • ${action.date}` : ""}
+                      </span>
+                      <small>{action.why}</small>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
 
-        {plan?.motivation ? <em className="assistant-motivation">{plan.motivation}</em> : null}
-      </div>
-    </section>
+              {plan?.motivation ? <em className="assistant-motivation">{plan.motivation}</em> : null}
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </>
   );
 }
 
