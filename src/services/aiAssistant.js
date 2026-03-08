@@ -1,16 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const API_KEY = import.meta.env.VITE_GEMINI_API || "";
-const MODEL_NAME = "gemini-1.5-flash";
-
-function getModel() {
-  if (!API_KEY) {
-    throw new Error("Gemini API key missing. Set VITE_GEMINI_API in your environment.");
-  }
-
-  const genAI = new GoogleGenerativeAI(API_KEY);
-  return genAI.getGenerativeModel({ model: MODEL_NAME });
-}
+const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY || "";
+const MODEL_NAME = import.meta.env.VITE_DEEPSEEK_MODEL || "deepseek-chat";
+const API_URL = "https://api.deepseek.com/chat/completions";
 
 function buildAssistantPrompt({ question, context }) {
   return `You are U.Do Assistant, an automation copilot for a student productivity workspace.
@@ -75,16 +65,22 @@ function normalizePlan(raw) {
   };
 }
 
+function extractJson(content) {
+  const cleaned = (content || "").trim();
+  const fencedMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  return fencedMatch ? fencedMatch[1].trim() : cleaned;
+}
+
 function formatAssistantError(error) {
-  const status = error?.status || error?.cause?.status;
+  const status = error?.status;
   const message = (error?.message || "").toLowerCase();
 
   if (!API_KEY) {
-    return "Gemini API key not found. Add VITE_GEMINI_API to your .env file and restart the app.";
+    return "DeepSeek API key not found. Add VITE_DEEPSEEK_API_KEY to your .env file and restart the app.";
   }
 
   if (status === 401 || status === 403 || message.includes("api key") || message.includes("permission")) {
-    return "Assistant access is blocked. Check your Gemini API key and API restrictions.";
+    return "Assistant access is blocked. Check your DeepSeek API key and API restrictions.";
   }
 
   if (status === 429 || message.includes("quota") || message.includes("rate")) {
@@ -96,6 +92,36 @@ function formatAssistantError(error) {
   }
 
   return "U.Do Assistant is temporarily unavailable. Please try again in a moment.";
+}
+
+async function requestAssistantPlan(prompt) {
+  if (!API_KEY) {
+    throw new Error("DeepSeek API key missing. Set VITE_DEEPSEEK_API_KEY in your environment.");
+  }
+
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: MODEL_NAME,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const apiError = new Error(payload?.error?.message || "DeepSeek request failed.");
+    apiError.status = response.status;
+    throw apiError;
+  }
+
+  const data = await response.json();
+  return data?.choices?.[0]?.message?.content || "{}";
 }
 
 export async function generateAssistantPlan(question, context = {}) {
@@ -113,16 +139,9 @@ export async function generateAssistantPlan(question, context = {}) {
   }
 
   try {
-    const model = getModel();
-    const result = await model.generateContent({
-  contents: buildAssistantPrompt({ question: cleanedQuestion, context }),
-      generationConfig: {
-        responseMimeType: "application/json",
-      },
-    });
-
-    const text = result.response.text();
-    const parsed = JSON.parse(text);
+    const prompt = buildAssistantPrompt({ question: cleanedQuestion, context });
+    const text = await requestAssistantPlan(prompt);
+    const parsed = JSON.parse(extractJson(text));
 
     return {
       plan: normalizePlan(parsed),
