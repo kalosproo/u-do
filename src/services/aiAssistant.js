@@ -91,8 +91,8 @@ export async function generateAssistantPlan(question, context = {}) {
 
   try {
     const model = getModel();
-    const result = await model.generateContent({
-      contents: buildAssistantPrompt({ question: cleanedQuestion, context }),
+    const result = await model.generateContent(
+  buildAssistantPrompt({ question: cleanedQuestion, context })
       generationConfig: {
         responseMimeType: "application/json",
       },
