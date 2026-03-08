@@ -40,3 +40,20 @@ This branch includes the refreshed U.Do app branding and login behavior:
 - U.Do logo used in app UI and favicon.
 - Login subtitle centered in the auth card.
 - Email/password auth restricted to `@svce.edu.in` addresses.
+
+
+## Gemini API setup
+
+To run the U.Do Assistant, set your Gemini API key in a local env file:
+
+1. Copy `.env.example` to `.env.local`.
+2. Replace `VITE_GEMINI_API` with your real key.
+3. Restart the dev server.
+
+```bash
+cp .env.example .env.local
+# edit .env.local and paste your key
+npm run dev
+```
+
+> Keep `.env.local` out of git. Commit only `.env.example`.

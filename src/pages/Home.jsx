@@ -102,6 +102,8 @@ function Home() {
     };
   }, [expenses, habits, plans, tasks, todayKey]);
 
+
+
   if (loading) {
     return <section className="dashboard-page"><p>Loading dashboard...</p></section>;
   }
