@@ -54,6 +54,7 @@ function Sidebar() {
           <FiLogOut />
           <span>Logout</span>
         </button>
+        <p className="sidebar-credits">© 2026 U.Do — Crafted by Muttukuru Rahul.</p>
       </div>
     </aside>
   );
