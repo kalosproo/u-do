@@ -1962,6 +1962,14 @@ body {
   color: #d8dbe6;
 }
 
+.sidebar-credits {
+  margin-top: 12px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+}
+
 
 .page-title-pill {
   display: inline-flex;
