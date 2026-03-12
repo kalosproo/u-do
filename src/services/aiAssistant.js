@@ -1,6 +1,4 @@
-const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY || "";
-const MODEL_NAME = import.meta.env.VITE_DEEPSEEK_MODEL || "deepseek-chat";
-const API_URL = "https://api.deepseek.com/chat/completions";
+import { askDeepSeek } from "./deepseek";
 
 function buildAssistantPrompt({ question, context }) {
   return `You are U.Do Assistant, an automation copilot for a student productivity workspace.
@@ -72,11 +70,11 @@ function extractJson(content) {
 }
 
 function formatAssistantError(error) {
-  const status = error?.status;
-  const message = (error?.message || "").toLowerCase();
+  const status = error?.response?.status || error?.status;
+  const message = (error?.response?.data?.error?.message || error?.message || "").toLowerCase();
 
-  if (!API_KEY) {
-    return "DeepSeek API key not found. Add VITE_DEEPSEEK_API_KEY to your .env file and restart the app.";
+  if (message.includes("deepseek api key missing") || !import.meta.env.VITE_DEEPSEEK_API) {
+    return "DeepSeek API key not found. Add VITE_DEEPSEEK_API to your .env file and restart the app.";
   }
 
   if (status === 401 || status === 403 || message.includes("api key") || message.includes("permission")) {
@@ -94,34 +92,24 @@ function formatAssistantError(error) {
   return "U.Do Assistant is temporarily unavailable. Please try again in a moment.";
 }
 
-async function requestAssistantPlan(prompt) {
-  if (!API_KEY) {
-    throw new Error("DeepSeek API key missing. Set VITE_DEEPSEEK_API_KEY in your environment.");
-  }
-
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: MODEL_NAME,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-    }),
-  });
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    const apiError = new Error(payload?.error?.message || "DeepSeek request failed.");
-    apiError.status = response.status;
-    throw apiError;
-  }
-
-  const data = await response.json();
-  return data?.choices?.[0]?.message?.content || "{}";
+function buildFallbackPlan() {
+  return {
+    summary: "Assistant is currently unavailable.",
+    actions: [
+      {
+        type: "task",
+        title: "Choose one high-impact task to complete today",
+        date: "",
+        priority: "high",
+        frequency: "daily",
+        amount: 0,
+        category: "General",
+        transactionType: "expense",
+        why: "A single clear priority prevents overwhelm and builds momentum.",
+      },
+    ],
+    motivation: "Keep going — consistency compounds.",
+  };
 }
 
 export async function generateAssistantPlan(question, context = {}) {
@@ -140,7 +128,7 @@ export async function generateAssistantPlan(question, context = {}) {
 
   try {
     const prompt = buildAssistantPrompt({ question: cleanedQuestion, context });
-    const text = await requestAssistantPlan(prompt);
+    const text = await askDeepSeek(prompt);
     const parsed = JSON.parse(extractJson(text));
 
     return {
@@ -151,11 +139,7 @@ export async function generateAssistantPlan(question, context = {}) {
     console.error("AI Error:", error);
 
     return {
-      plan: {
-        summary: "Assistant is currently unavailable.",
-        actions: [],
-        motivation: "Keep going — consistency compounds.",
-      },
+      plan: buildFallbackPlan(),
       error: formatAssistantError(error),
     };
   }
