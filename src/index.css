@@ -2378,3 +2378,146 @@ body {
     padding: 14px;
   }
 }
+
+/* ===== HABITS REDESIGN v2 ===== */
+.habits-page {
+  gap: 16px;
+}
+
+.habits-header {
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.habits-subtitle {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  max-width: 680px;
+  font-size: 13px;
+}
+
+.habits-header-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.habits-layout-switch,
+.habits-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.habits-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.habits-stat-card {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.habits-stat-card span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.habits-stat-card strong {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.habits-add-bar {
+  grid-template-columns: 2fr 0.8fr auto;
+}
+
+.habits-add-bar button {
+  font-weight: 600;
+}
+
+.today-card,
+.analytics-card {
+  transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.today-card:hover,
+.analytics-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.today-main p,
+.analytics-card p {
+  font-size: clamp(1.3rem, 1.2rem + 0.5vw, 2rem);
+}
+
+.today-main small {
+  display: block;
+}
+
+.habits-layout-board .habits-grid {
+  grid-template-columns: 1fr;
+}
+
+.habits-layout-board .right-panel {
+  grid-template-columns: 1fr 1fr;
+}
+
+.habits-layout-compact .habits-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.habits-layout-compact .habits-grid {
+  grid-template-columns: 1fr;
+}
+
+.habits-layout-compact .today-list,
+.habits-layout-compact .analytics-list {
+  gap: 8px;
+}
+
+.habits-layout-compact .today-card,
+.habits-layout-compact .analytics-card {
+  padding: 10px;
+}
+
+.habits-layout-focus .today-panel {
+  border-color: rgba(163, 191, 255, 0.35);
+}
+
+.habits-layout-focus .habit-checkbox.checked {
+  background: linear-gradient(120deg, rgba(124, 58, 237, 0.6), rgba(59, 130, 246, 0.75));
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 1024px) {
+  .habits-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .habits-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .habits-header-controls {
+    align-items: flex-start;
+  }
+
+  .habits-layout-board .right-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .habits-summary-grid,
+  .habits-layout-compact .habits-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

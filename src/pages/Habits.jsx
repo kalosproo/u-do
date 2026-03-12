@@ -8,6 +8,12 @@ const FILTER_OPTIONS = [
   ["weekly", "Weekly"],
 ];
 
+const LAYOUT_OPTIONS = [
+  ["focus", "Focus"],
+  ["board", "Board"],
+  ["compact", "Compact"],
+];
+
 const toDateKey = (date) => date.toISOString().split("T")[0];
 
 const getDateKeysBackward = (count, fromDate = new Date()) =>
@@ -68,6 +74,7 @@ function Habits() {
   const [title, setTitle] = useState("");
   const [frequency, setFrequency] = useState("daily");
   const [filter, setFilter] = useState("all");
+  const [layout, setLayout] = useState("focus");
 
   const user = auth.currentUser;
   const today = useMemo(() => new Date(), []);
@@ -167,23 +174,80 @@ function Habits() {
     return Math.round((completeDays / keys.length) * 100);
   }, [habits, monthCells]);
 
+  const summary = useMemo(() => {
+    const completedToday = enrichedHabits.filter((habit) => habit.completedToday).length;
+    const avgCompletion =
+      enrichedHabits.length > 0
+        ? Math.round(enrichedHabits.reduce((sum, habit) => sum + habit.completionRate, 0) / enrichedHabits.length)
+        : 0;
+
+    const strongestStreak = enrichedHabits.reduce((max, habit) => Math.max(max, habit.streak), 0);
+
+    return {
+      total: enrichedHabits.length,
+      completedToday,
+      avgCompletion,
+      strongestStreak,
+    };
+  }, [enrichedHabits]);
+
   return (
-    <section className="habits-page">
+    <section className={`habits-page habits-layout-${layout}`}>
       <header className="habits-header glass-panel">
-        <h2>Habit Tracker</h2>
-        <div className="habits-filter-group" role="tablist" aria-label="Habit filter">
-          {FILTER_OPTIONS.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              className={`habit-filter-pill ${filter === value ? "active" : ""}`}
-              onClick={() => setFilter(value)}
-            >
-              {label}
-            </button>
-          ))}
+        <div>
+          <h2>Habit Tracker</h2>
+          <p className="habits-subtitle">Redesigned with multiple visual systems and productivity-first analytics.</p>
+        </div>
+
+        <div className="habits-header-controls">
+          <div className="habits-filter-group" role="tablist" aria-label="Habit filter">
+            {FILTER_OPTIONS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`habit-filter-pill ${filter === value ? "active" : ""}`}
+                onClick={() => setFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="habits-layout-switch" role="tablist" aria-label="Habit layout">
+            {LAYOUT_OPTIONS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`habit-filter-pill ${layout === value ? "active" : ""}`}
+                onClick={() => setLayout(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
+
+      <section className="habits-summary-grid">
+        <article className="glass-panel habits-stat-card">
+          <span>Tracked habits</span>
+          <strong>{summary.total}</strong>
+        </article>
+        <article className="glass-panel habits-stat-card">
+          <span>Completed today</span>
+          <strong>
+            {summary.completedToday}/{Math.max(summary.total, 1)}
+          </strong>
+        </article>
+        <article className="glass-panel habits-stat-card">
+          <span>30-day completion</span>
+          <strong>{summary.avgCompletion}%</strong>
+        </article>
+        <article className="glass-panel habits-stat-card">
+          <span>Best streak</span>
+          <strong>{summary.strongestStreak}d</strong>
+        </article>
+      </section>
 
       <div className="habits-add-bar glass-panel">
         <input
@@ -201,7 +265,7 @@ function Habits() {
         </select>
 
         <button type="button" onClick={addHabit}>
-          Add
+          Add habit
         </button>
       </div>
 
