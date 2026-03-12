@@ -8,6 +8,13 @@ const FILTER_OPTIONS = [
   ["weekly", "Weekly"],
 ];
 
+const VIEW_OPTIONS = [
+  ["balanced", "Balanced"],
+  ["focus", "Focus"],
+  ["analytics", "Analytics"],
+  ["compact", "Compact"],
+];
+
 const toDateKey = (date) => date.toISOString().split("T")[0];
 
 const getDateKeysBackward = (count, fromDate = new Date()) =>
@@ -68,6 +75,7 @@ function Habits() {
   const [title, setTitle] = useState("");
   const [frequency, setFrequency] = useState("daily");
   const [filter, setFilter] = useState("all");
+  const [viewMode, setViewMode] = useState("balanced");
 
   const user = auth.currentUser;
   const today = useMemo(() => new Date(), []);
@@ -167,10 +175,63 @@ function Habits() {
     return Math.round((completeDays / keys.length) * 100);
   }, [habits, monthCells]);
 
+  const summary = useMemo(() => {
+    const total = enrichedHabits.length;
+    const doneToday = enrichedHabits.filter((habit) => habit.completedToday).length;
+    const consistency = total ? Math.round((doneToday / total) * 100) : 0;
+    const strongestStreak = enrichedHabits.reduce((best, habit) => Math.max(best, habit.streak), 0);
+    const avgCompletion =
+      total > 0
+        ? Math.round(
+            enrichedHabits.reduce((sum, habit) => sum + habit.completionRate, 0) / total
+          )
+        : 0;
+
+    return {
+      total,
+      doneToday,
+      consistency,
+      strongestStreak,
+      avgCompletion,
+    };
+  }, [enrichedHabits]);
+
+  const topHabits = useMemo(
+    () => [...enrichedHabits].sort((a, b) => b.completionRate - a.completionRate).slice(0, 3),
+    [enrichedHabits]
+  );
+
   return (
-    <section className="habits-page">
-      <header className="habits-header glass-panel">
-        <h2>Habit Tracker</h2>
+    <section className={`habits-page habits-view-${viewMode}`}>
+      <header className="habits-hero glass-panel">
+        <div>
+          <p className="habits-overline">Habit OS</p>
+          <h2>Upgrade your habit engine</h2>
+          <p className="habits-subtitle">Plan, execute, and analyze your daily system with flexible layouts.</p>
+        </div>
+        <div className="habits-summary-strip" aria-label="Habit summary">
+          <article className="habit-kpi-card">
+            <span>Today</span>
+            <strong>
+              {summary.doneToday}/{summary.total}
+            </strong>
+          </article>
+          <article className="habit-kpi-card">
+            <span>Consistency</span>
+            <strong>{summary.consistency}%</strong>
+          </article>
+          <article className="habit-kpi-card">
+            <span>Top Streak</span>
+            <strong>{summary.strongestStreak}d</strong>
+          </article>
+          <article className="habit-kpi-card">
+            <span>30d Avg</span>
+            <strong>{summary.avgCompletion}%</strong>
+          </article>
+        </div>
+      </header>
+
+      <div className="habits-toolbar glass-panel">
         <div className="habits-filter-group" role="tablist" aria-label="Habit filter">
           {FILTER_OPTIONS.map(([value, label]) => (
             <button
@@ -183,11 +244,24 @@ function Habits() {
             </button>
           ))}
         </div>
-      </header>
+
+        <div className="habits-filter-group" role="tablist" aria-label="Layout options">
+          {VIEW_OPTIONS.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={`habit-filter-pill ${viewMode === value ? "active" : ""}`}
+              onClick={() => setViewMode(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="habits-add-bar glass-panel">
         <input
-          placeholder="Habit name"
+          placeholder="Create a new habit"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           onKeyDown={(event) => {
@@ -201,13 +275,16 @@ function Habits() {
         </select>
 
         <button type="button" onClick={addHabit}>
-          Add
+          Add habit
         </button>
       </div>
 
       <div className="habits-grid">
         <section className="today-panel glass-panel">
-          <h3>Today&apos;s Habits</h3>
+          <div className="panel-title-row">
+            <h3>Execution board</h3>
+            <small>{enrichedHabits.length} active</small>
+          </div>
           <div className="today-list">
             {enrichedHabits.map((habit) => (
               <article
@@ -227,8 +304,9 @@ function Habits() {
 
                   <div>
                     <p>{habit.title}</p>
-                    <small>Streak: {habit.streak} day{habit.streak === 1 ? "" : "s"}</small>
-                    <small>Completion: {habit.completionRate}%</small>
+                    <small>
+                      {habit.frequency} • streak {habit.streak} day{habit.streak === 1 ? "" : "s"}
+                    </small>
                     <div className="week-dots" aria-hidden>
                       {habit.weekDots.map((done, index) => (
                         <span key={`${habit.id}-w-${index}`} className={done ? "dot-filled" : "dot-empty"} />
@@ -238,6 +316,7 @@ function Habits() {
                 </div>
 
                 <div className="today-meta">
+                  <strong>{habit.completionRate}%</strong>
                   <button type="button" className="habit-delete" onClick={() => removeHabit(habit.id)}>
                     ×
                   </button>
@@ -249,7 +328,20 @@ function Habits() {
 
         <section className="right-panel">
           <div className="analytics-panel glass-panel">
-            <h3>Habit Analytics</h3>
+            <div className="panel-title-row">
+              <h3>Insights</h3>
+              <small>Top performers</small>
+            </div>
+
+            <div className="top-habits-row">
+              {topHabits.map((habit) => (
+                <article key={`${habit.id}-top`} className="top-habit-chip">
+                  <p>{habit.title}</p>
+                  <strong>{habit.completionRate}%</strong>
+                </article>
+              ))}
+            </div>
+
             <div className="analytics-list">
               {enrichedHabits.map((habit) => (
                 <article key={`${habit.id}-analytics`} className="analytics-card">
