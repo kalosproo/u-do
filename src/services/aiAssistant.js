@@ -1,4 +1,4 @@
-import { askDeepSeek } from "./deepseek";
+import { askDeepSeek } from "./deepseek.js";
 
 function buildAssistantPrompt({ question, context }) {
   return `You are U.Do Assistant, an automation copilot for a student productivity workspace.
