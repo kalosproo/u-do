@@ -42,18 +42,18 @@ This branch includes the refreshed U.Do app branding and login behavior:
 - Email/password auth restricted to `@svce.edu.in` addresses.
 
 
-## DeepSeek API setup
+## OpenAI API setup
 
-To run the U.Do Assistant, set your DeepSeek API key in a local env file:
+To run the U.Do Assistant, set your OpenAI API key in a local env file:
 
 1. Create or edit `.env.local`.
-2. Add `VITE_DEEPSEEK_API_KEY` with your real key.
-3. (Optional) Set `VITE_DEEPSEEK_MODEL` to override the default model (`deepseek-chat`).
+2. Add `VITE_OPENAI_API_KEY` with your real key.
+3. (Optional) Set `VITE_OPENAI_MODEL` to override the default model (`gpt-4o-mini`).
 4. Restart the dev server.
 
 ```bash
 cp .env.example .env.local
-echo "VITE_DEEPSEEK_API_KEY=your_key_here" >> .env.local
+echo "VITE_OPENAI_API_KEY=your_key_here" >> .env.local
 npm run dev
 ```
 
