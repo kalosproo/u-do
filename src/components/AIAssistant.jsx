@@ -175,7 +175,7 @@ function AIAssistant() {
   return (
     <>
       <button type="button" className="assistant-launch-btn" onClick={() => setIsOpen(true)}>
-        Open AI Assistant
+        OpenAI Assistant
       </button>
 
       {isOpen ? (
