@@ -1,18 +1,20 @@
 import axios from "axios";
 
-const API_URL = "https://api.deepseek.com/v1/chat/completions";
-const API_KEY = import.meta.env.VITE_DEEPSEEK_API;
+const API_URL = "https://api.openai.com/v1/chat/completions";
+const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+const MODEL = import.meta.env.VITE_OPENAI_MODEL || "gpt-4o-mini";
 
-export async function askDeepSeek(prompt) {
+export async function askOpenAI(prompt) {
   if (!API_KEY) {
-    throw new Error("DeepSeek API key missing. Set VITE_DEEPSEEK_API in your environment.");
+    throw new Error("OpenAI API key missing. Set VITE_OPENAI_API_KEY in your environment.");
   }
 
   const response = await axios.post(
     API_URL,
     {
-      model: "deepseek-chat",
+      model: MODEL,
       messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
     },
     {
       headers: {
