@@ -2378,3 +2378,60 @@ body {
     padding: 14px;
   }
 }
+
+.profile-page {
+  max-width: 880px;
+  margin: 0 auto;
+  display: grid;
+  gap: 18px;
+}
+
+.profile-card {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-avatar img,
+img.profile-avatar {
+  object-fit: cover;
+}
+
+.profile-avatar-large {
+  width: 58px;
+  height: 58px;
+  font-size: 20px;
+}
+
+.profile-actions-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.profile-actions-stack {
+  grid-template-columns: repeat(2, minmax(160px, max-content));
+  justify-content: flex-start;
+}
+
+.danger-action {
+  background: #8f1f2f;
+}
+
+.profile-status {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .profile-actions-row,
+  .profile-actions-stack {
+    grid-template-columns: 1fr;
+  }
+}

@@ -9,6 +9,7 @@ import Finance from "./pages/Finance";
 import Planner from "./pages/Planner";
 import Tasks from "./pages/Tasks";
 import Habits from "./pages/Habits";
+import Profile from "./pages/Profile";
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
 
@@ -95,6 +96,15 @@ function App() {
           element={
             <Protected user={user}>
               <Habits />
+            </Protected>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <Protected user={user}>
+              <Profile />
             </Protected>
           }
         />
