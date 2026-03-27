@@ -277,7 +277,13 @@ body.dark .text-muted {
   font-size: 20px;
   font-weight: 600;
   overflow-y: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-top::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .sidebar-nav {
@@ -2098,6 +2104,14 @@ body {
   border-radius: 14px;
   margin-bottom: 14px;
   background: rgba(255, 255, 255, 0.02);
+  text-decoration: none;
+  color: inherit;
+}
+
+.sidebar-profile.active,
+.sidebar-profile:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .profile-text {
@@ -2464,7 +2478,7 @@ body {
 
 .profile-status {
   margin-top: 12px;
-  color: rgba(195, 255, 220, 0.95);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 

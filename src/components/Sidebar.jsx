@@ -40,17 +40,16 @@ function Sidebar() {
       <div className="sidebar-top">
         <BrandLogo compact />
 
-        <div className="sidebar-profile" aria-label="Current user profile">
+        <NavLink to="/profile" className="sidebar-profile" aria-label="Open profile">
           {profilePhoto ? (
             <img src={profilePhoto} alt="Profile" className="profile-avatar profile-avatar-image" />
           ) : (
             <span className="profile-avatar">{avatarText}</span>
           )}
           <div className="profile-text">
-            <strong className="profile-name" title={userName}>{userName}</strong>
-            <small className="profile-email" title="Profile">Profile</small>
+            <strong className="profile-name">Profile</strong>
           </div>
-        </div>
+        </NavLink>
 
         <nav className="nav-links">
           {links.map(({ to, label, icon }) => (
