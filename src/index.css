@@ -2466,3 +2466,9 @@ body {
   margin-top: 12px;
   color: rgba(195, 255, 220, 0.95);
 }
+
+
+.profile-data-copy {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.78);
+}
