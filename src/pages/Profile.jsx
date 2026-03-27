@@ -244,7 +244,10 @@ function Profile() {
           workspace.
         </p>
         <div className="profile-actions">
-          <label className="upload-label" htmlFor="profile-data-import">
+          <label
+            className={`upload-label ${busyAction !== "" ? "is-disabled" : ""}`}
+            htmlFor="profile-data-import"
+          >
             {busyAction === "import" ? "Importing..." : "Import Backup"}
           </label>
           <input

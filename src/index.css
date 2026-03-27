@@ -2459,13 +2459,44 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 16px;
+  padding: 10px 18px;
+  min-height: 40px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #1a1c22;
+  border: 1px solid transparent;
+  background: var(--primary);
   color: #fff;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+}
+
+.upload-label:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 18px rgba(124, 92, 255, 0.35),
+    0 8px 20px rgba(0, 0, 0, 0.45);
+  filter: brightness(1.06);
+}
+
+.upload-label.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  filter: none;
+}
+
+.profile-actions button {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+}
+
+.profile-actions button:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 18px rgba(124, 92, 255, 0.35),
+    0 8px 20px rgba(0, 0, 0, 0.45);
+  filter: brightness(1.06);
 }
 
 .upload-input {
