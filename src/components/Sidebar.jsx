@@ -1,9 +1,18 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
-import { FiGrid, FiDollarSign, FiCalendar, FiCheckSquare, FiActivity, FiLogOut } from "react-icons/fi";
+import {
+  FiGrid,
+  FiDollarSign,
+  FiCalendar,
+  FiCheckSquare,
+  FiActivity,
+  FiUser,
+  FiLogOut,
+} from "react-icons/fi";
 import { auth } from "../services/firebase";
 import BrandLogo from "./BrandLogo";
 import AIAssistant from "./AIAssistant";
+import { resolveUserPhoto } from "../utils/profilePhoto";
 
 const links = [
   { to: "/", label: "Home", icon: <FiGrid /> },
@@ -11,6 +20,7 @@ const links = [
   { to: "/planner", label: "Planner", icon: <FiCalendar /> },
   { to: "/tasks", label: "Tasks", icon: <FiCheckSquare /> },
   { to: "/habits", label: "Habits", icon: <FiActivity /> },
+  { to: "/profile", label: "Profile", icon: <FiUser /> },
 ];
 
 function Sidebar() {
@@ -18,6 +28,7 @@ function Sidebar() {
   const user = auth.currentUser;
   const userName = user?.displayName || user?.email?.split("@")[0] || "User";
   const avatarText = userName.trim().charAt(0).toUpperCase();
+  const profilePhoto = resolveUserPhoto(user);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -30,10 +41,14 @@ function Sidebar() {
         <BrandLogo compact />
 
         <div className="sidebar-profile" aria-label="Current user profile">
-          <span className="profile-avatar">{avatarText}</span>
+          {profilePhoto ? (
+            <img src={profilePhoto} alt="Profile" className="profile-avatar profile-avatar-image" />
+          ) : (
+            <span className="profile-avatar">{avatarText}</span>
+          )}
           <div className="profile-text">
             <strong className="profile-name" title={userName}>{userName}</strong>
-            <small className="profile-email" title={user?.email || "Signed in"}>{user?.email || "Signed in"}</small>
+            <small className="profile-email" title="Profile">Profile</small>
           </div>
         </div>
 
