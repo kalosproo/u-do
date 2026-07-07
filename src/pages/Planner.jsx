@@ -33,6 +33,7 @@ function PlannerTaskCard({
 }) {
   return (
     <div
+      title={plan.title}
       className={`task-card priority-${plan.priority} ${plan.completed ? "task-completed" : ""} ${
         isDragging ? "task-dragging" : ""
       }`}
@@ -345,7 +346,12 @@ function Planner() {
       </div>
 
       <div className="planner-meta">
-        <span className="meta-pill">Completed {completedWeekTasks} / {totalWeekTasks} this week</span>
+        <div className="planner-progress-card" aria-label={`Completed ${completedWeekTasks} of ${totalWeekTasks} this week`}>
+          <span className="meta-pill">Completed {completedWeekTasks} / {totalWeekTasks} this week</span>
+          <div className="planner-progress-track">
+            <span style={{ width: `${totalWeekTasks ? Math.round((completedWeekTasks / totalWeekTasks) * 100) : 0}%` }} />
+          </div>
+        </div>
       </div>
 
       <div className="week-grid-wrap">
