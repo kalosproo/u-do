@@ -134,8 +134,8 @@ function Home() {
                 <p className="muted-line">No upcoming plans.</p>
               ) : (
                 summary.upcomingPlans.map((plan) => (
-                  <div key={plan.id} className="line-row">
-                    <span>{plan.date || "No date"}{plan.time ? ` • ${plan.time}` : ""}</span>
+                  <div key={plan.id} className="line-row upcoming-plan-row">
+                    <span className="date-badge">{plan.date || "No date"}{plan.time ? ` • ${plan.time}` : ""}</span>
                     <strong>{plan.title}</strong>
                   </div>
                 ))
@@ -145,10 +145,12 @@ function Home() {
         </div>
 
         <div className="dashboard-right-stack">
-          <article className="wire-card">
+          <article className="wire-card finance-card">
             <h3>Finance</h3>
-            <p>Today: ₹ {summary.todayAmount}</p>
-            <p>This Month: ₹ {summary.monthAmount}</p>
+            <div className="finance-amounts">
+              <p><span>Today</span><strong>₹ {summary.todayAmount}</strong></p>
+              <p><span>This Month</span><strong>₹ {summary.monthAmount}</strong></p>
+            </div>
             <div className="wire-progress"><span style={{ width: `${summary.progress}%` }} /></div>
             <small>{summary.progress}% spend ratio</small>
           </article>
