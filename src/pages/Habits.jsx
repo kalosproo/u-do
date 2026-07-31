@@ -8,6 +8,12 @@ const FILTER_OPTIONS = [
   ["weekly", "Weekly"],
 ];
 
+const VIEW_OPTIONS = [
+  ["focus", "Focus"],
+  ["split", "Split"],
+  ["compact", "Compact"],
+];
+
 const toDateKey = (date) => date.toISOString().split("T")[0];
 
 const getDateKeysBackward = (count, fromDate = new Date()) =>
@@ -68,6 +74,7 @@ function Habits() {
   const [title, setTitle] = useState("");
   const [frequency, setFrequency] = useState("daily");
   const [filter, setFilter] = useState("all");
+  const [viewMode, setViewMode] = useState("split");
 
   const user = auth.currentUser;
   const today = useMemo(() => new Date(), []);
@@ -167,23 +174,79 @@ function Habits() {
     return Math.round((completeDays / keys.length) * 100);
   }, [habits, monthCells]);
 
+  const completedTodayCount = useMemo(
+    () => enrichedHabits.filter((habit) => habit.completedToday).length,
+    [enrichedHabits]
+  );
+
+  const averageCompletion = useMemo(() => {
+    if (!enrichedHabits.length) return 0;
+    const total = enrichedHabits.reduce((sum, habit) => sum + habit.completionRate, 0);
+    return Math.round(total / enrichedHabits.length);
+  }, [enrichedHabits]);
+
+  const longestStreak = useMemo(
+    () => enrichedHabits.reduce((max, habit) => Math.max(max, habit.streak), 0),
+    [enrichedHabits]
+  );
+
   return (
-    <section className="habits-page">
+    <section className={`habits-page habits-view-${viewMode}`}>
       <header className="habits-header glass-panel">
-        <h2>Habit Tracker</h2>
-        <div className="habits-filter-group" role="tablist" aria-label="Habit filter">
-          {FILTER_OPTIONS.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              className={`habit-filter-pill ${filter === value ? "active" : ""}`}
-              onClick={() => setFilter(value)}
-            >
-              {label}
-            </button>
-          ))}
+        <div>
+          <h2>Habit Studio</h2>
+          <p className="habits-subtitle">Craft routines with flexible layouts and clearer momentum signals.</p>
+        </div>
+
+        <div className="habits-header-controls">
+          <div className="habits-filter-group" role="tablist" aria-label="Habit filter">
+            {FILTER_OPTIONS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`habit-filter-pill ${filter === value ? "active" : ""}`}
+                onClick={() => setFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="habits-filter-group" role="tablist" aria-label="Layout presets">
+            {VIEW_OPTIONS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`habit-filter-pill ${viewMode === value ? "active" : ""}`}
+                onClick={() => setViewMode(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
+
+      <section className="habits-snapshot-grid">
+        <article className="habit-stat glass-panel">
+          <small>Completed Today</small>
+          <strong>
+            {completedTodayCount}/{enrichedHabits.length || 0}
+          </strong>
+        </article>
+        <article className="habit-stat glass-panel">
+          <small>30-Day Avg Completion</small>
+          <strong>{averageCompletion}%</strong>
+        </article>
+        <article className="habit-stat glass-panel">
+          <small>Longest Streak</small>
+          <strong>{longestStreak} days</strong>
+        </article>
+        <article className="habit-stat glass-panel">
+          <small>Month Consistency</small>
+          <strong>{monthlyProgress}%</strong>
+        </article>
+      </section>
 
       <div className="habits-add-bar glass-panel">
         <input
@@ -201,7 +264,7 @@ function Habits() {
         </select>
 
         <button type="button" onClick={addHabit}>
-          Add
+          Add Habit
         </button>
       </div>
 
@@ -229,6 +292,9 @@ function Habits() {
                     <p>{habit.title}</p>
                     <small>Streak: {habit.streak} day{habit.streak === 1 ? "" : "s"}</small>
                     <small>Completion: {habit.completionRate}%</small>
+                    <div className="habit-progress-track" aria-hidden>
+                      <span style={{ width: `${habit.completionRate}%` }} />
+                    </div>
                     <div className="week-dots" aria-hidden>
                       {habit.weekDots.map((done, index) => (
                         <span key={`${habit.id}-w-${index}`} className={done ? "dot-filled" : "dot-empty"} />
