@@ -1,11 +1,33 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { FiBarChart2, FiCalendar, FiCheckCircle, FiLayout, FiTarget, FiTrendingUp, FiZap } from "react-icons/fi";
 import { auth, db } from "../services/firebase";
 
 const FILTER_OPTIONS = [
   ["all", "All"],
   ["daily", "Daily"],
   ["weekly", "Weekly"],
+];
+
+const VIEW_OPTIONS = [
+  {
+    value: "focus",
+    label: "Focus",
+    description: "Today-first execution layout",
+    icon: FiTarget,
+  },
+  {
+    value: "analytics",
+    label: "Analytics",
+    description: "Data-rich trend centric view",
+    icon: FiBarChart2,
+  },
+  {
+    value: "calendar",
+    label: "Calendar",
+    description: "Consistency heat and month rhythm",
+    icon: FiCalendar,
+  },
 ];
 
 const toDateKey = (date) => date.toISOString().split("T")[0];
@@ -68,6 +90,7 @@ function Habits() {
   const [title, setTitle] = useState("");
   const [frequency, setFrequency] = useState("daily");
   const [filter, setFilter] = useState("all");
+  const [viewMode, setViewMode] = useState("focus");
 
   const user = auth.currentUser;
   const today = useMemo(() => new Date(), []);
@@ -159,6 +182,24 @@ function Habits() {
 
   const monthCells = useMemo(() => getMonthCells(today), [today]);
 
+  const stats = useMemo(() => {
+    const all = habits.length;
+    const completedToday = habits.filter((habit) => isCompletedOn(habit, todayKey)).length;
+    const bestStreak = habits.reduce((max, habit) => Math.max(max, calculateStreak(habit, today)), 0);
+    const averageCompletion =
+      all > 0
+        ? Math.round(habits.reduce((sum, habit) => sum + completionRate30(habit, today), 0) / all)
+        : 0;
+
+    return {
+      all,
+      completedToday,
+      completionPct: all ? Math.round((completedToday / all) * 100) : 0,
+      bestStreak,
+      averageCompletion,
+    };
+  }, [habits, today, todayKey]);
+
   const monthlyProgress = useMemo(() => {
     const keys = monthCells.filter(Boolean);
     if (!keys.length) return 0;
@@ -168,21 +209,85 @@ function Habits() {
   }, [habits, monthCells]);
 
   return (
-    <section className="habits-page">
+    <section className={`habits-page habits-variant-${viewMode}`}>
       <header className="habits-header glass-panel">
-        <h2>Habit Tracker</h2>
-        <div className="habits-filter-group" role="tablist" aria-label="Habit filter">
-          {FILTER_OPTIONS.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              className={`habit-filter-pill ${filter === value ? "active" : ""}`}
-              onClick={() => setFilter(value)}
-            >
-              {label}
-            </button>
-          ))}
+        <div>
+          <h2>Habit Performance Studio</h2>
+          <p className="habits-subtitle">Choose your preferred workflow style and execute with consistency.</p>
         </div>
+
+        <div className="habits-header-controls">
+          <div className="habits-filter-group" role="tablist" aria-label="Habit filter">
+            {FILTER_OPTIONS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`habit-filter-pill ${filter === value ? "active" : ""}`}
+                onClick={() => setFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="habits-view-group" role="tablist" aria-label="Habit layout options">
+            {VIEW_OPTIONS.map((option) => {
+              const IconComponent = option.icon;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`habit-view-pill ${viewMode === option.value ? "active" : ""}`}
+                  onClick={() => setViewMode(option.value)}
+                  title={option.description}
+                >
+                  <IconComponent aria-hidden />
+                  <span>{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </header>
+
+      <section className="habits-highlights">
+        <article className="habit-highlight-card glass-panel">
+          <FiCheckCircle aria-hidden />
+          <div>
+            <small>Completed Today</small>
+            <strong>
+              {stats.completedToday}/{stats.all || 0}
+            </strong>
+          </div>
+        </article>
+        <article className="habit-highlight-card glass-panel">
+          <FiZap aria-hidden />
+          <div>
+            <small>Execution Rate</small>
+            <strong>{stats.completionPct}%</strong>
+          </div>
+        </article>
+        <article className="habit-highlight-card glass-panel">
+          <FiTrendingUp aria-hidden />
+          <div>
+            <small>Best Current Streak</small>
+            <strong>{stats.bestStreak} days</strong>
+          </div>
+        </article>
+        <article className="habit-highlight-card glass-panel">
+          <FiLayout aria-hidden />
+          <div>
+            <small>30-day Average</small>
+            <strong>{stats.averageCompletion}%</strong>
+          </div>
+        </article>
+      </section>
+
+      <header className="habits-mode-banner glass-panel">
+        {viewMode === "focus" && <p>Focus mode keeps Today&apos;s Habits dominant so you can act faster.</p>}
+        {viewMode === "analytics" && <p>Analytics mode expands progress intelligence to optimize your routines.</p>}
+        {viewMode === "calendar" && <p>Calendar mode emphasizes monthly consistency and streak protection.</p>}
       </header>
 
       <div className="habits-add-bar glass-panel">
@@ -209,6 +314,12 @@ function Habits() {
         <section className="today-panel glass-panel">
           <h3>Today&apos;s Habits</h3>
           <div className="today-list">
+            {!enrichedHabits.length && (
+              <article className="habit-empty-state">
+                <p>No habits found for this filter.</p>
+                <small>Add your first routine and start building momentum.</small>
+              </article>
+            )}
             {enrichedHabits.map((habit) => (
               <article
                 key={habit.id}
@@ -268,6 +379,11 @@ function Habits() {
                   </div>
                 </article>
               ))}
+              {!enrichedHabits.length && (
+                <article className="habit-empty-state">
+                  <p>Analytics will appear here once habits are created.</p>
+                </article>
+              )}
             </div>
           </div>
 
