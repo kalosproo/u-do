@@ -1342,24 +1342,73 @@ border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 1260px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
-.habits-header {
-  padding: 16px 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.habits-hero {
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1.2fr 1fr;
+  align-items: end;
 }
 
-.habits-header h2 {
+.habits-overline {
   margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.habits-hero h2 {
+  margin: 4px 0;
+  font-size: clamp(26px, 3vw, 36px);
+}
+
+.habits-subtitle {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.habits-summary-strip {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.habit-kpi-card {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), rgba(8, 10, 16, 0.82));
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.habit-kpi-card span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.habit-kpi-card strong {
+  font-size: 24px;
+}
+
+.habits-toolbar {
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .habits-filter-group {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .habit-filter-pill {
@@ -1368,6 +1417,7 @@ border-radius: 10px;
   background: #121318;
   color: var(--text-muted);
   padding: 8px 14px;
+  font-size: 13px;
 }
 
 .habit-filter-pill.active {
@@ -1397,7 +1447,7 @@ border-radius: 10px;
 
 .habits-grid {
   display: grid;
-  grid-template-columns: 0.8fr 1.2fr;
+  grid-template-columns: 1.1fr 1fr;
   gap: 12px;
 }
 
@@ -1407,10 +1457,20 @@ border-radius: 10px;
   padding: 14px;
 }
 
-.today-panel h3,
-.analytics-panel h3,
+.panel-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.panel-title-row h3,
 .month-panel h3 {
-  margin: 0 0 12px;
+  margin: 0;
+}
+
+.panel-title-row small {
+  color: var(--text-muted);
 }
 
 .today-list,
@@ -1423,7 +1483,7 @@ border-radius: 10px;
 .today-card,
 .analytics-card {
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(8, 10, 16, 0.75);
+  background: linear-gradient(135deg, rgba(8, 10, 16, 0.92), rgba(16, 20, 30, 0.6));
   border-radius: 12px;
   padding: 12px;
   display: flex;
@@ -1447,6 +1507,7 @@ border-radius: 10px;
 .today-main small,
 .analytics-card small {
   opacity: 0.72;
+  text-transform: capitalize;
 }
 
 .habit-checkbox {
@@ -1460,7 +1521,7 @@ border-radius: 10px;
 }
 
 .habit-checkbox.checked {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .today-meta {
@@ -1469,10 +1530,15 @@ border-radius: 10px;
   gap: 10px;
 }
 
+.today-meta strong {
+  font-size: 19px;
+}
+
 .week-dots,
 .trend-dots {
   display: flex;
   gap: 6px;
+  margin-top: 4px;
 }
 
 .dot-filled,
@@ -1499,36 +1565,40 @@ border-radius: 10px;
 }
 
 .today-done {
-  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(110, 231, 183, 0.45);
 }
 
 .today-muted {
-  opacity: 0.62;
-}
-
-
-.today-card.state-grace {
-  border-color: rgba(250, 204, 21, 0.45);
-}
-
-.today-card.state-frozen {
-  border-color: rgba(147, 197, 253, 0.55);
-}
-
-.today-card.state-recovery,
-.today-card.state-broken {
-  border-color: rgba(248, 113, 113, 0.45);
-}
-
-.habit-line-row span small {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
+  opacity: 0.7;
 }
 
 .right-panel {
   display: grid;
   gap: 12px;
+}
+
+.top-habits-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.top-habit-chip {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+}
+
+.top-habit-chip p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.top-habit-chip strong {
+  font-size: 20px;
 }
 
 .analytics-trend {
@@ -1582,7 +1652,7 @@ border-radius: 10px;
 }
 
 .month-done {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(74, 222, 128, 0.22);
 }
 
 .month-missed {
@@ -1594,6 +1664,40 @@ border-radius: 10px;
   border-color: rgba(255, 255, 255, 0.32);
 }
 
+/* View variants */
+.habits-view-focus .habits-grid {
+  grid-template-columns: 1.4fr 0.8fr;
+}
+
+.habits-view-analytics .habits-grid {
+  grid-template-columns: 0.95fr 1.25fr;
+}
+
+.habits-view-compact .today-card,
+.habits-view-compact .analytics-card {
+  padding: 9px;
+}
+
+.habits-view-compact .today-main p,
+.habits-view-compact .analytics-card p {
+  font-size: 18px;
+}
+
+.habits-view-compact .week-dots,
+.habits-view-compact .trend-dots {
+  gap: 4px;
+}
+
+@media (max-width: 1120px) {
+  .habits-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .habits-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1024px) {
   .habits-grid {
     grid-template-columns: 1fr;
@@ -1603,10 +1707,8 @@ border-radius: 10px;
     grid-template-columns: 1fr;
   }
 
-  .habits-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+  .top-habits-row {
+    grid-template-columns: 1fr;
   }
 }
 
