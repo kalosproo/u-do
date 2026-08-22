@@ -260,12 +260,22 @@ function Finance() {
 
           <div className="card chart-card">
             <h3>Spending by Category</h3>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={chartData}>
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="amount" fill="rgba(255,255,255,0.35)" />
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 28, left: 0 }}>
+                <XAxis
+                  dataKey="category"
+                  interval={0}
+                  angle={-30}
+                  textAnchor="end"
+                  height={50}
+                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.65)" }}
+                />
+                <YAxis width={40} tick={{ fontSize: 11, fill: "rgba(255,255,255,0.65)" }} />
+                <Tooltip
+                  contentStyle={{ background: "#14161b", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8 }}
+                  cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                />
+                <Bar dataKey="amount" fill="rgba(255,255,255,0.4)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -58,6 +58,11 @@ function Sidebar() {
               <span>{label}</span>
             </NavLink>
           ))}
+
+          <button type="button" className="logout-tab" onClick={handleLogout} aria-label="Logout">
+            <FiLogOut />
+            <span>Logout</span>
+          </button>
         </nav>
 
         <AIAssistant />
