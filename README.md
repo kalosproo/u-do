@@ -42,19 +42,36 @@ This branch includes the refreshed U.Do app branding and login behavior:
 - Email/password auth restricted to `@svce.edu.in` addresses.
 
 
-## OpenAI API setup
+## AI setup (free — Groq)
 
-To run the U.Do Assistant, set your OpenAI API key in a local env file:
+The U.Do Assistant and Quick Capture both run on [Groq](https://console.groq.com/keys), which gives a free API key with no credit card required.
 
-1. Create or edit `.env.local`.
-2. Add `VITE_OPENAI_API_KEY` with your real key.
-3. (Optional) Set `VITE_OPENAI_MODEL` to override the default model (`gpt-4o-mini`).
-4. Restart the dev server.
+1. Sign up at console.groq.com and create an API key.
+2. Create or edit `.env.local`.
+3. Add `VITE_GROQ_API_KEY` with your real key.
+4. (Optional) Set `VITE_GROQ_MODEL` to override the default model (`llama-3.3-70b-versatile`).
+5. Restart the dev server.
 
 ```bash
 cp .env.example .env.local
-echo "VITE_OPENAI_API_KEY=your_key_here" >> .env.local
+echo "VITE_GROQ_API_KEY=your_key_here" >> .env.local
 npm run dev
 ```
 
 > Keep `.env.local` out of git. Commit only `.env.example`.
+> Free tier limits (per Groq, subject to change): ~30 requests/minute, ~14,400 requests/day. Plenty for personal use. All Groq calls retry automatically with backoff on rate-limit (429) or transient server errors.
+
+### Quick Capture
+
+Tap the ⚡ button (bottom-right, on every page) and type a line like:
+
+- `spent 20rs on juice` → logged to Finance as an expense
+- `got 500 from freelance` → logged to Finance as income
+- `submit assignment tomorrow` → added to Tasks
+- `meditate daily` → added to Habits
+
+It shows a 1-tap confirm card (editable) before saving anything — nothing is written until you confirm.
+
+### AI Auto-Plan Week (Planner page)
+
+Click **"AI Auto-Plan Week"** at the top of the Planner. It reads your pending Tasks and whatever's already on this week's planner, then proposes which day to schedule each task on (respecting due dates and a max of 4 items/day, without duplicating anything already scheduled). Review the proposed list, drop anything you don't want, then confirm to add the rest.

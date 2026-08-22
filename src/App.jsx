@@ -12,6 +12,7 @@ import Habits from "./pages/Habits";
 import Profile from "./pages/Profile";
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
+import QuickCapture from "./components/QuickCapture";
 
 function Protected({ user, children }) {
   if (!user) return <Navigate to="/login" replace />;
@@ -45,7 +46,10 @@ function App() {
  return (
   <BrowserRouter>
     {user && (
-      <Sidebar/>
+      <>
+        <Sidebar />
+        <QuickCapture />
+      </>
     )}
 
     <main className={`main-content ${user ? "with-sidebar" : "no-sidebar"}`}>

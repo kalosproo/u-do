@@ -2,6 +2,7 @@ import { FiChevronLeft, FiChevronRight, FiPlus, FiTrash2 } from "react-icons/fi"
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { auth, db } from "../services/firebase";
 import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
+import { generateWeeklyPlan } from "../services/autoPlanner";
 
 function sortPlans(list) {
   return [...list].sort((a, b) => {
@@ -101,6 +102,12 @@ function Planner() {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingText, setEditingText] = useState("");
   const [dragTaskId, setDragTaskId] = useState(null);
+  const [autoPlanOpen, setAutoPlanOpen] = useState(false);
+  const [autoPlanLoading, setAutoPlanLoading] = useState(false);
+  const [autoPlanApplying, setAutoPlanApplying] = useState(false);
+  const [autoPlanSummary, setAutoPlanSummary] = useState("");
+  const [autoPlanItems, setAutoPlanItems] = useState([]);
+  const [autoPlanStatus, setAutoPlanStatus] = useState("");
 
   const user = auth.currentUser;
 
@@ -298,6 +305,32 @@ function Planner() {
     fetchPlans();
   };
 
+  const openAutoPlanner = async () => {
+    if (!user) return;
+    setAutoPlanOpen(true); setAutoPlanLoading(true); setAutoPlanStatus(""); setAutoPlanSummary(""); setAutoPlanItems([]);
+    const weekDates = weekDays.map((date) => ({ date: formatDateKey(date), weekday: date.toLocaleDateString("en-US", { weekday: "short" }) }));
+    const scheduledByDate = Object.fromEntries(weekDates.map(({ date }) => [date, (sortedPlansByDate[date] || []).map((plan) => plan.title)]));
+    try {
+      const snapshot = await getDocs(collection(db, "users", user.uid, "tasks"));
+      const pendingTasks = snapshot.docs.map((item) => item.data()).filter((task) => task.status !== "done" && !task.completed).map((task) => ({ title: task.title, dueDate: task.dueDate || "", priority: task.priority || "medium" }));
+      const result = await generateWeeklyPlan({ weekDates, pendingTasks, scheduledByDate });
+      setAutoPlanSummary(result.summary); setAutoPlanItems(result.assignments.map((item, index) => ({ ...item, id: `${item.date}-${index}` }))); setAutoPlanStatus(result.error || "");
+    } catch (error) { setAutoPlanStatus(error?.message || "Couldn't load your tasks. Please try again."); }
+    finally { setAutoPlanLoading(false); }
+  };
+  const closeAutoPlanner = () => { setAutoPlanOpen(false); setAutoPlanItems([]); setAutoPlanSummary(""); setAutoPlanStatus(""); };
+  const applyAutoPlan = async () => {
+    if (!user || !autoPlanItems.length) return;
+    setAutoPlanApplying(true); setAutoPlanStatus("");
+    try {
+      const countByDate = {};
+      autoPlanItems.forEach(({ date }) => { countByDate[date] ??= (sortedPlansByDate[date] || []).length; });
+      await Promise.all(autoPlanItems.map(({ title, date, priority }) => addDoc(collection(db, "users", user.uid, "planner"), { title, date, priority, completed: false, order: countByDate[date]++, createdAt: new Date() })));
+      await fetchPlans(); closeAutoPlanner();
+    } catch (error) { setAutoPlanStatus(error?.message || "Couldn't add these to your planner. Please try again."); }
+    finally { setAutoPlanApplying(false); }
+  };
+
   return (
     <section className="board-page">
       <div className="board-header">
@@ -309,6 +342,7 @@ function Planner() {
         </div>
 
         <div className="week-nav" role="navigation" aria-label="Week navigation">
+          <button type="button" className="autoplan-trigger" onClick={openAutoPlanner}>AI Auto-Plan Week</button>
           <button
             type="button"
             aria-label="Previous week"
@@ -459,6 +493,8 @@ function Planner() {
           })}
         </div>
       </div>
+      {autoPlanOpen && <div className="autoplan-overlay" role="dialog" aria-modal="true" aria-label="AI Auto-Plan Week"><section className="autoplan-popup"><div className="autoplan-header"><h4>AI Auto-Plan Week</h4><button type="button" className="autoplan-close" onClick={closeAutoPlanner} aria-label="Close">✕</button></div>
+        {autoPlanLoading ? <p className="autoplan-muted">Reading your tasks and this week's planner...</p> : <>{autoPlanSummary && <p className="autoplan-summary">{autoPlanSummary}</p>}{autoPlanStatus && <p className="autoplan-status">{autoPlanStatus}</p>}{autoPlanItems.length ? <div className="autoplan-list">{autoPlanItems.map((item) => <div key={item.id} className="autoplan-item"><div><strong>{item.title}</strong><small>{item.date} · {item.priority}</small></div><button type="button" className="autoplan-remove" onClick={() => setAutoPlanItems((items) => items.filter((current) => current.id !== item.id))} aria-label={`Remove ${item.title}`}>✕</button></div>)}</div> : !autoPlanStatus && <p className="autoplan-muted">Nothing new to schedule right now.</p>}{autoPlanItems.length ? <div className="autoplan-cta-row"><button type="button" className="autoplan-primary" onClick={applyAutoPlan} disabled={autoPlanApplying}>{autoPlanApplying ? "Adding..." : `Add ${autoPlanItems.length} to Planner`}</button><button type="button" className="autoplan-secondary" onClick={closeAutoPlanner} disabled={autoPlanApplying}>Cancel</button></div> : null}</>}</section></div>}
     </section>
   );
 }
