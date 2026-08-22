@@ -2,22 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { auth, db } from "../services/firebase";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { collection, addDoc, getDocs, deleteDoc, doc, setDoc } from "firebase/firestore";
-
-const EXPENSE_CATEGORIES = [
-  "Food",
-  "Travel",
-  "Fuel",
-  "Transaction",
-  "Shopping",
-  "Needs",
-  "Rent",
-  "Bills",
-  "Investment",
-  "Education",
-  "Entertainment",
-];
-
-const INCOME_CATEGORIES = ["Salary", "Freelance", "Gift", "Other"];
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../config/financeCategories";
 
 const convertExpensesToCSV = (expenses) => {
   if (!expenses.length) return "";

@@ -1,4 +1,4 @@
-import { askOpenAI } from "./openai";
+import { askGroq } from "./groq";
 
 function buildAssistantPrompt({ question, context }) {
   return `You are U.Do Assistant, an automation copilot for a student productivity workspace.
@@ -73,12 +73,12 @@ function formatAssistantError(error) {
   const status = error?.response?.status || error?.status;
   const message = (error?.response?.data?.error?.message || error?.message || "").toLowerCase();
 
-  if (message.includes("openai api key missing") || !import.meta.env.VITE_OPENAI_API_KEY) {
-    return "OpenAI API key not found. Add VITE_OPENAI_API_KEY to your .env file and restart the app.";
+  if (message.includes("groq api key missing") || !import.meta.env.VITE_GROQ_API_KEY) {
+    return "Groq API key not found. Add VITE_GROQ_API_KEY to your .env file and restart the app.";
   }
 
   if (status === 401 || status === 403 || message.includes("api key") || message.includes("permission")) {
-    return "Assistant access is blocked. Check your OpenAI API key and API restrictions.";
+    return "Assistant access is blocked. Check your Groq API key at console.groq.com/keys.";
   }
 
   if (status === 429 || message.includes("quota") || message.includes("rate")) {
@@ -128,7 +128,7 @@ export async function generateAssistantPlan(question, context = {}) {
 
   try {
     const prompt = buildAssistantPrompt({ question: cleanedQuestion, context });
-    const text = await askOpenAI(prompt);
+    const text = await askGroq(prompt);
     const parsed = JSON.parse(extractJson(text));
 
     return {
