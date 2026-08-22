@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
-import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs, setDoc } from "firebase/firestore";
+import { FiEdit2 } from "react-icons/fi";
 import { auth, db } from "../services/firebase";
 import {
   clearStoredProfilePhoto,
+  getStoredProfilePhoto,
   resolveUserPhoto,
   setStoredProfilePhoto,
 } from "../utils/profilePhoto";
@@ -15,11 +17,13 @@ function Profile() {
 
   const initialPhoto = useMemo(() => resolveUserPhoto(user), [user]);
   const [photoPreview, setPhotoPreview] = useState(initialPhoto);
+  const [hasCustomPhoto, setHasCustomPhoto] = useState(() => Boolean(getStoredProfilePhoto(user?.uid)));
   const [status, setStatus] = useState("");
   const [busyAction, setBusyAction] = useState("");
 
   const handleUpload = (event) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file || !user) return;
 
     if (!file.type.startsWith("image/")) {
@@ -37,7 +41,8 @@ function Profile() {
 
       setStoredProfilePhoto(user.uid, dataUrl);
       setPhotoPreview(dataUrl);
-      setStatus("Profile photo updated from your local file.");
+      setHasCustomPhoto(true);
+      setStatus("Profile photo updated.");
     };
     reader.readAsDataURL(file);
   };
@@ -45,14 +50,71 @@ function Profile() {
   const handleUseGooglePhoto = () => {
     if (!user) return;
 
+    clearStoredProfilePhoto(user.uid);
+    setHasCustomPhoto(false);
+
     if (user.photoURL) {
-      clearStoredProfilePhoto(user.uid);
       setPhotoPreview(user.photoURL);
       setStatus("Switched back to your Google/Gmail profile photo.");
       return;
     }
 
+    setPhotoPreview("");
     setStatus("No Google/Gmail profile photo was found for this account.");
+  };
+
+  const handleImportClick = () => {
+    document.getElementById("import-data-input")?.click();
+  };
+
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !user) return;
+
+    const shouldImport = window.confirm(
+      "Import this backup? Items with a matching ID will be overwritten. Nothing else in your workspace is deleted."
+    );
+    if (!shouldImport) return;
+
+    setBusyAction("import");
+    setStatus("Reading backup file...");
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const sections = parsed?.data && typeof parsed.data === "object" ? parsed.data : null;
+
+      if (!sections) {
+        setStatus("That file doesn't look like a U.Do backup.");
+        return;
+      }
+
+      let importedCount = 0;
+      await Promise.all(
+        USER_COLLECTIONS.map(async (name) => {
+          const items = Array.isArray(sections[name]) ? sections[name] : [];
+          await Promise.all(
+            items.map(async (item) => {
+              if (!item?.id) return;
+              const { id, ...rest } = item;
+              await setDoc(doc(db, "users", user.uid, name, id), rest);
+              importedCount += 1;
+            })
+          );
+        })
+      );
+
+      setStatus(
+        importedCount
+          ? `Import complete. Restored ${importedCount} item(s). Revisit those pages to see them.`
+          : "That backup didn't contain any recognizable items."
+      );
+    } catch (error) {
+      setStatus(error?.message || "Couldn't read that file. Make sure it's a U.Do backup JSON.");
+    } finally {
+      setBusyAction("");
+    }
   };
 
   const handleExportData = async () => {
@@ -141,49 +203,48 @@ function Profile() {
 
       <article className="profile-card glass-panel">
         <div className="profile-row">
-          {photoPreview ? (
-            <img src={photoPreview} alt="Profile" className="profile-photo" />
-          ) : (
-            <div className="profile-photo profile-photo-fallback">{avatarFallback}</div>
-          )}
+          <div className="profile-photo-wrap">
+            {photoPreview ? (
+              <img src={photoPreview} alt="Profile" className="profile-photo" />
+            ) : (
+              <div className="profile-photo profile-photo-fallback">{avatarFallback}</div>
+            )}
+            <label className="profile-photo-edit" htmlFor="profile-photo-input" aria-label="Change profile photo">
+              <FiEdit2 />
+            </label>
+            <input id="profile-photo-input" type="file" accept="image/*" onChange={handleUpload} className="upload-input" />
+          </div>
 
           <div className="profile-meta">
             <h3>{userName}</h3>
             <p>{user?.email || "Signed in"}</p>
-            <small>
-              Default photo uses your Google/Gmail profile image. You can override it by uploading a
-              local image file.
-            </small>
+            <small>Your Google/Gmail photo is used by default. Tap the pencil to use a different image.</small>
           </div>
         </div>
 
-        <div className="profile-actions">
-          <label className="upload-label" htmlFor="profile-photo-input">
-            Upload local photo
-          </label>
-          <input
-            id="profile-photo-input"
-            type="file"
-            accept="image/*"
-            onChange={handleUpload}
-            className="upload-input"
-          />
-
-          <button type="button" className="secondary" onClick={handleUseGooglePhoto}>
-            Use Gmail photo
-          </button>
-        </div>
+        {hasCustomPhoto ? (
+          <div className="profile-actions">
+            <button type="button" className="secondary" onClick={handleUseGooglePhoto}>
+              Reset to Google photo
+            </button>
+          </div>
+        ) : null}
       </article>
 
       <article className="profile-card glass-panel">
         <h3>Data Controls</h3>
         <p className="profile-data-copy">
-          Export a backup JSON file of your account data or clear everything from your workspace.
+          Export a backup JSON file of your account data, import a previous backup, or clear everything from your
+          workspace.
         </p>
         <div className="profile-actions">
           <button type="button" onClick={handleExportData} disabled={busyAction !== ""}>
             {busyAction === "export" ? "Exporting..." : "Export My Data"}
           </button>
+          <button type="button" onClick={handleImportClick} disabled={busyAction !== ""}>
+            {busyAction === "import" ? "Importing..." : "Import Data"}
+          </button>
+          <input id="import-data-input" type="file" accept="application/json" onChange={handleImportFile} className="upload-input" />
           <button
             type="button"
             className="secondary"
