@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs, setDoc } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
 import {
   clearStoredProfilePhoto,
@@ -101,6 +101,68 @@ function Profile() {
     }
   };
 
+  const handleImportData = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !user) return;
+
+    if (!file.type.includes("json") && !file.name.toLowerCase().endsWith(".json")) {
+      setStatus("Please choose a JSON backup file.");
+      return;
+    }
+
+    setBusyAction("import");
+    setStatus("Importing your backup file...");
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const importedData = parsed?.data || {};
+
+      const hasValidSections = USER_COLLECTIONS.every((name) => Array.isArray(importedData[name]));
+      if (!hasValidSections) {
+        throw new Error("Invalid backup file format.");
+      }
+
+      const shouldImport = window.confirm(
+        "Importing will replace your current tasks, planner, expenses, and habits. Continue?"
+      );
+      if (!shouldImport) {
+        setStatus("Import canceled.");
+        return;
+      }
+
+      await Promise.all(
+        USER_COLLECTIONS.map(async (name) => {
+          const existing = await getDocs(collection(db, "users", user.uid, name));
+          await Promise.all(existing.docs.map((item) => deleteDoc(doc(db, "users", user.uid, name, item.id))));
+
+          await Promise.all(
+            importedData[name].map(async (item) => {
+              const docId =
+                typeof item?.id === "string" && item.id.trim()
+                  ? item.id.trim()
+                  : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+              const payload = { ...(item || {}) };
+              delete payload.id;
+              await setDoc(doc(db, "users", user.uid, name, docId), payload);
+            })
+          );
+        })
+      );
+
+      localStorage.removeItem(`u_do_expenses_${user.uid}`);
+      localStorage.removeItem("u_do_habits");
+
+      setStatus("Import complete. Your workspace data has been restored.");
+    } catch (error) {
+      setStatus(error?.message || "Failed to import backup data.");
+    } finally {
+      setBusyAction("");
+    }
+  };
+
   const handleClearAllData = async () => {
     if (!user) return;
 
@@ -178,9 +240,24 @@ function Profile() {
       <article className="profile-card glass-panel">
         <h3>Data Controls</h3>
         <p className="profile-data-copy">
-          Export a backup JSON file of your account data or clear everything from your workspace.
+          Export or import a backup JSON file of your account data, or clear everything from your
+          workspace.
         </p>
         <div className="profile-actions">
+          <label
+            className={`upload-label ${busyAction !== "" ? "is-disabled" : ""}`}
+            htmlFor="profile-data-import"
+          >
+            {busyAction === "import" ? "Importing..." : "Import Backup"}
+          </label>
+          <input
+            id="profile-data-import"
+            type="file"
+            accept="application/json,.json"
+            onChange={handleImportData}
+            className="upload-input"
+            disabled={busyAction !== ""}
+          />
           <button type="button" onClick={handleExportData} disabled={busyAction !== ""}>
             {busyAction === "export" ? "Exporting..." : "Export My Data"}
           </button>
