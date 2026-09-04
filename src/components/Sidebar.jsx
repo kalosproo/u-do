@@ -23,9 +23,8 @@ const links = [
   { to: "/profile", label: "Profile", icon: <FiUser /> },
 ];
 
-function Sidebar() {
+function Sidebar({ user }) {
   const navigate = useNavigate();
-  const user = auth.currentUser;
   const userName = user?.displayName || user?.email?.split("@")[0] || "User";
   const avatarText = userName.trim().charAt(0).toUpperCase();
   const profilePhoto = resolveUserPhoto(user);
@@ -33,6 +32,15 @@ function Sidebar() {
   const handleLogout = async () => {
     await signOut(auth);
     navigate("/login", { replace: true });
+  };
+
+  const handleAuthAction = () => {
+    if (user) {
+      handleLogout();
+      return;
+    }
+
+    navigate("/login");
   };
 
   return (
@@ -64,9 +72,9 @@ function Sidebar() {
       </div>
 
       <div className="sidebar-bottom">
-        <button className="logout-btn" onClick={handleLogout}>
+        <button className="logout-btn" onClick={handleAuthAction}>
           <FiLogOut />
-          <span>Logout</span>
+          <span>{user ? "Logout" : "Login"}</span>
         </button>
         <p className="sidebar-credits">© 2026 U.Do — Crafted by Muttukuru Rahul.</p>
       </div>

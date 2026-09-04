@@ -1,5 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth, db } from "../services/firebase";
 
 const FILTER_OPTIONS = [
@@ -70,6 +71,7 @@ function Habits() {
   const [filter, setFilter] = useState("all");
 
   const user = auth.currentUser;
+  const navigate = useNavigate();
   const today = useMemo(() => new Date(), []);
   const todayKey = toDateKey(today);
   const yesterdayKey = useMemo(() => {
@@ -101,9 +103,11 @@ function Habits() {
   }, [fetchHabits]);
 
   const addHabit = async () => {
-    if (!title.trim() || !user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
+    if (!title.trim()) return;
 
-    await addDoc(collection(db, "users", user.uid, "habits"), {
+    await addDoc(collection(db, "users", currentUser.uid, "habits"), {
       title: title.trim(),
       frequency,
       createdAt: new Date(),
@@ -116,7 +120,8 @@ function Habits() {
   };
 
   const toggleToday = async (habit) => {
-    if (!user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
 
     const nextLogs = { ...(habit.logs || {}) };
     if (nextLogs[todayKey]) {
@@ -125,7 +130,7 @@ function Habits() {
       nextLogs[todayKey] = true;
     }
 
-    await updateDoc(doc(db, "users", user.uid, "habits", habit.id), {
+    await updateDoc(doc(db, "users", currentUser.uid, "habits", habit.id), {
       logs: nextLogs,
     });
 
@@ -133,8 +138,9 @@ function Habits() {
   };
 
   const removeHabit = async (habitId) => {
-    if (!user) return;
-    await deleteDoc(doc(db, "users", user.uid, "habits", habitId));
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
+    await deleteDoc(doc(db, "users", currentUser.uid, "habits", habitId));
     fetchHabits();
   };
 

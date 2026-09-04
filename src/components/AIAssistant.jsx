@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { addDoc, collection, getDocs } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
 import { generateAssistantPlan } from "../services/aiAssistant";
@@ -47,6 +48,7 @@ function summarizeWorkspace({ tasks, plans, expenses, habits }) {
 }
 
 function AIAssistant() {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [plan, setPlan] = useState(null);
@@ -77,7 +79,10 @@ function AIAssistant() {
 
   const applySingleAction = async (action) => {
     const user = auth.currentUser;
-    if (!user) throw new Error("Please login first.");
+    if (!user) {
+      navigate("/login");
+      throw new Error("Please login first.");
+    }
 
     if (action.type === "task") {
       await addDoc(collection(db, "users", user.uid, "tasks"), {
@@ -142,6 +147,7 @@ function AIAssistant() {
   };
 
   const handleAsk = async (prompt = question, autoApply = false) => {
+    if (!auth.currentUser) return navigate("/login");
     setLoading(true);
     setStatus("");
 

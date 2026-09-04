@@ -3,6 +3,7 @@ import { auth, db } from "../services/firebase";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { collection, addDoc, getDocs, deleteDoc, doc, setDoc } from "firebase/firestore";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../config/financeCategories";
+import { useNavigate } from "react-router-dom";
 
 const convertExpensesToCSV = (expenses) => {
   if (!expenses.length) return "";
@@ -15,6 +16,7 @@ const convertExpensesToCSV = (expenses) => {
 
 function Finance() {
   const user = auth.currentUser;
+  const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
@@ -76,7 +78,9 @@ function Finance() {
   }, [fetchExpenses, user]);
 
   const addExpense = async () => {
-    if (!title || !amount || !category || !user) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
+    if (!title || !amount || !category) {
       alert("Please fill all fields");
       return;
     }
@@ -97,9 +101,9 @@ function Finance() {
     saveExpensesToLocal(updatedExpenses);
 
     try {
-      await setDoc(doc(db, "users", user.uid, "expenses", newExpense.id), newExpense);
+      await setDoc(doc(db, "users", currentUser.uid, "expenses", newExpense.id), newExpense);
     } catch {
-      await addDoc(collection(db, "users", user.uid, "expenses"), newExpense);
+      await addDoc(collection(db, "users", currentUser.uid, "expenses"), newExpense);
     }
 
     setTitle("");
@@ -109,14 +113,16 @@ function Finance() {
   };
 
   const deleteExpense = async (id) => {
-    if (!id || !user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
+    if (!id) return;
 
     const updated = expenses.filter((e) => e.id !== id);
     setExpenses(updated);
     saveExpensesToLocal(updated);
 
     try {
-      await deleteDoc(doc(db, "users", user.uid, "expenses", id));
+      await deleteDoc(doc(db, "users", currentUser.uid, "expenses", id));
     } catch {
       // noop: local copy already updated
     }

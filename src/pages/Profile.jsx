@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
 import {
@@ -11,6 +12,7 @@ const USER_COLLECTIONS = ["tasks", "planner", "expenses", "habits"];
 
 function Profile() {
   const user = auth.currentUser;
+  const navigate = useNavigate();
   const userName = user?.displayName || user?.email?.split("@")[0] || "U.Do User";
 
   const initialPhoto = useMemo(() => resolveUserPhoto(user), [user]);
@@ -20,7 +22,9 @@ function Profile() {
 
   const handleUpload = (event) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
+    if (!file) return;
 
     if (!file.type.startsWith("image/")) {
       setStatus("Please choose an image file.");
@@ -35,7 +39,7 @@ function Profile() {
         return;
       }
 
-      setStoredProfilePhoto(user.uid, dataUrl);
+      setStoredProfilePhoto(currentUser.uid, dataUrl);
       setPhotoPreview(dataUrl);
       setStatus("Profile photo updated from your local file.");
     };
@@ -43,11 +47,12 @@ function Profile() {
   };
 
   const handleUseGooglePhoto = () => {
-    if (!user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
 
-    if (user.photoURL) {
-      clearStoredProfilePhoto(user.uid);
-      setPhotoPreview(user.photoURL);
+    if (currentUser.photoURL) {
+      clearStoredProfilePhoto(currentUser.uid);
+      setPhotoPreview(currentUser.photoURL);
       setStatus("Switched back to your Google/Gmail profile photo.");
       return;
     }
@@ -56,7 +61,8 @@ function Profile() {
   };
 
   const handleExportData = async () => {
-    if (!user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
 
     setBusyAction("export");
     setStatus("Preparing your account backup file...");
@@ -64,7 +70,7 @@ function Profile() {
     try {
       const sections = await Promise.all(
         USER_COLLECTIONS.map(async (name) => {
-          const snap = await getDocs(collection(db, "users", user.uid, name));
+          const snap = await getDocs(collection(db, "users", currentUser.uid, name));
           return [
             name,
             snap.docs.map((item) => ({
@@ -78,9 +84,9 @@ function Profile() {
       const payload = {
         exportedAt: new Date().toISOString(),
         user: {
-          uid: user.uid,
+          uid: currentUser.uid,
           name: userName,
-          email: user.email || "",
+          email: currentUser.email || "",
         },
         data: Object.fromEntries(sections),
       };
@@ -89,7 +95,7 @@ function Profile() {
       const downloadUrl = URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.download = `u-do-backup-${user.uid}-${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `u-do-backup-${currentUser.uid}-${new Date().toISOString().slice(0, 10)}.json`;
       link.click();
       URL.revokeObjectURL(downloadUrl);
 
@@ -102,7 +108,8 @@ function Profile() {
   };
 
   const handleClearAllData = async () => {
-    if (!user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
 
     const shouldClear = window.confirm(
       "Are you sure you want to clear all your data? This removes all tasks, planner items, expenses, and habits."
@@ -115,12 +122,12 @@ function Profile() {
     try {
       await Promise.all(
         USER_COLLECTIONS.map(async (name) => {
-          const snap = await getDocs(collection(db, "users", user.uid, name));
-          await Promise.all(snap.docs.map((item) => deleteDoc(doc(db, "users", user.uid, name, item.id))));
+          const snap = await getDocs(collection(db, "users", currentUser.uid, name));
+          await Promise.all(snap.docs.map((item) => deleteDoc(doc(db, "users", currentUser.uid, name, item.id))));
         })
       );
 
-      localStorage.removeItem(`u_do_expenses_${user.uid}`);
+      localStorage.removeItem(`u_do_expenses_${currentUser.uid}`);
       localStorage.removeItem("u_do_habits");
 
       setStatus("All account data has been cleared.");
