@@ -9,7 +9,7 @@ import {
 } from "../utils/streaks";
 
 function Home() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(auth.currentUser));
   const [tasks, setTasks] = useState([]);
   const [plans, setPlans] = useState([]);
   const [expenses, setExpenses] = useState([]);

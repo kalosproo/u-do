@@ -1,5 +1,6 @@
 import { FiChevronLeft, FiChevronRight, FiPlus, FiTrash2 } from "react-icons/fi";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth, db } from "../services/firebase";
 import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 import { generateWeeklyPlan } from "../services/autoPlanner";
@@ -110,6 +111,12 @@ function Planner() {
   const [autoPlanStatus, setAutoPlanStatus] = useState("");
 
   const user = auth.currentUser;
+  const navigate = useNavigate();
+  const requireUser = () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) navigate("/login");
+    return currentUser;
+  };
 
   const formatDateKey = (date) => {
     const d = new Date(date);
@@ -135,12 +142,13 @@ function Planner() {
   }, [user]);
 
   const addTaskToDate = async (date) => {
-    if (!newTaskTitle.trim() || !user) return;
+    const currentUser = requireUser();
+    if (!currentUser || !newTaskTitle.trim()) return;
 
     const dateKey = formatDateKey(date);
     const dayPlans = plans.filter((plan) => plan.date === dateKey && !plan.completed);
 
-    await addDoc(collection(db, "users", user.uid, "planner"), {
+    await addDoc(collection(db, "users", currentUser.uid, "planner"), {
       title: newTaskTitle.trim(),
       date: dateKey,
       priority: "medium",
@@ -155,9 +163,10 @@ function Planner() {
   };
 
   const updateTask = async (planId) => {
-    if (!editingText.trim() || !user) return;
+    const currentUser = requireUser();
+    if (!currentUser || !editingText.trim()) return;
 
-    await updateDoc(doc(db, "users", user.uid, "planner", planId), {
+    await updateDoc(doc(db, "users", currentUser.uid, "planner", planId), {
       title: editingText.trim(),
     });
 
@@ -167,12 +176,13 @@ function Planner() {
   };
 
   const toggleCompleted = async (plan) => {
-    if (!user) return;
+    const currentUser = requireUser();
+    if (!currentUser) return;
 
     const sameDay = plans.filter((item) => item.date === plan.date && item.id !== plan.id);
     const targetGroup = sameDay.filter((item) => item.completed === !plan.completed);
 
-    await updateDoc(doc(db, "users", user.uid, "planner", plan.id), {
+    await updateDoc(doc(db, "users", currentUser.uid, "planner", plan.id), {
       completed: !plan.completed,
       order: targetGroup.length,
     });
@@ -181,8 +191,9 @@ function Planner() {
   };
 
   const deletePlan = async (planId) => {
-    if (!user) return;
-    await deleteDoc(doc(db, "users", user.uid, "planner", planId));
+    const currentUser = requireUser();
+    if (!currentUser) return;
+    await deleteDoc(doc(db, "users", currentUser.uid, "planner", planId));
     fetchPlans();
   };
 
@@ -250,10 +261,11 @@ function Planner() {
   const findPlanById = (id) => plans.find((item) => item.id === id);
 
   const moveAndPersistOrder = async (dayKey, nextDayPlans) => {
-    if (!user) return;
+    const currentUser = requireUser();
+    if (!currentUser) return;
     await Promise.all(
       nextDayPlans.map((plan, index) =>
-        updateDoc(doc(db, "users", user.uid, "planner", plan.id), {
+        updateDoc(doc(db, "users", currentUser.uid, "planner", plan.id), {
           order: index,
           date: dayKey,
         })
@@ -262,7 +274,8 @@ function Planner() {
   };
 
   const moveTask = async (targetDate, targetTaskId = null) => {
-    if (!dragTaskId || !user) return;
+    const currentUser = requireUser();
+    if (!dragTaskId || !currentUser) return;
 
     const activePlan = findPlanById(dragTaskId);
     if (!activePlan || activePlan.completed) return;
@@ -306,7 +319,7 @@ function Planner() {
   };
 
   const openAutoPlanner = async () => {
-    if (!user) return;
+    if (!auth.currentUser) return navigate("/login");
     setAutoPlanOpen(true); setAutoPlanLoading(true); setAutoPlanStatus(""); setAutoPlanSummary(""); setAutoPlanItems([]);
     const weekDates = weekDays.map((date) => ({ date: formatDateKey(date), weekday: date.toLocaleDateString("en-US", { weekday: "short" }) }));
     const scheduledByDate = Object.fromEntries(weekDates.map(({ date }) => [date, (sortedPlansByDate[date] || []).map((plan) => plan.title)]));
@@ -319,13 +332,19 @@ function Planner() {
     finally { setAutoPlanLoading(false); }
   };
   const closeAutoPlanner = () => { setAutoPlanOpen(false); setAutoPlanItems([]); setAutoPlanSummary(""); setAutoPlanStatus(""); };
+  const startAddingTask = (dateKey) => {
+    if (!auth.currentUser) return navigate("/login");
+    setActiveInputDate(dateKey);
+    setNewTaskTitle("");
+  };
   const applyAutoPlan = async () => {
-    if (!user || !autoPlanItems.length) return;
+    const currentUser = requireUser();
+    if (!currentUser || !autoPlanItems.length) return;
     setAutoPlanApplying(true); setAutoPlanStatus("");
     try {
       const countByDate = {};
       autoPlanItems.forEach(({ date }) => { countByDate[date] ??= (sortedPlansByDate[date] || []).length; });
-      await Promise.all(autoPlanItems.map(({ title, date, priority }) => addDoc(collection(db, "users", user.uid, "planner"), { title, date, priority, completed: false, order: countByDate[date]++, createdAt: new Date() })));
+      await Promise.all(autoPlanItems.map(({ title, date, priority }) => addDoc(collection(db, "users", currentUser.uid, "planner"), { title, date, priority, completed: false, order: countByDate[date]++, createdAt: new Date() })));
       await fetchPlans(); closeAutoPlanner();
     } catch (error) { setAutoPlanStatus(error?.message || "Couldn't add these to your planner. Please try again."); }
     finally { setAutoPlanApplying(false); }
@@ -480,10 +499,7 @@ function Planner() {
                     </button>
                   </div>
                 ) : (
-                  <button type="button" className="add-task" onClick={() => {
-                      setActiveInputDate(dateKey);
-                      setNewTaskTitle("");
-                    }}>
+                  <button type="button" className="add-task" onClick={() => startAddingTask(dateKey)}>
                     <FiPlus />
                     Add task
                   </button>

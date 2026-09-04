@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FiCheck, FiX, FiZap } from "react-icons/fi";
 import { addDoc, collection, doc, getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../config/financeCategories";
@@ -28,11 +29,12 @@ async function saveEntry(entry, user) {
 }
 
 export default function QuickCapture() {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false); const [note, setNote] = useState(""); const [entry, setEntry] = useState(null); const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false); const [status, setStatus] = useState("");
   const reset = () => { setNote(""); setEntry(null); setStatus(""); };
   const close = () => { setIsOpen(false); reset(); };
   const capture = async () => { if (!note.trim()) return; setLoading(true); setStatus(""); const parsed = await parseQuickCapture(note); setEntry(parsed.entry); setStatus(parsed.error || ""); setLoading(false); };
-  const confirm = async () => { if (!auth.currentUser || !entry) return; setSaving(true); setStatus(""); try { const destination = await saveEntry(entry, auth.currentUser); setStatus(`Saved to ${destination}${entry.type === "income" ? " (income)" : ""}.`); setEntry(null); setNote(""); } catch (error) { setStatus(error?.message || "Couldn't save that. Please try again."); } finally { setSaving(false); } };
+  const confirm = async () => { const user = auth.currentUser; if (!user) return navigate("/login"); if (!entry) return; setSaving(true); setStatus(""); try { const destination = await saveEntry(entry, user); setStatus(`Saved to ${destination}${entry.type === "income" ? " (income)" : ""}.`); setEntry(null); setNote(""); } catch (error) { setStatus(error?.message || "Couldn't save that. Please try again."); } finally { setSaving(false); } };
   const money = ["expense", "income"].includes(entry?.type);
   return <>
     <button type="button" className="quickcap-fab" onClick={() => setIsOpen(true)} aria-label="Quick capture" title="Quick capture (AI)"><FiZap /></button>

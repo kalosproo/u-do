@@ -7,6 +7,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth, db } from "../services/firebase";
 
 const KANBAN_COLUMNS = [
@@ -48,6 +49,7 @@ function Tasks() {
   const [filter, setFilter] = useState("all");
 
   const user = auth.currentUser;
+  const navigate = useNavigate();
 
   const fetchTasks = useCallback(async () => {
     if (!user) return;
@@ -65,9 +67,11 @@ function Tasks() {
   }, [user]);
 
   const addTask = async () => {
-    if (!title.trim() || !user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
+    if (!title.trim()) return;
 
-    await addDoc(collection(db, "users", user.uid, "tasks"), {
+    await addDoc(collection(db, "users", currentUser.uid, "tasks"), {
       title: title.trim(),
       dueDate,
       priority,
@@ -83,15 +87,17 @@ function Tasks() {
   };
 
   const deleteTask = async (id) => {
-    if (!user) return;
-    await deleteDoc(doc(db, "users", user.uid, "tasks", id));
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
+    await deleteDoc(doc(db, "users", currentUser.uid, "tasks", id));
     fetchTasks();
   };
 
   const updateTaskStatus = async (task, nextStatus) => {
-    if (!user) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return navigate("/login");
 
-    await updateDoc(doc(db, "users", user.uid, "tasks", task.id), {
+    await updateDoc(doc(db, "users", currentUser.uid, "tasks", task.id), {
       status: nextStatus,
       completed: nextStatus === "done",
     });

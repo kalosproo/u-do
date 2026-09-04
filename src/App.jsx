@@ -14,11 +14,6 @@ import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
 import QuickCapture from "./components/QuickCapture";
 
-function Protected({ user, children }) {
-  if (!user) return <Navigate to="/login" replace />;
-  return children;
-}
-
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,79 +40,28 @@ function App() {
 
  return (
   <BrowserRouter>
-    {user && (
-      <>
-        <Sidebar />
-        <QuickCapture />
-      </>
-    )}
+    <>
+      <Sidebar user={user} />
+      <QuickCapture />
+    </>
 
-    <main className={`main-content ${user ? "with-sidebar" : "no-sidebar"}`}>
+    <main className="main-content with-sidebar">
       
       <Routes>
         {/* LOGIN */}
         <Route path="/login" element={<Login />} />
 
-        {/* PROTECTED ROUTES */}
-        <Route
-          path="/"
-          element={
-            <Protected user={user}>
-              <Home />
-            </Protected>
-          }
-        />
-
-        <Route
-          path="/finance"
-          element={
-            <Protected user={user}>
-              <Finance />
-            </Protected>
-          }
-        />
-
-        <Route
-          path="/planner"
-          element={
-            <Protected user={user}>
-              <Planner />
-            </Protected>
-          }
-        />
-
-        <Route
-          path="/tasks"
-          element={
-            <Protected user={user}>
-              <Tasks />
-            </Protected>
-          }
-        />
-
-        <Route
-          path="/habits"
-          element={
-            <Protected user={user}>
-              <Habits />
-            </Protected>
-          }
-        />
-
-
-        <Route
-          path="/profile"
-          element={
-            <Protected user={user}>
-              <Profile />
-            </Protected>
-          }
-        />
+        <Route path="/" element={<Home />} />
+        <Route path="/finance" element={<Finance />} />
+        <Route path="/planner" element={<Planner />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/habits" element={<Habits />} />
+        <Route path="/profile" element={<Profile />} />
 
         {/* CATCH ALL */}
         <Route
           path="*"
-          element={<Navigate to={user ? "/" : "/login"} replace />}
+          element={<Navigate to="/" replace />}
         />
       </Routes>
     </main>
