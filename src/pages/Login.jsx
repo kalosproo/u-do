@@ -78,18 +78,18 @@ function Login() {
     <section className="login-page">
       <div className="login-card">
         <BrandLogo />
-        <p>Login to continue your system.</p>
+        <p>Log in to pick up where you left off.</p>
 
         <div className="login-tabs" role="tablist" aria-label="Auth mode">
-          <button type="button" onClick={() => { setIsSignup(false); resetMessages(); }} className={!isSignup ? "active" : ""}>
+          <button type="button" onClick={() => { setIsSignup(false); resetMessages(); }} className={!isSignup ? "active" : ""} role="tab" aria-selected={!isSignup}>
             Login
           </button>
-          <button type="button" onClick={() => { setIsSignup(true); resetMessages(); }} className={isSignup ? "active" : ""}>
+          <button type="button" onClick={() => { setIsSignup(true); resetMessages(); }} className={isSignup ? "active" : ""} role="tab" aria-selected={isSignup}>
             Sign Up
           </button>
         </div>
 
-        <button type="button" className="login-google" onClick={googleLogin}>Continue with Google</button>
+        <button type="button" className="login-google button-secondary" onClick={googleLogin}>Continue with Google</button>
 
         <div className="login-divider" />
 
@@ -106,9 +106,9 @@ function Login() {
         {error && <p className="login-error">{error}</p>}
 
         {isSignup ? (
-          <button type="button" className="login-primary" onClick={signupWithEmail}>Create Account</button>
+          <button type="button" className="login-primary button-primary" onClick={signupWithEmail}>Create Account</button>
         ) : (
-          <button type="button" className="login-primary" onClick={emailLogin}>Login</button>
+          <button type="button" className="login-primary button-primary" onClick={emailLogin}>Login</button>
         )}
       </div>
     </section>

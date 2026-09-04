@@ -185,7 +185,7 @@ function Tasks() {
           <option value="high">High Priority</option>
         </select>
 
-        <button onClick={addTask}>Add</button>
+        <button className="button-primary" onClick={addTask}>Add</button>
       </div>
 
       <div className="tasks-filter-row">
@@ -197,7 +197,7 @@ function Tasks() {
         ].map(([key, label]) => (
           <button
             key={key}
-            className={`filter-pill ${filter === key ? "active" : ""}`}
+            className={`filter-pill button-secondary ${filter === key ? "active" : ""}`}
             onClick={() => setFilter(key)}
           >
             {label}
