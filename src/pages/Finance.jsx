@@ -222,27 +222,27 @@ function Finance() {
             <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
 
-            <button onClick={addExpense}>{type === "income" ? "Add Income" : "Add Expense"}</button>
-            <button onClick={downloadFinanceCSV}>Export CSV</button>
+            <button className="button-primary" onClick={addExpense}>{type === "income" ? "Add Income" : "Add Expense"}</button>
+            <button className="button-secondary" onClick={downloadFinanceCSV}>Export CSV</button>
           </div>
 
           <div className="card category-breakdown">
             <h3>Category Breakdown</h3>
-            <ul>
+            {Object.keys(getCategorySummary()).length ? <ul>
               {Object.entries(getCategorySummary()).map(([cat, total]) => (
                 <li key={cat} className="category-row">
                   <span>{cat}</span>
                   <span>₹{total}</span>
                 </li>
               ))}
-            </ul>
+            </ul> : <p className="finance-empty-state">No spending data yet.</p>}
           </div>
         </div>
 
         <div className="finance-right">
           <div className="card recent-transactions">
             <h3>Recent Transactions</h3>
-            <ul>
+            {getMonthlyExpenses().length ? <ul>
               {getMonthlyExpenses().map((exp) => (
                 <li key={exp.id} className="transaction-item">
                   <div>
@@ -261,19 +261,19 @@ function Finance() {
                   </div>
                 </li>
               ))}
-            </ul>
+            </ul> : <p className="finance-empty-state">No transactions yet — add one to see it here.</p>}
           </div>
 
           <div className="card chart-card">
             <h3>Spending by Category</h3>
-            <ResponsiveContainer width="100%" height={240}>
+            {chartData.length ? <ResponsiveContainer width="100%" height={240}>
               <BarChart data={chartData}>
                 <XAxis dataKey="category" />
                 <YAxis />
                 <Tooltip />
                 <Bar dataKey="amount" fill="rgba(255,255,255,0.35)" />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> : <p className="finance-empty-state">No spending data yet.</p>}
           </div>
         </div>
       </section>

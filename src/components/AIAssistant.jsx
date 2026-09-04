@@ -180,7 +180,7 @@ function AIAssistant() {
 
   return (
     <>
-      <button type="button" className="assistant-launch-btn" onClick={() => setIsOpen(true)}>
+      <button type="button" className="assistant-launch-btn button-secondary" onClick={() => setIsOpen(true)}>
         Open AI Assistant
       </button>
 
@@ -213,10 +213,10 @@ function AIAssistant() {
             />
 
             <div className="assistant-cta-row">
-              <button type="button" onClick={() => handleAsk(question, true)} disabled={loading || applying}>
+              <button type="button" className="button-primary" onClick={() => handleAsk(question, true)} disabled={loading || applying}>
                 {loading || applying ? "Processing..." : "Generate + Apply"}
               </button>
-              <button type="button" className="assistant-apply-btn" onClick={() => handleAsk(question, false)} disabled={loading || applying}>
+              <button type="button" className="assistant-apply-btn button-secondary" onClick={() => handleAsk(question, false)} disabled={loading || applying}>
                 Generate Only
               </button>
             </div>

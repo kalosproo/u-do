@@ -112,7 +112,7 @@ function Profile() {
     if (!currentUser) return navigate("/login");
 
     const shouldClear = window.confirm(
-      "Are you sure you want to clear all your data? This removes all tasks, planner items, expenses, and habits."
+      "This will permanently delete all your data. Are you sure?"
     );
     if (!shouldClear) return;
 
@@ -165,7 +165,7 @@ function Profile() {
         </div>
 
         <div className="profile-actions">
-          <label className="upload-label" htmlFor="profile-photo-input">
+          <label className="upload-label button-secondary" htmlFor="profile-photo-input">
             Upload local photo
           </label>
           <input
@@ -176,7 +176,7 @@ function Profile() {
             className="upload-input"
           />
 
-          <button type="button" className="secondary" onClick={handleUseGooglePhoto}>
+          <button type="button" className="button-secondary" onClick={handleUseGooglePhoto}>
             Use Gmail photo
           </button>
         </div>
@@ -188,12 +188,12 @@ function Profile() {
           Export a backup JSON file of your account data or clear everything from your workspace.
         </p>
         <div className="profile-actions">
-          <button type="button" onClick={handleExportData} disabled={busyAction !== ""}>
+          <button type="button" className="button-secondary" onClick={handleExportData} disabled={busyAction !== ""}>
             {busyAction === "export" ? "Exporting..." : "Export My Data"}
           </button>
           <button
             type="button"
-            className="secondary"
+            className="button-destructive"
             onClick={handleClearAllData}
             disabled={busyAction !== ""}
           >

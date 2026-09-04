@@ -182,7 +182,7 @@ function Habits() {
             <button
               key={value}
               type="button"
-              className={`habit-filter-pill ${filter === value ? "active" : ""}`}
+              className={`habit-filter-pill button-secondary ${filter === value ? "active" : ""}`}
               onClick={() => setFilter(value)}
             >
               {label}
@@ -206,7 +206,7 @@ function Habits() {
           <option value="weekly">Weekly</option>
         </select>
 
-        <button type="button" onClick={addHabit}>
+        <button type="button" className="button-primary" onClick={addHabit}>
           Add
         </button>
       </div>
