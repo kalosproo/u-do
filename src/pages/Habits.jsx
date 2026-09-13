@@ -2,6 +2,7 @@ import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../services/firebase";
+import { publishHabitSummary } from "../services/friends";
 import {
   getHabitStreakSnapshot,
   getRecentWindowKeys,
@@ -86,6 +87,10 @@ function Habits() {
       const list = snapshot.docs.map((item) => normalizeHabit({ id: item.id, ...item.data() }));
       setHabits(list);
       localStorage.setItem(cacheKey, JSON.stringify(list));
+
+      // Refresh what friends see. Best-effort: a failure here must never stop
+      // you ticking a habit, and it no-ops for accounts without a username.
+      publishHabitSummary(user, list).catch(() => {});
     } catch {
       const local = localStorage.getItem(cacheKey);
       setHabits(local ? JSON.parse(local) : []);

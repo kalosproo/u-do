@@ -9,6 +9,7 @@ import Finance from "./pages/Finance";
 import Planner from "./pages/Planner";
 import Tasks from "./pages/Tasks";
 import Habits from "./pages/Habits";
+import Friends from "./pages/Friends";
 import Profile from "./pages/Profile";
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
@@ -56,6 +57,7 @@ function App() {
         <Route path="/planner" element={<Planner />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/habits" element={<Habits />} />
+        <Route path="/friends" element={<Friends />} />
         <Route path="/profile" element={<Profile />} />
 
         {/* CATCH ALL */}
