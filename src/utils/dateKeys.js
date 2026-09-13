@@ -22,3 +22,34 @@ export const todayKey = () => toDateKey(new Date());
  * is read as UTC midnight, which is the same bug in the other direction.
  */
 export const fromDateKey = (dateKey) => new Date(`${dateKey}T00:00:00`);
+
+/**
+ * Milliseconds for any timestamp shape the app has ever written, or null when
+ * there isn't one.
+ *
+ * Documents carry three shapes: an ISO string (Finance, Quick Capture), a
+ * Firestore Timestamp (anything saved with `new Date()`, which Firestore
+ * converts on write), and a plain Date. `new Date(timestamp)` on the Firestore
+ * shape is an Invalid Date, which is how comparing them used to go NaN.
+ */
+export const toMillis = (value) => {
+  if (!value) return null;
+
+  // Firestore Timestamp, either live or rehydrated from JSON.
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (typeof value.toDate === "function") return value.toDate().getTime();
+  if (typeof value.seconds === "number") return value.seconds * 1000;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.getTime();
+  }
+
+  if (typeof value === "number") return value;
+
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+/** When a record was last touched, falling back through the shapes it may have. */
+export const recordTimestamp = (record) =>
+  toMillis(record?.updatedAt) ?? toMillis(record?.createdAt) ?? 0;

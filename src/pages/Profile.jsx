@@ -1,132 +1,144 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { FiDownload, FiTrash2, FiUpload } from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { todayKey } from "../utils/dateKeys";
-import { clearWorkspace, exportWorkspace } from "../services/workspace";
-import {
-  clearStoredProfilePhoto,
-  resolveUserPhoto,
-  setStoredProfilePhoto,
-} from "../utils/profilePhoto";
+import { resolveUserPhoto } from "../utils/profilePhoto";
+import { clearWorkspace, exportWorkspace, importWorkspace, inspectBackup } from "../services/workspace";
+
+const SECTION_LABEL = {
+  tasks: "Tasks",
+  planner: "Planner entries",
+  expenses: "Transactions",
+  habits: "Habits",
+};
 
 function Profile() {
   const { user } = useAuth();
   const requireUser = useAuthGuard();
-  const userName = user?.displayName || user?.email?.split("@")[0] || "U.Do User";
+  const fileInputRef = useRef(null);
 
-  const initialPhoto = useMemo(() => resolveUserPhoto(user), [user]);
-  const [photoPreview, setPhotoPreview] = useState(initialPhoto);
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState({ tone: "", text: "" });
   const [busyAction, setBusyAction] = useState("");
+  const [pendingImport, setPendingImport] = useState(null);
 
-  const handleUpload = (event) => {
-    const file = event.target.files?.[0];
-    const currentUser = requireUser();
-    if (!currentUser || !file) return;
+  const userName = user?.displayName || user?.email?.split("@")[0] || "U.Do User";
+  const photo = useMemo(() => resolveUserPhoto(user), [user]);
+  const avatarFallback = userName.trim().charAt(0).toUpperCase();
 
-    if (!file.type.startsWith("image/")) {
-      setStatus("Please choose an image file.");
-      return;
-    }
+  const say = (tone, text) => setStatus({ tone, text });
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = typeof reader.result === "string" ? reader.result : "";
-      if (!dataUrl) {
-        setStatus("Could not read this image. Try another file.");
-        return;
-      }
-
-      setStoredProfilePhoto(currentUser.uid, dataUrl);
-      setPhotoPreview(dataUrl);
-      setStatus("Profile photo updated from your local file.");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleUseGooglePhoto = () => {
-    const currentUser = requireUser();
-    if (!currentUser) return;
-
-    if (currentUser.photoURL) {
-      clearStoredProfilePhoto(currentUser.uid);
-      setPhotoPreview(currentUser.photoURL);
-      setStatus("Switched back to your Google/Gmail profile photo.");
-      return;
-    }
-
-    setStatus("No Google/Gmail profile photo was found for this account.");
-  };
-
-  const handleExportData = async () => {
+  const handleExport = async () => {
     const currentUser = requireUser();
     if (!currentUser) return;
 
     setBusyAction("export");
-    setStatus("Preparing your account backup file...");
+    say("", "Preparing your backup…");
 
     try {
       const payload = {
         exportedAt: new Date().toISOString(),
-        user: {
-          uid: currentUser.uid,
-          name: userName,
-          email: currentUser.email || "",
-        },
+        user: { uid: currentUser.uid, name: userName, email: currentUser.email || "" },
         data: await exportWorkspace(currentUser.uid),
       };
 
-      const fileBlob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const downloadUrl = URL.createObjectURL(fileBlob);
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
+      );
       const link = document.createElement("a");
-      link.href = downloadUrl;
+      link.href = url;
       link.download = `u-do-backup-${currentUser.uid}-${todayKey()}.json`;
       link.click();
-      URL.revokeObjectURL(downloadUrl);
+      URL.revokeObjectURL(url);
 
-      setStatus("Export complete. Backup file downloaded.");
+      say("success", "Export complete — check your downloads.");
     } catch (error) {
-      setStatus(error?.message || "Failed to export your account data.");
+      say("error", error?.message || "Failed to export your data.");
     } finally {
       setBusyAction("");
     }
   };
 
-  const handleClearAllData = async () => {
+  // Read and validate first; nothing is written until the summary is confirmed.
+  const handleFileChosen = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!requireUser() || !file) return;
+
+    if (!/\.json$/i.test(file.name)) {
+      say("error", "Pick the .json backup file that Export produced.");
+      return;
+    }
+
+    try {
+      const raw = await file.text();
+      setPendingImport({ raw, name: file.name, ...inspectBackup(raw) });
+      say("", "");
+    } catch (error) {
+      setPendingImport(null);
+      say("error", error?.message || "Couldn't read that file.");
+    }
+  };
+
+  const confirmImport = async () => {
+    const currentUser = requireUser();
+    if (!currentUser || !pendingImport) return;
+
+    setBusyAction("import");
+
+    try {
+      const result = await importWorkspace(currentUser.uid, pendingImport.raw);
+      setPendingImport(null);
+      say("success", `Imported ${result.total} record${result.total === 1 ? "" : "s"}.`);
+    } catch (error) {
+      say("error", error?.message || "Import failed. Nothing else was changed.");
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const handleClear = async () => {
     const currentUser = requireUser();
     if (!currentUser) return;
 
-    const shouldClear = window.confirm(
-      "This will permanently delete all your data. Are you sure?"
+    const typed = window.prompt(
+      "This permanently deletes every task, habit, planner entry and transaction in this account.\n\nType DELETE to confirm."
     );
-    if (!shouldClear) return;
+
+    if (typed !== "DELETE") {
+      if (typed !== null) say("", "Nothing was deleted.");
+      return;
+    }
 
     setBusyAction("clear");
-    setStatus("Clearing all workspace data...");
+    say("", "Clearing your workspace…");
 
     try {
       await clearWorkspace(currentUser.uid);
-
-      setStatus("All account data has been cleared.");
+      say("success", "All workspace data cleared.");
     } catch (error) {
-      setStatus(error?.message || "Failed to clear your data.");
+      say("error", error?.message || "Failed to clear your data.");
     } finally {
       setBusyAction("");
     }
   };
 
-  const avatarFallback = userName.trim().charAt(0).toUpperCase();
+  const busy = busyAction !== "";
 
   return (
     <section className="profile-page">
-      <header className="profile-header glass-panel">
-        <h2>Profile</h2>
+      <header className="page-head">
+        <div>
+          <h1 className="page-title">Profile</h1>
+          <p className="page-sub">Your account and its data.</p>
+        </div>
       </header>
 
-      <article className="profile-card glass-panel">
+      <article className="panel profile-card">
         <div className="profile-row">
-          {photoPreview ? (
-            <img src={photoPreview} alt="Profile" className="profile-photo" />
+          {photo ? (
+            <img src={photo} alt="" className="profile-photo" />
           ) : (
             <div className="profile-photo profile-photo-fallback">{avatarFallback}</div>
           )}
@@ -134,51 +146,98 @@ function Profile() {
           <div className="profile-meta">
             <h3>{userName}</h3>
             <p>{user?.email || "Signed in"}</p>
-            <small>
-              Default photo uses your Google/Gmail profile image. You can override it by uploading a
-              local image file.
-            </small>
+            <p className="panel-note">Your picture comes from the Google account you sign in with.</p>
           </div>
-        </div>
-
-        <div className="profile-actions">
-          <label className="upload-label button-secondary" htmlFor="profile-photo-input">
-            Upload local photo
-          </label>
-          <input
-            id="profile-photo-input"
-            type="file"
-            accept="image/*"
-            onChange={handleUpload}
-            className="upload-input"
-          />
-
-          <button type="button" className="button-secondary" onClick={handleUseGooglePhoto}>
-            Use Gmail photo
-          </button>
         </div>
       </article>
 
-      <article className="profile-card glass-panel">
-        <h3>Data Controls</h3>
-        <p className="profile-data-copy">
-          Export a backup JSON file of your account data or clear everything from your workspace.
-        </p>
-        <div className="profile-actions">
-          <button type="button" className="button-secondary" onClick={handleExportData} disabled={busyAction !== ""}>
-            {busyAction === "export" ? "Exporting..." : "Export My Data"}
-          </button>
-          <button
-            type="button"
-            className="button-destructive"
-            onClick={handleClearAllData}
-            disabled={busyAction !== ""}
-          >
-            {busyAction === "clear" ? "Clearing..." : "Clear All Data"}
-          </button>
+      <article className="panel profile-card">
+        <div className="panel-head">
+          <h3 className="panel-title">Your data</h3>
         </div>
 
-        {status ? <p className="profile-status">{status}</p> : null}
+        <p className="profile-data-copy">
+          Export writes a JSON backup of your tasks, habits, planner and transactions. Import
+          restores one into this account — entries sharing an id are overwritten.
+        </p>
+
+        <div className="profile-actions">
+          <button type="button" className="btn" onClick={handleExport} disabled={busy}>
+            <FiDownload /> {busyAction === "export" ? "Exporting…" : "Export data"}
+          </button>
+
+          <button
+            type="button"
+            className="btn"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy}
+          >
+            <FiUpload /> Import data
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="upload-input"
+            onChange={handleFileChosen}
+          />
+        </div>
+
+        {pendingImport ? (
+          <div className="import-preview">
+            <strong>{pendingImport.name}</strong>
+            {pendingImport.exportedAt ? (
+              <span className="panel-note">
+                Exported {new Date(pendingImport.exportedAt).toLocaleString()}
+              </span>
+            ) : null}
+
+            {Object.entries(pendingImport.counts).map(([name, count]) => (
+              <span key={name} className="import-row">
+                <span>{SECTION_LABEL[name] || name}</span>
+                <strong>{count}</strong>
+              </span>
+            ))}
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setPendingImport(null)}
+                disabled={busy}
+              >
+                Cancel
+              </button>
+              <button type="button" className="btn btn-primary" onClick={confirmImport} disabled={busy}>
+                {busyAction === "import"
+                  ? "Importing…"
+                  : `Import ${pendingImport.total} record${pendingImport.total === 1 ? "" : "s"}`}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {status.text ? (
+          <p className={`profile-status ${status.tone ? `is-${status.tone}` : ""}`}>{status.text}</p>
+        ) : null}
+      </article>
+
+      <article className="panel profile-card">
+        <div className="panel-head">
+          <h3 className="panel-title">Danger zone</h3>
+        </div>
+
+        <p className="profile-data-copy">
+          Clearing removes every task, habit, planner entry and transaction in this account. It
+          cannot be undone — export first if you might want any of it back.
+        </p>
+
+        <div className="profile-actions">
+          <button type="button" className="btn btn-danger" onClick={handleClear} disabled={busy}>
+            <FiTrash2 /> {busyAction === "clear" ? "Clearing…" : "Clear all data"}
+          </button>
+        </div>
       </article>
     </section>
   );
