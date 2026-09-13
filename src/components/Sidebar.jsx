@@ -9,7 +9,6 @@ import {
   FiGrid,
   FiLogOut,
   FiChevronLeft,
-  FiChevronRight,
   FiMenu,
   FiMoon,
   FiSun,
@@ -90,16 +89,19 @@ function Sidebar({ user }) {
 
       <aside className={`sidebar ${isOpen ? "is-open" : ""} ${isCollapsed ? "is-collapsed" : ""}`}>
         <div className="sidebar-top">
+          {/* Collapsed, the rail has no room for the wordmark, so the row
+              becomes a single hamburger that expands it again. */}
           <div className="sidebar-brand-row">
-            <BrandLogo compact />
+            {isCollapsed ? null : <BrandLogo compact />}
             <button
               type="button"
-              className="sidebar-collapse"
+              className={`sidebar-collapse ${isCollapsed ? "is-rail" : ""}`}
               onClick={() => setIsCollapsed((collapsed) => !collapsed)}
               aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!isCollapsed}
               title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
-              {isCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
+              {isCollapsed ? <FiMenu /> : <FiChevronLeft />}
             </button>
           </div>
 
@@ -123,7 +125,7 @@ function Sidebar({ user }) {
             ))}
           </nav>
 
-          <AIAssistant />
+          <AIAssistant collapsed={isCollapsed} />
         </div>
 
         <div className="sidebar-bottom">

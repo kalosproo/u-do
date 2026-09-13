@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { fromDateKey, todayKey as getTodayKey } from "../utils/dateKeys";
 import {
+  clearTasks,
   createTask,
   deleteTask as deleteTaskDoc,
   fetchTasks,
   setTaskStatus,
 } from "../services/tasks";
+import ClearDataButton from "../components/ClearDataButton";
 
 const COLUMNS = [
   { key: "todo", title: "To do" },
@@ -42,7 +45,13 @@ function Tasks() {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("medium");
-  const [filter, setFilter] = useState("all");
+  // The dashboard links here with ?filter=overdue etc., so the arriving view
+  // actually shows the number that was clicked.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requested = searchParams.get("filter");
+  const [filter, setFilter] = useState(
+    FILTERS.some(([key]) => key === requested) ? requested : "all"
+  );
   const [error, setError] = useState("");
   const [dragId, setDragId] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
@@ -177,13 +186,29 @@ function Tasks() {
           </p>
         </div>
 
+        <div className="tasks-toolbar">
+          <ClearDataButton
+            label="Clear tasks"
+            noun="tasks"
+            count={tasks.length}
+            clear={clearTasks}
+            onCleared={loadTasks}
+          />
+        </div>
+
         <div className="tasks-filter-row">
           {FILTERS.map(([key, label]) => (
             <button
               key={key}
               type="button"
               className={`chip ${filter === key ? "active" : ""}`}
-              onClick={() => setFilter(key)}
+              onClick={() => {
+                setFilter(key);
+                // Keep the address honest about what is on screen.
+                if (key === "all") searchParams.delete("filter");
+                else searchParams.set("filter", key);
+                setSearchParams(searchParams, { replace: true });
+              }}
             >
               {label}
             </button>
@@ -265,7 +290,7 @@ function Tasks() {
               </h3>
             </div>
 
-            <div className="column-list">
+            <div className="column-list is-scrollable">
               {tasksByStatus[column.key].map((task) => {
                 const overdue = isOverdue(task);
 
@@ -311,7 +336,9 @@ function Tasks() {
                           {overdue ? "Overdue · " : ""}
                           {formatDueDate(task.dueDate)}
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="date-badge is-undated">No due date</span>
+                      )}
                     </div>
 
                     <div className="task-actions-row">

@@ -1,4 +1,5 @@
-import { addDoc, deleteDoc, getDocs, updateDoc } from "firebase/firestore";
+import { addDoc, deleteDoc, getDocs, updateDoc, writeBatch } from "firebase/firestore";
+import { db } from "./firebase";
 import { habitDoc, habitsCollection } from "./paths";
 import { publishHabitSummary } from "./friends";
 
@@ -56,4 +57,31 @@ export const createHabit = (uid, { title, frequency = "daily" }) =>
 
 export const setHabitLogs = (uid, habitId, logs) => updateDoc(habitDoc(uid, habitId), { logs });
 
+/** Renames a habit or changes its frequency. Logs are never touched here. */
+export const updateHabit = (uid, habitId, changes) => {
+  const patch = {};
+
+  if (changes.title !== undefined) patch.title = String(changes.title).trim();
+  if (changes.frequency !== undefined) patch.frequency = changes.frequency;
+
+  return updateDoc(habitDoc(uid, habitId), patch);
+};
+
 export const deleteHabit = (uid, habitId) => deleteDoc(habitDoc(uid, habitId));
+
+/** Deletes every habit for this account and nothing else. */
+export const clearHabits = async (uid) => {
+  const snapshot = await getDocs(habitsCollection(uid));
+  const batch = writeBatch(db);
+
+  snapshot.docs.forEach((item) => batch.delete(habitDoc(uid, item.id)));
+  await batch.commit();
+
+  try {
+    localStorage.removeItem(habitsCacheKey(uid));
+  } catch {
+    /* The cache is best-effort. */
+  }
+
+  return snapshot.size;
+};

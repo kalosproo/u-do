@@ -6,6 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import {
   CLAIM_ERRORS,
   acceptFriendRequest,
+  clearFriendGraph,
   buildInviteLink,
   claimUsername,
   declineFriendRequest,
@@ -20,6 +21,7 @@ import {
   sendFriendRequest,
   validateUsername,
 } from "../services/friends";
+import ClearDataButton from "../components/ClearDataButton";
 
 const SEARCH_MODES = [
   ["username", "By username"],
@@ -444,7 +446,7 @@ function Friends() {
       {requests.length > 0 && (
         <article className="wire-card">
           <h3>Requests ({requests.length})</h3>
-          <div className="friends-request-list">
+          <div className="friends-request-list is-scrollable">
             {requests.map((request) => (
               <div key={request.uid} className="friends-result-row">
                 <Avatar person={request} />
@@ -475,7 +477,16 @@ function Friends() {
       )}
 
       <article className="wire-card">
-        <h3>Their streaks</h3>
+        <div className="panel-head">
+          <h3 className="panel-title">Their streaks</h3>
+          <ClearDataButton
+            label="Remove all friends"
+            noun="friendships and pending requests"
+            count={friends.length + requests.length}
+            clear={clearFriendGraph}
+            onCleared={refresh}
+          />
+        </div>
 
         {loading ? (
           <p className="friends-muted">Loading your friends...</p>
@@ -484,7 +495,7 @@ function Friends() {
             No friends yet. Share your invite link or search for their username above.
           </p>
         ) : (
-          <div className="friends-list">
+          <div className="friends-list is-scrollable">
             {friends.map((friend) => (
               <section key={friend.uid} className="friend-card">
                 <header className="friend-card-header">

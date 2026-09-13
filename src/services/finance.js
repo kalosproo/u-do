@@ -1,4 +1,5 @@
-import { addDoc, deleteDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
+import { addDoc, deleteDoc, getDocs, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { db } from "./firebase";
 import { expenseDoc, expensesCollection } from "./paths";
 import {
   PENDING_FLAG,
@@ -111,3 +112,15 @@ export const updateExpense = async (uid, expenseId, changes) => {
 };
 
 export const deleteExpense = (uid, expenseId) => deleteDoc(expenseDoc(uid, expenseId));
+
+/** Deletes every transaction for this account and nothing else. */
+export const clearExpenses = async (uid) => {
+  const snapshot = await getDocs(expensesCollection(uid));
+  const batch = writeBatch(db);
+
+  snapshot.docs.forEach((item) => batch.delete(expenseDoc(uid, item.id)));
+  await batch.commit();
+
+  writeCachedExpenses(uid, []);
+  return snapshot.size;
+};
