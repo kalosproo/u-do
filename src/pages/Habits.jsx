@@ -5,6 +5,7 @@ import { useAuthGuard } from "../hooks/useAuthGuard";
 import { fromDateKey, toDateKey } from "../utils/dateKeys";
 import { clearHabits, createHabit, deleteHabit, fetchHabits, setHabitLogs } from "../services/habits";
 import ClearDataButton from "../components/ClearDataButton";
+import PageMenu, { PageMenuLabel } from "../components/PageMenu";
 import {
   getHabitStreakSnapshot,
   getRecentWindowKeys,
@@ -207,21 +208,24 @@ function Habits() {
   return (
     <section className="habits-page">
       <header className="page-head">
-        <div>
-          <h1 className="page-title">Habits</h1>
-          <p className="page-sub">
-            {summary.doneNow} of {summary.total} done this window
-          </p>
-        </div>
+        <div className="page-head-row">
+          <div>
+            <h1 className="page-title">Habits</h1>
+            <p className="page-sub">
+              {summary.doneNow} of {summary.total} done this window
+            </p>
+          </div>
 
-        <div className="habits-toolbar">
-          <ClearDataButton
-            label="Clear habits"
-            noun="habits"
-            count={habits.length}
-            clear={clearHabits}
-            onCleared={loadHabits}
-          />
+          <PageMenu label="Habit actions">
+            <PageMenuLabel>Danger zone</PageMenuLabel>
+            <ClearDataButton
+              label="Clear habits"
+              noun="habits"
+              count={habits.length}
+              clear={clearHabits}
+              onCleared={loadHabits}
+            />
+          </PageMenu>
         </div>
 
         <div className="habits-filter-group">

@@ -178,7 +178,7 @@ function Profile() {
 
         <div className="profile-actions">
           <button type="button" className="btn" onClick={handleExport} disabled={busy}>
-            <FiDownload /> {busyAction === "export" ? "Exporting…" : "Export data"}
+            <FiUpload /> {busyAction === "export" ? "Exporting…" : "Export data"}
           </button>
 
           <button
@@ -187,7 +187,7 @@ function Profile() {
             onClick={() => fileInputRef.current?.click()}
             disabled={busy}
           >
-            <FiUpload /> Import data
+            <FiDownload /> Import data
           </button>
 
           <input

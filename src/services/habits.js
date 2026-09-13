@@ -1,7 +1,7 @@
 import { addDoc, deleteDoc, getDocs, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 import { habitDoc, habitsCollection } from "./paths";
-import { publishHabitSummary } from "./friends";
+import { clearSharedSummary, publishHabitSummary } from "./friends";
 
 /** Scoped per account: an unscoped key let one account's cache show to another. */
 export const habitsCacheKey = (uid) => `u_do_habits_${uid}`;
@@ -82,6 +82,11 @@ export const clearHabits = async (uid) => {
   } catch {
     /* The cache is best-effort. */
   }
+
+  // The shared card is a separate document, so deleting habits does not touch
+  // it. Without this, friends keep seeing the streaks of habits that no longer
+  // exist until the owner next opens their Habits page.
+  await clearSharedSummary(uid).catch(() => {});
 
   return snapshot.size;
 };

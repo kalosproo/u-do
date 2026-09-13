@@ -12,6 +12,7 @@ import {
   setTaskStatus,
 } from "../services/tasks";
 import ClearDataButton from "../components/ClearDataButton";
+import PageMenu, { PageMenuLabel } from "../components/PageMenu";
 
 const COLUMNS = [
   { key: "todo", title: "To do" },
@@ -178,22 +179,25 @@ function Tasks() {
   return (
     <section className="tasks-page">
       <header className="page-head">
-        <div>
-          <h1 className="page-title">Tasks</h1>
-          <p className="page-sub">
-            {stats.active} active · {stats.done} done
-            {stats.overdue ? ` · ${stats.overdue} overdue` : ""}
-          </p>
-        </div>
+        <div className="page-head-row">
+          <div>
+            <h1 className="page-title">Tasks</h1>
+            <p className="page-sub">
+              {stats.active} active · {stats.done} done
+              {stats.overdue ? ` · ${stats.overdue} overdue` : ""}
+            </p>
+          </div>
 
-        <div className="tasks-toolbar">
-          <ClearDataButton
-            label="Clear tasks"
-            noun="tasks"
-            count={tasks.length}
-            clear={clearTasks}
-            onCleared={loadTasks}
-          />
+          <PageMenu label="Task actions">
+            <PageMenuLabel>Danger zone</PageMenuLabel>
+            <ClearDataButton
+              label="Clear tasks"
+              noun="tasks"
+              count={tasks.length}
+              clear={clearTasks}
+              onCleared={loadTasks}
+            />
+          </PageMenu>
         </div>
 
         <div className="tasks-filter-row">

@@ -33,5 +33,11 @@ export const friendsCollection = (uid) => collection(db, "profiles", uid, "frien
 export const friendDoc = (uid, friendUid) => doc(db, "profiles", uid, "friends", friendUid);
 export const requestsCollection = (uid) => collection(db, "profiles", uid, "requests");
 export const requestDoc = (uid, fromUid) => doc(db, "profiles", uid, "requests", fromUid);
+
+// A request is stored on the recipient, who is the only one allowed to read
+// it. Without a mirror the sender cannot see — let alone withdraw — what they
+// sent, so each send also writes here, under the sender's own profile.
+export const outgoingCollection = (uid) => collection(db, "profiles", uid, "outgoing");
+export const outgoingDoc = (uid, toUid) => doc(db, "profiles", uid, "outgoing", toUid);
 export const usernameDoc = (username) => doc(db, "usernames", username);
 export const inviteCodeDoc = (code) => doc(db, "inviteCodes", code);

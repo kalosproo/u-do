@@ -4,6 +4,8 @@ import {
   friendDoc,
   friendsCollection,
   inviteCodeDoc,
+  outgoingCollection,
+  outgoingDoc,
   profileDoc,
   requestDoc,
   requestsCollection,
@@ -279,6 +281,45 @@ export const findUserByInviteCode = async (value) => {
 export const isFriend = async (uid, otherUid) =>
   (await getDoc(friendDoc(uid, otherUid))).exists();
 
+/** Every state two accounts can be in, so the UI never has to guess. */
+export const RELATIONSHIP = {
+  SELF: "self",
+  FRIENDS: "friends",
+  OUTGOING: "outgoing",
+  INCOMING: "incoming",
+  NONE: "none",
+};
+
+/**
+ * What am I to this account right now?
+ *
+ * Checked in priority order: an existing friendship outranks a stale request
+ * left behind by a failed cleanup, and an incoming request outranks an
+ * outgoing one so the UI offers Accept rather than a second send.
+ */
+export const getRelationship = async (uid, targetUid) => {
+  if (!uid || !targetUid) return RELATIONSHIP.NONE;
+  if (uid === targetUid) return RELATIONSHIP.SELF;
+
+  const [friends, incoming, outgoing] = await Promise.all([
+    getDoc(friendDoc(uid, targetUid)).catch(() => null),
+    getDoc(requestDoc(uid, targetUid)).catch(() => null),
+    getDoc(outgoingDoc(uid, targetUid)).catch(() => null),
+  ]);
+
+  if (friends?.exists()) return RELATIONSHIP.FRIENDS;
+  if (incoming?.exists()) return RELATIONSHIP.INCOMING;
+  if (outgoing?.exists()) return RELATIONSHIP.OUTGOING;
+  return RELATIONSHIP.NONE;
+};
+
+/**
+ * Asks to be friends.
+ *
+ * Returns what actually happened, because two cases are not a plain send:
+ * asking someone who already asked you is an accept, and asking someone twice
+ * is a no-op rather than an error that resets the original request's age.
+ */
 export const sendFriendRequest = async (user, targetUid) => {
   if (targetUid === user.uid) throw new Error("That's your own profile.");
 
@@ -287,8 +328,20 @@ export const sendFriendRequest = async (user, targetUid) => {
     throw new Error("Claim a username first so they know who's asking.");
   }
 
-  if (await isFriend(user.uid, targetUid)) {
+  const relationship = await getRelationship(user.uid, targetUid);
+
+  if (relationship === RELATIONSHIP.FRIENDS) {
     throw new Error("You're already friends.");
+  }
+
+  // They asked first: the honest response to "add them" is to accept.
+  if (relationship === RELATIONSHIP.INCOMING) {
+    await acceptFriendRequest(user, targetUid);
+    return RELATIONSHIP.FRIENDS;
+  }
+
+  if (relationship === RELATIONSHIP.OUTGOING) {
+    return RELATIONSHIP.OUTGOING;
   }
 
   await setDoc(requestDoc(targetUid, user.uid), {
@@ -298,11 +351,61 @@ export const sendFriendRequest = async (user, targetUid) => {
     photoURL: myProfile.photoURL,
     createdAt: serverTimestamp(),
   });
+
+  // The sender's own copy. Written after the request so a failure here leaves
+  // a real request rather than a phantom "Pending" with nothing behind it.
+  await setDoc(outgoingDoc(user.uid, targetUid), {
+    uid: targetUid,
+    createdAt: serverTimestamp(),
+  });
+
+  return RELATIONSHIP.OUTGOING;
+};
+
+/** Withdraws a request. The rules let the sender delete the recipient's copy. */
+export const cancelFriendRequest = async (user, targetUid) => {
+  await deleteDoc(requestDoc(targetUid, user.uid)).catch(() => {});
+  await deleteDoc(outgoingDoc(user.uid, targetUid));
 };
 
 export const listIncomingRequests = async (uid) => {
   const snap = await getDocs(requestsCollection(uid));
   return snap.docs.map((item) => ({ uid: item.id, ...item.data() }));
+};
+
+/**
+ * Requests this account has sent and not yet had answered.
+ *
+ * The mirror can outlive the request it tracks if the recipient's cleanup
+ * failed, so anyone already a friend is filtered out here rather than shown
+ * as perpetually pending.
+ */
+export const listOutgoingRequests = async (uid) => {
+  const snap = await getDocs(outgoingCollection(uid));
+
+  const rows = await Promise.all(
+    snap.docs.map(async (item) => {
+      const targetUid = item.id;
+      const [profile, alreadyFriends] = await Promise.all([
+        readProfile(targetUid).catch(() => null),
+        isFriend(uid, targetUid).catch(() => false),
+      ]);
+
+      if (alreadyFriends) {
+        await deleteDoc(outgoingDoc(uid, targetUid)).catch(() => {});
+        return null;
+      }
+
+      return {
+        uid: targetUid,
+        username: profile?.username || "",
+        displayName: profile?.displayName || "U.Do user",
+        photoURL: profile?.photoURL || "",
+      };
+    })
+  );
+
+  return rows.filter(Boolean);
 };
 
 /**
@@ -320,10 +423,16 @@ export const acceptFriendRequest = async (user, requesterUid) => {
     since: serverTimestamp(),
   });
   await deleteDoc(requestDoc(user.uid, requesterUid));
+
+  // Clear the sender's "Pending" marker. Best-effort: the friendship is
+  // already real, and listOutgoingRequests drops friends anyway.
+  await deleteDoc(outgoingDoc(requesterUid, user.uid)).catch(() => {});
 };
 
-export const declineFriendRequest = (user, requesterUid) =>
-  deleteDoc(requestDoc(user.uid, requesterUid));
+export const declineFriendRequest = async (user, requesterUid) => {
+  await deleteDoc(requestDoc(user.uid, requesterUid));
+  await deleteDoc(outgoingDoc(requesterUid, user.uid)).catch(() => {});
+};
 
 export const removeFriend = async (user, friendUid) => {
   await deleteDoc(friendDoc(user.uid, friendUid));
@@ -360,9 +469,10 @@ export const getFriendSummary = async (friendUid) => {
  * then take.
  */
 export const clearFriendGraph = async (uid) => {
-  const [friends, requests] = await Promise.all([
+  const [friends, requests, outgoing] = await Promise.all([
     getDocs(friendsCollection(uid)),
     getDocs(requestsCollection(uid)),
+    getDocs(outgoingCollection(uid)),
   ]);
 
   await Promise.all([
@@ -371,10 +481,19 @@ export const clearFriendGraph = async (uid) => {
       // The other side may already be gone; that is not a failure.
       await deleteDoc(friendDoc(item.id, uid)).catch(() => {});
     }),
-    ...requests.docs.map((item) => deleteDoc(requestDoc(uid, item.id))),
+    ...requests.docs.map(async (item) => {
+      await deleteDoc(requestDoc(uid, item.id));
+      // Also clear the asker's pending marker, so they stop seeing "Pending"
+      // for a request that no longer exists.
+      await deleteDoc(outgoingDoc(item.id, uid)).catch(() => {});
+    }),
+    ...outgoing.docs.map(async (item) => {
+      await deleteDoc(outgoingDoc(uid, item.id));
+      await deleteDoc(requestDoc(item.id, uid)).catch(() => {});
+    }),
   ]);
 
-  return { friends: friends.size, requests: requests.size };
+  return { friends: friends.size, requests: requests.size, outgoing: outgoing.size };
 };
 
 /** Removes the shared streak card so friends stop seeing habit data. */

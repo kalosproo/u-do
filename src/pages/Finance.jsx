@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { FiDownload, FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiUpload } from "react-icons/fi";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../config/financeCategories";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
@@ -38,6 +38,7 @@ import {
   removeExpense as removeExpenseRecord,
 } from "../services/finance";
 import ClearDataButton from "../components/ClearDataButton";
+import PageMenu, { PageMenuLabel } from "../components/PageMenu";
 
 const CHART_COLORS = [
   "var(--chart-1)",
@@ -250,9 +251,22 @@ function Finance() {
   return (
     <section className="finance-page">
       <header className="page-head">
-        <div>
-          <h1 className="page-title">Finance</h1>
-          <p className="page-sub">Income, spending and where it goes.</p>
+        <div className="page-head-row">
+          <div>
+            <h1 className="page-title">Finance</h1>
+            <p className="page-sub">Income, spending and where it goes.</p>
+          </div>
+
+          <PageMenu label="Finance actions">
+            <PageMenuLabel>Danger zone</PageMenuLabel>
+            <ClearDataButton
+              label="Clear finance"
+              noun="transactions"
+              count={expenses.length}
+              clear={clearExpenses}
+              onCleared={loadExpenses}
+            />
+          </PageMenu>
         </div>
 
         <div className="toolbar">
@@ -267,7 +281,7 @@ function Finance() {
             </button>
           ))}
           <button type="button" className="btn btn-sm" onClick={downloadCSV}>
-            <FiDownload /> Export
+            <FiUpload /> Export
           </button>
         </div>
       </header>
@@ -477,13 +491,6 @@ function Finance() {
                 <span className="panel-note">
                   {Math.min(visibleRows, history.length)} of {history.length} shown
                 </span>
-                <ClearDataButton
-                  label="Clear finance"
-                  noun="transactions"
-                  count={expenses.length}
-                  clear={clearExpenses}
-                  onCleared={loadExpenses}
-                />
               </div>
             </div>
 

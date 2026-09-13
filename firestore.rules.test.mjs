@@ -98,6 +98,32 @@ await t("alice removes bob from her list", () => assertSucceeds(deleteDoc(doc(al
 await t("bob can no longer read alice's summary", () => assertFails(getDoc(doc(bob,"profiles",ALICE,"shared","summary"))));
 await t("alice can remove herself from bob's list too", () => assertSucceeds(deleteDoc(doc(alice,"profiles",BOB,"friends",ALICE))));
 
+console.log("\n=== outgoing request mirror ===");
+await seed();
+await t("alice writes her own outgoing marker", () => assertSucceeds(setDoc(doc(alice,"profiles",ALICE,"outgoing",BOB),{uid:BOB})));
+await t("alice reads her own outgoing list", () => assertSucceeds(getDocs(collection(alice,"profiles",ALICE,"outgoing"))));
+await t("bob CANNOT read alice's outgoing list", () => assertFails(getDocs(collection(bob,"profiles",ALICE,"outgoing"))));
+await t("mallory CANNOT read alice's outgoing list", () => assertFails(getDocs(collection(mallory,"profiles",ALICE,"outgoing"))));
+await t("mallory CANNOT plant a marker on alice", () => assertFails(setDoc(doc(mallory,"profiles",ALICE,"outgoing",MALLORY),{uid:MALLORY})));
+await t("alice CANNOT write a marker whose uid lies about the target", () => assertFails(setDoc(doc(alice,"profiles",ALICE,"outgoing",BOB),{uid:MALLORY})));
+await t("bob (the recipient) CAN clear alice's marker for him", () => assertSucceeds(deleteDoc(doc(bob,"profiles",ALICE,"outgoing",BOB))));
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(),"profiles",ALICE,"outgoing",BOB),{uid:BOB});
+});
+await t("mallory CANNOT clear a marker that isn't about her", () => assertFails(deleteDoc(doc(mallory,"profiles",ALICE,"outgoing",BOB))));
+await t("alice withdraws her own marker", () => assertSucceeds(deleteDoc(doc(alice,"profiles",ALICE,"outgoing",BOB))));
+
+console.log("\n=== sender can withdraw the request itself ===");
+await seed();
+await t("alice sends bob a request", () => assertSucceeds(setDoc(doc(alice,"profiles",BOB,"requests",ALICE),{uid:ALICE})));
+await t("alice withdraws it from bob's inbox", () => assertSucceeds(deleteDoc(doc(alice,"profiles",BOB,"requests",ALICE))));
+await t("mallory CANNOT withdraw alice's request", async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(),"profiles",BOB,"requests",ALICE),{uid:ALICE});
+  });
+  await assertFails(deleteDoc(doc(mallory,"profiles",BOB,"requests",ALICE)));
+});
+
 console.log("\n=== rate limit collection is closed to clients ===");
 await t("client CANNOT read authRateLimits", () => assertFails(getDoc(doc(alice,"authRateLimits","ip:1.2.3.4"))));
 await t("client CANNOT write authRateLimits", () => assertFails(setDoc(doc(alice,"authRateLimits","ip:1.2.3.4"),{count:0})));
