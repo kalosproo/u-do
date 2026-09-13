@@ -1,40 +1,61 @@
-import { useEffect, useMemo, useState } from "react";
-import { auth, db } from "../services/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getDocs } from "firebase/firestore";
+import { useAuth } from "../hooks/useAuth";
+import { fromDateKey, todayKey as getTodayKey } from "../utils/dateKeys";
+import { workspaceCollection } from "../services/paths";
 import {
   buildHabitMetadata,
   getRecentWindowKeys,
   isHabitCompletedInWindow,
-  toDateKey,
 } from "../utils/streaks";
 
 function Home() {
-  const [loading, setLoading] = useState(() => Boolean(auth.currentUser));
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(() => Boolean(user));
   const [tasks, setTasks] = useState([]);
   const [plans, setPlans] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [habits, setHabits] = useState([]);
+  const [error, setError] = useState("");
 
-  const user = auth.currentUser;
-  const todayKey = toDateKey(new Date());
+  const todayKey = getTodayKey();
 
-  useEffect(() => {
+  const loadDashboard = useCallback(async () => {
     if (!user) return;
 
-    Promise.all([
-      getDocs(collection(db, "users", user.uid, "tasks")),
-      getDocs(collection(db, "users", user.uid, "planner")),
-      getDocs(collection(db, "users", user.uid, "expenses")),
-      getDocs(collection(db, "users", user.uid, "habits")),
-    ])
-      .then(([taskSnap, planSnap, expenseSnap, habitSnap]) => {
-        setTasks(taskSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setPlans(planSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setExpenses(expenseSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setHabits(habitSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      })
-      .finally(() => setLoading(false));
+    const read = async (name) =>
+      (await getDocs(workspaceCollection(user.uid, name))).docs.map((item) => ({
+        id: item.id,
+        ...item.data(),
+      }));
+
+    try {
+      const [nextTasks, nextPlans, nextExpenses, nextHabits] = await Promise.all([
+        read("tasks"),
+        read("planner"),
+        read("expenses"),
+        read("habits"),
+      ]);
+
+      setTasks(nextTasks);
+      setPlans(nextPlans);
+      setExpenses(nextExpenses);
+      setHabits(nextHabits);
+      setError("");
+    } catch (loadError) {
+      // Without this the dashboard used to sit on zeros with nothing said.
+      setError(loadError?.message || "Couldn't load your dashboard.");
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  // Deferred a tick: loading sets state, and React warns about doing that
+  // synchronously inside an effect. Every page in the app loads this way.
+  useEffect(() => {
+    const timer = setTimeout(loadDashboard, 0);
+    return () => clearTimeout(timer);
+  }, [loadDashboard]);
 
   const summary = useMemo(() => {
     const totalTasks = tasks.length;
@@ -78,7 +99,7 @@ function Home() {
         const logs = habit.logs || {};
         const streakMeta = buildHabitMetadata(habit);
         const frequency = habit.frequency || "daily";
-        const keys = getRecentWindowKeys(frequency, 7, new Date(`${todayKey}T00:00:00`));
+        const keys = getRecentWindowKeys(frequency, 7, fromDateKey(todayKey));
         return {
           id: habit.id,
           title: habit.title,
@@ -113,6 +134,7 @@ function Home() {
       <header className="dashboard-header-block">
         <h1>Dashboard</h1>
         <p>Today you have {summary.pendingTasks} pending task{summary.pendingTasks === 1 ? "" : "s"}.</p>
+        {error ? <p className="page-error">{error}</p> : null}
       </header>
 
       <div className="dashboard-layout-grid">

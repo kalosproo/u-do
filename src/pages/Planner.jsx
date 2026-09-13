@@ -1,9 +1,18 @@
 import { FiChevronLeft, FiChevronRight, FiPlus, FiTrash2 } from "react-icons/fi";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { auth, db } from "../services/firebase";
-import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 import { generateWeeklyPlan } from "../services/autoPlanner";
+import { useAuth } from "../hooks/useAuth";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+import { toDateKey } from "../utils/dateKeys";
+import { fetchPendingTaskSummaries } from "../services/tasks";
+import {
+  createPlan,
+  deletePlan as deletePlanDoc,
+  fetchPlans,
+  persistPlanOrder,
+  renamePlan,
+  setPlanCompleted,
+} from "../services/planner";
 
 function sortPlans(list) {
   return [...list].sort((a, b) => {
@@ -110,35 +119,18 @@ function Planner() {
   const [autoPlanItems, setAutoPlanItems] = useState([]);
   const [autoPlanStatus, setAutoPlanStatus] = useState("");
 
-  const user = auth.currentUser;
-  const navigate = useNavigate();
-  const requireUser = () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) navigate("/login");
-    return currentUser;
-  };
+  const { user } = useAuth();
+  const requireUser = useAuthGuard();
+  const formatDateKey = toDateKey;
 
-  const formatDateKey = (date) => {
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = `${d.getMonth() + 1}`.padStart(2, "0");
-    const day = `${d.getDate()}`.padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  const fetchPlans = useCallback(async () => {
+  const loadPlans = useCallback(async () => {
     if (!user) return;
 
-    const snapshot = await getDocs(collection(db, "users", user.uid, "planner"));
-
-    const list = snapshot.docs.map((planDoc) => ({
-      id: planDoc.id,
-      completed: false,
-      order: 0,
-      ...planDoc.data(),
-    }));
-
-    setPlans(list);
+    try {
+      setPlans(await fetchPlans(user.uid));
+    } catch (loadError) {
+      setAutoPlanStatus(loadError?.message || "Couldn't load your planner.");
+    }
   }, [user]);
 
   const addTaskToDate = async (date) => {
@@ -148,31 +140,26 @@ function Planner() {
     const dateKey = formatDateKey(date);
     const dayPlans = plans.filter((plan) => plan.date === dateKey && !plan.completed);
 
-    await addDoc(collection(db, "users", currentUser.uid, "planner"), {
+    await createPlan(currentUser.uid, {
       title: newTaskTitle.trim(),
       date: dateKey,
-      priority: "medium",
-      completed: false,
       order: dayPlans.length,
-      createdAt: new Date(),
     });
 
     setNewTaskTitle("");
     setActiveInputDate(null);
-    fetchPlans();
+    loadPlans();
   };
 
   const updateTask = async (planId) => {
     const currentUser = requireUser();
     if (!currentUser || !editingText.trim()) return;
 
-    await updateDoc(doc(db, "users", currentUser.uid, "planner", planId), {
-      title: editingText.trim(),
-    });
+    await renamePlan(currentUser.uid, planId, editingText.trim());
 
     setEditingTaskId(null);
     setEditingText("");
-    fetchPlans();
+    loadPlans();
   };
 
   const toggleCompleted = async (plan) => {
@@ -182,29 +169,24 @@ function Planner() {
     const sameDay = plans.filter((item) => item.date === plan.date && item.id !== plan.id);
     const targetGroup = sameDay.filter((item) => item.completed === !plan.completed);
 
-    await updateDoc(doc(db, "users", currentUser.uid, "planner", plan.id), {
-      completed: !plan.completed,
-      order: targetGroup.length,
-    });
+    await setPlanCompleted(currentUser.uid, plan.id, !plan.completed, targetGroup.length);
 
-    fetchPlans();
+    loadPlans();
   };
 
   const deletePlan = async (planId) => {
     const currentUser = requireUser();
     if (!currentUser) return;
-    await deleteDoc(doc(db, "users", currentUser.uid, "planner", planId));
-    fetchPlans();
+    await deletePlanDoc(currentUser.uid, planId);
+    loadPlans();
   };
 
+  // Deferred a tick: loading sets state, and React warns about doing that
+  // synchronously inside an effect. Every page in the app loads this way.
   useEffect(() => {
-    if (!user) return;
-    const timer = setTimeout(() => {
-      fetchPlans();
-    }, 0);
-
+    const timer = setTimeout(loadPlans, 0);
     return () => clearTimeout(timer);
-  }, [fetchPlans, user]);
+  }, [loadPlans]);
 
 
   const getStartOfWeek = (date) => {
@@ -263,14 +245,7 @@ function Planner() {
   const moveAndPersistOrder = async (dayKey, nextDayPlans) => {
     const currentUser = requireUser();
     if (!currentUser) return;
-    await Promise.all(
-      nextDayPlans.map((plan, index) =>
-        updateDoc(doc(db, "users", currentUser.uid, "planner", plan.id), {
-          order: index,
-          date: dayKey,
-        })
-      )
-    );
+    await persistPlanOrder(currentUser.uid, dayKey, nextDayPlans);
   };
 
   const moveTask = async (targetDate, targetTaskId = null) => {
@@ -298,7 +273,7 @@ function Planner() {
 
       await moveAndPersistOrder(fromDate, reordered);
       setDragTaskId(null);
-      fetchPlans();
+      loadPlans();
       return;
     }
 
@@ -315,17 +290,17 @@ function Planner() {
     ]);
 
     setDragTaskId(null);
-    fetchPlans();
+    loadPlans();
   };
 
   const openAutoPlanner = async () => {
-    if (!auth.currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
     setAutoPlanOpen(true); setAutoPlanLoading(true); setAutoPlanStatus(""); setAutoPlanSummary(""); setAutoPlanItems([]);
     const weekDates = weekDays.map((date) => ({ date: formatDateKey(date), weekday: date.toLocaleDateString("en-US", { weekday: "short" }) }));
     const scheduledByDate = Object.fromEntries(weekDates.map(({ date }) => [date, (sortedPlansByDate[date] || []).map((plan) => plan.title)]));
     try {
-      const snapshot = await getDocs(collection(db, "users", user.uid, "tasks"));
-      const pendingTasks = snapshot.docs.map((item) => item.data()).filter((task) => task.status !== "done" && !task.completed).map((task) => ({ title: task.title, dueDate: task.dueDate || "", priority: task.priority || "medium" }));
+      const pendingTasks = await fetchPendingTaskSummaries(currentUser.uid);
       const result = await generateWeeklyPlan({ weekDates, pendingTasks, scheduledByDate });
       setAutoPlanSummary(result.summary); setAutoPlanItems(result.assignments.map((item, index) => ({ ...item, id: `${item.date}-${index}` }))); setAutoPlanStatus(result.error || "");
     } catch (error) { setAutoPlanStatus(error?.message || "Couldn't load your tasks. Please try again."); }
@@ -333,7 +308,7 @@ function Planner() {
   };
   const closeAutoPlanner = () => { setAutoPlanOpen(false); setAutoPlanItems([]); setAutoPlanSummary(""); setAutoPlanStatus(""); };
   const startAddingTask = (dateKey) => {
-    if (!auth.currentUser) return navigate("/login");
+    if (!requireUser()) return;
     setActiveInputDate(dateKey);
     setNewTaskTitle("");
   };
@@ -344,8 +319,8 @@ function Planner() {
     try {
       const countByDate = {};
       autoPlanItems.forEach(({ date }) => { countByDate[date] ??= (sortedPlansByDate[date] || []).length; });
-      await Promise.all(autoPlanItems.map(({ title, date, priority }) => addDoc(collection(db, "users", currentUser.uid, "planner"), { title, date, priority, completed: false, order: countByDate[date]++, createdAt: new Date() })));
-      await fetchPlans(); closeAutoPlanner();
+      await Promise.all(autoPlanItems.map(({ title, date, priority }) => createPlan(currentUser.uid, { title, date, priority, order: countByDate[date]++ })));
+      await loadPlans(); closeAutoPlanner();
     } catch (error) { setAutoPlanStatus(error?.message || "Couldn't add these to your planner. Please try again."); }
     finally { setAutoPlanApplying(false); }
   };

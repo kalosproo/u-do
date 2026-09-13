@@ -1,14 +1,15 @@
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-} from "firebase/firestore";
+import { deleteDoc, getDoc, getDocs, runTransaction, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
+import {
+  friendDoc,
+  friendsCollection,
+  inviteCodeDoc,
+  profileDoc,
+  requestDoc,
+  requestsCollection,
+  sharedSummaryDoc,
+  usernameDoc,
+} from "./paths";
 import { buildHabitSummary } from "../utils/habitSummary";
 
 const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/;
@@ -38,10 +39,8 @@ const generateInviteCode = () =>
 
 export const buildInviteLink = (code) => `${window.location.origin}/friends?add=${code}`;
 
-const profileRef = (uid) => doc(db, "profiles", uid);
-
 const readProfile = async (uid) => {
-  const snap = await getDoc(profileRef(uid));
+  const snap = await getDoc(profileDoc(uid));
   if (!snap.exists()) return null;
 
   const data = snap.data();
@@ -78,7 +77,7 @@ export const claimUsername = async (user, requestedUsername) => {
   const inviteCode = existing?.inviteCode || generateInviteCode();
 
   await runTransaction(db, async (transaction) => {
-    const nameRef = doc(db, "usernames", username);
+    const nameRef = usernameDoc(username);
     const nameSnap = await transaction.get(nameRef);
 
     if (nameSnap.exists() && nameSnap.data()?.uid !== user.uid) {
@@ -86,15 +85,15 @@ export const claimUsername = async (user, requestedUsername) => {
     }
 
     transaction.set(nameRef, { uid: user.uid });
-    transaction.set(doc(db, "inviteCodes", inviteCode), { uid: user.uid });
+    transaction.set(inviteCodeDoc(inviteCode), { uid: user.uid });
     transaction.set(
-      profileRef(user.uid),
+      profileDoc(user.uid),
       { uid: user.uid, username, inviteCode, ...describeUser(user), updatedAt: serverTimestamp() },
       { merge: true }
     );
 
     if (existing?.username && existing.username !== username) {
-      transaction.delete(doc(db, "usernames", existing.username));
+      transaction.delete(usernameDoc(existing.username));
     }
   });
 
@@ -105,7 +104,7 @@ export const findUserByUsername = async (value) => {
   const username = normalizeUsername(value);
   if (validateUsername(username)) return null;
 
-  const snap = await getDoc(doc(db, "usernames", username));
+  const snap = await getDoc(usernameDoc(username));
   if (!snap.exists()) return null;
 
   return readProfile(snap.data().uid);
@@ -115,14 +114,14 @@ export const findUserByInviteCode = async (value) => {
   const code = normalizeInviteCode(value);
   if (!code) return null;
 
-  const snap = await getDoc(doc(db, "inviteCodes", code));
+  const snap = await getDoc(inviteCodeDoc(code));
   if (!snap.exists()) return null;
 
   return readProfile(snap.data().uid);
 };
 
 export const isFriend = async (uid, otherUid) =>
-  (await getDoc(doc(db, "profiles", uid, "friends", otherUid))).exists();
+  (await getDoc(friendDoc(uid, otherUid))).exists();
 
 export const sendFriendRequest = async (user, targetUid) => {
   if (targetUid === user.uid) throw new Error("That's your own profile.");
@@ -136,7 +135,7 @@ export const sendFriendRequest = async (user, targetUid) => {
     throw new Error("You're already friends.");
   }
 
-  await setDoc(doc(db, "profiles", targetUid, "requests", user.uid), {
+  await setDoc(requestDoc(targetUid, user.uid), {
     uid: user.uid,
     username: myProfile.username,
     displayName: myProfile.displayName,
@@ -146,7 +145,7 @@ export const sendFriendRequest = async (user, targetUid) => {
 };
 
 export const listIncomingRequests = async (uid) => {
-  const snap = await getDocs(collection(db, "profiles", uid, "requests"));
+  const snap = await getDocs(requestsCollection(uid));
   return snap.docs.map((item) => ({ uid: item.id, ...item.data() }));
 };
 
@@ -156,23 +155,23 @@ export const listIncomingRequests = async (uid) => {
  * to be added, so deleting it first would lock out the second write.
  */
 export const acceptFriendRequest = async (user, requesterUid) => {
-  await setDoc(doc(db, "profiles", user.uid, "friends", requesterUid), {
+  await setDoc(friendDoc(user.uid, requesterUid), {
     uid: requesterUid,
     since: serverTimestamp(),
   });
-  await setDoc(doc(db, "profiles", requesterUid, "friends", user.uid), {
+  await setDoc(friendDoc(requesterUid, user.uid), {
     uid: user.uid,
     since: serverTimestamp(),
   });
-  await deleteDoc(doc(db, "profiles", user.uid, "requests", requesterUid));
+  await deleteDoc(requestDoc(user.uid, requesterUid));
 };
 
 export const declineFriendRequest = (user, requesterUid) =>
-  deleteDoc(doc(db, "profiles", user.uid, "requests", requesterUid));
+  deleteDoc(requestDoc(user.uid, requesterUid));
 
 export const removeFriend = async (user, friendUid) => {
-  await deleteDoc(doc(db, "profiles", user.uid, "friends", friendUid));
-  await deleteDoc(doc(db, "profiles", friendUid, "friends", user.uid));
+  await deleteDoc(friendDoc(user.uid, friendUid));
+  await deleteDoc(friendDoc(friendUid, user.uid));
 };
 
 /**
@@ -183,7 +182,7 @@ export const publishHabitSummary = async (user, habits, today = new Date()) => {
   const profile = await readProfile(user.uid);
   if (!profile?.username) return false;
 
-  await setDoc(doc(db, "profiles", user.uid, "shared", "summary"), {
+  await setDoc(sharedSummaryDoc(user.uid), {
     ...buildHabitSummary(habits, today),
     updatedAt: serverTimestamp(),
   });
@@ -194,12 +193,12 @@ export const publishHabitSummary = async (user, habits, today = new Date()) => {
 export { buildHabitSummary };
 
 export const getFriendSummary = async (friendUid) => {
-  const snap = await getDoc(doc(db, "profiles", friendUid, "shared", "summary"));
+  const snap = await getDoc(sharedSummaryDoc(friendUid));
   return snap.exists() ? snap.data() : null;
 };
 
 export const listFriends = async (uid) => {
-  const snap = await getDocs(collection(db, "profiles", uid, "friends"));
+  const snap = await getDocs(friendsCollection(uid));
 
   return Promise.all(
     snap.docs.map(async (item) => {

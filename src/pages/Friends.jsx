@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuthGuard } from "../hooks/useAuthGuard";
 import { FiCheck, FiCopy, FiUserPlus, FiX } from "react-icons/fi";
-import { auth } from "../services/firebase";
+import { useAuth } from "../hooks/useAuth";
 import {
   acceptFriendRequest,
   buildInviteLink,
@@ -58,8 +59,9 @@ function Avatar({ person }) {
 
 function Friends() {
   const navigate = useNavigate();
+  const requireUser = useAuthGuard();
   const [searchParams, setSearchParams] = useSearchParams();
-  const user = auth.currentUser;
+  const { user } = useAuth();
 
   const [profile, setProfile] = useState(null);
   const [usernameInput, setUsernameInput] = useState("");
@@ -162,8 +164,8 @@ function Friends() {
   }, [invitedCode, runSearch, searchParams, setSearchParams, user]);
 
   const handleClaimUsername = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
 
     const validationError = validateUsername(usernameInput);
     if (validationError) {
@@ -187,8 +189,8 @@ function Friends() {
   };
 
   const handleSendRequest = async (targetUid) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
 
     setBusyUid(targetUid);
     setStatus("");
@@ -206,8 +208,8 @@ function Friends() {
   };
 
   const handleAccept = async (requesterUid) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
 
     setBusyUid(requesterUid);
     try {
@@ -221,8 +223,8 @@ function Friends() {
   };
 
   const handleDecline = async (requesterUid) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
 
     setBusyUid(requesterUid);
     try {
@@ -236,8 +238,8 @@ function Friends() {
   };
 
   const handleRemove = async (friendUid, name) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
     if (!window.confirm(`Remove ${name}? You'll both stop seeing each other's streaks.`)) return;
 
     setBusyUid(friendUid);

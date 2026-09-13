@@ -1,18 +1,17 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
-import { auth, db } from "../services/firebase";
+import { useAuth } from "../hooks/useAuth";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+import { todayKey } from "../utils/dateKeys";
+import { clearWorkspace, exportWorkspace } from "../services/workspace";
 import {
   clearStoredProfilePhoto,
   resolveUserPhoto,
   setStoredProfilePhoto,
 } from "../utils/profilePhoto";
 
-const USER_COLLECTIONS = ["tasks", "planner", "expenses", "habits"];
-
 function Profile() {
-  const user = auth.currentUser;
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const requireUser = useAuthGuard();
   const userName = user?.displayName || user?.email?.split("@")[0] || "U.Do User";
 
   const initialPhoto = useMemo(() => resolveUserPhoto(user), [user]);
@@ -22,9 +21,8 @@ function Profile() {
 
   const handleUpload = (event) => {
     const file = event.target.files?.[0];
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
-    if (!file) return;
+    const currentUser = requireUser();
+    if (!currentUser || !file) return;
 
     if (!file.type.startsWith("image/")) {
       setStatus("Please choose an image file.");
@@ -47,8 +45,8 @@ function Profile() {
   };
 
   const handleUseGooglePhoto = () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
 
     if (currentUser.photoURL) {
       clearStoredProfilePhoto(currentUser.uid);
@@ -61,26 +59,13 @@ function Profile() {
   };
 
   const handleExportData = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
 
     setBusyAction("export");
     setStatus("Preparing your account backup file...");
 
     try {
-      const sections = await Promise.all(
-        USER_COLLECTIONS.map(async (name) => {
-          const snap = await getDocs(collection(db, "users", currentUser.uid, name));
-          return [
-            name,
-            snap.docs.map((item) => ({
-              id: item.id,
-              ...item.data(),
-            })),
-          ];
-        })
-      );
-
       const payload = {
         exportedAt: new Date().toISOString(),
         user: {
@@ -88,14 +73,14 @@ function Profile() {
           name: userName,
           email: currentUser.email || "",
         },
-        data: Object.fromEntries(sections),
+        data: await exportWorkspace(currentUser.uid),
       };
 
       const fileBlob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const downloadUrl = URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.download = `u-do-backup-${currentUser.uid}-${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `u-do-backup-${currentUser.uid}-${todayKey()}.json`;
       link.click();
       URL.revokeObjectURL(downloadUrl);
 
@@ -108,8 +93,8 @@ function Profile() {
   };
 
   const handleClearAllData = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
 
     const shouldClear = window.confirm(
       "This will permanently delete all your data. Are you sure?"
@@ -120,18 +105,7 @@ function Profile() {
     setStatus("Clearing all workspace data...");
 
     try {
-      await Promise.all(
-        USER_COLLECTIONS.map(async (name) => {
-          const snap = await getDocs(collection(db, "users", currentUser.uid, name));
-          await Promise.all(snap.docs.map((item) => deleteDoc(doc(db, "users", currentUser.uid, name, item.id))));
-        })
-      );
-
-      localStorage.removeItem(`u_do_expenses_${currentUser.uid}`);
-      localStorage.removeItem(`u_do_habits_${currentUser.uid}`);
-      // Older builds cached habits under a key shared by every account on this
-      // browser. Clear it too so no stale copy survives.
-      localStorage.removeItem("u_do_habits");
+      await clearWorkspace(currentUser.uid);
 
       setStatus("All account data has been cleared.");
     } catch (error) {

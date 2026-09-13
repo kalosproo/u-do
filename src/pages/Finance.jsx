@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { auth, db } from "../services/firebase";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { collection, addDoc, getDocs, deleteDoc, doc, setDoc } from "firebase/firestore";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../config/financeCategories";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+import { todayKey } from "../utils/dateKeys";
+import {
+  deleteExpense as deleteExpenseDoc,
+  fetchExpenses,
+  saveExpense,
+  writeCachedExpenses,
+} from "../services/finance";
 
 const convertExpensesToCSV = (expenses) => {
   if (!expenses.length) return "";
@@ -15,73 +21,39 @@ const convertExpensesToCSV = (expenses) => {
 };
 
 function Finance() {
-  const user = auth.currentUser;
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const requireUser = useAuthGuard();
 
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(todayKey());
   const [expenses, setExpenses] = useState([]);
   const [type, setType] = useState("expense");
+  const [status, setStatus] = useState("");
 
   const categories = useMemo(
     () => (type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
     [type]
   );
 
-  const saveExpensesToLocal = useCallback((data) => {
+  const loadExpenses = useCallback(async () => {
     if (!user) return;
-    localStorage.setItem(`u_do_expenses_${user.uid}`, JSON.stringify(data));
+    setExpenses(await fetchExpenses(user.uid));
   }, [user]);
 
-  const getExpensesFromLocal = useCallback(() => {
-    if (!user) return [];
-    const data = localStorage.getItem(`u_do_expenses_${user.uid}`);
-    return data ? JSON.parse(data) : [];
-  }, [user]);
-
-  const getLatestExpenses = (firebaseList, localList) => {
-    if (firebaseList.length === 0) return localList;
-    if (localList.length === 0) return firebaseList;
-
-    const firebaseLatest = Math.max(...firebaseList.map((e) => new Date(e.updatedAt || e.createdAt).getTime()));
-    const localLatest = Math.max(...localList.map((e) => new Date(e.updatedAt || e.createdAt).getTime()));
-
-    return firebaseLatest >= localLatest ? firebaseList : localList;
-  };
-
-  const fetchExpenses = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      const snapshot = await getDocs(collection(db, "users", user.uid, "expenses"));
-      const firebaseList = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
-      const localList = getExpensesFromLocal();
-      const latestData = getLatestExpenses(firebaseList, localList);
-
-      setExpenses(latestData);
-      saveExpensesToLocal(latestData);
-    } catch {
-      setExpenses(getExpensesFromLocal());
-    }
-  }, [getExpensesFromLocal, saveExpensesToLocal, user]);
-
+  // Deferred a tick: loading sets state, and React warns about doing that
+  // synchronously inside an effect. Every page in the app loads this way.
   useEffect(() => {
-    if (!user) return;
-
-    const timer = setTimeout(() => {
-      fetchExpenses();
-    }, 0);
-
+    const timer = setTimeout(loadExpenses, 0);
     return () => clearTimeout(timer);
-  }, [fetchExpenses, user]);
+  }, [loadExpenses]);
 
   const addExpense = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
     if (!title || !amount || !category) {
-      alert("Please fill all fields");
+      setStatus("Please fill all fields.");
       return;
     }
 
@@ -98,12 +70,13 @@ function Finance() {
 
     const updatedExpenses = [...expenses, newExpense];
     setExpenses(updatedExpenses);
-    saveExpensesToLocal(updatedExpenses);
+    writeCachedExpenses(currentUser.uid, updatedExpenses);
 
     try {
-      await setDoc(doc(db, "users", currentUser.uid, "expenses", newExpense.id), newExpense);
-    } catch {
-      await addDoc(collection(db, "users", currentUser.uid, "expenses"), newExpense);
+      await saveExpense(currentUser.uid, newExpense);
+      setStatus("");
+    } catch (saveError) {
+      setStatus(saveError?.message || "Saved locally, but syncing failed.");
     }
 
     setTitle("");
@@ -113,25 +86,20 @@ function Finance() {
   };
 
   const deleteExpense = async (id) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
-    if (!id) return;
+    const currentUser = requireUser();
+    if (!currentUser || !id) return;
 
     const updated = expenses.filter((e) => e.id !== id);
     setExpenses(updated);
-    saveExpensesToLocal(updated);
+    writeCachedExpenses(currentUser.uid, updated);
 
-    try {
-      await deleteDoc(doc(db, "users", currentUser.uid, "expenses", id));
-    } catch {
-      // noop: local copy already updated
-    }
+    await deleteExpenseDoc(currentUser.uid, id);
   };
 
   const downloadFinanceCSV = () => {
     const csv = convertExpensesToCSV(expenses);
     if (!csv) {
-      alert("No data to export");
+      setStatus("No data to export.");
       return;
     }
 
@@ -181,6 +149,7 @@ function Finance() {
         <div className="page-title-pill">
           <h2>Finance</h2>
         </div>
+        {status ? <p className="page-error">{status}</p> : null}
       </header>
 
       <section className="finance-summary">

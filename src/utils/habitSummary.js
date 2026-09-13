@@ -1,4 +1,5 @@
 import { getHabitStreakSnapshot, getRecentWindowKeys, getWindowKeyForDate } from "./streaks";
+import { fromDateKey } from "./dateKeys";
 
 // How far back a shared completion rate looks, in windows for that frequency.
 const RATE_WINDOW_COUNT = { daily: 30, weekly: 12 };
@@ -16,7 +17,7 @@ export const buildHabitSummary = (habits, today = new Date()) => {
     const completedWindows = new Set();
     Object.entries(habit.logs || {}).forEach(([dateKey, done]) => {
       if (!done) return;
-      completedWindows.add(getWindowKeyForDate(new Date(`${dateKey}T00:00:00`), frequency));
+      completedWindows.add(getWindowKeyForDate(fromDateKey(dateKey), frequency));
     });
 
     const snapshot = getHabitStreakSnapshot(habit, today);

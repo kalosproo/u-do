@@ -33,13 +33,19 @@ If you want to use PNG/JPG instead:
 2. Update the import path in `src/components/BrandLogo.jsx`.
 3. Adjust size in `src/index.css` (`.brand-mark` and `.brand-compact .brand-mark`).
 
-## Latest U.Do branding/auth update
-
-This branch includes the refreshed U.Do app branding and login behavior:
+## Branding and login
 
 - U.Do logo used in app UI and favicon.
 - Login subtitle centered in the auth card.
-- Email/password auth restricted to `@svce.edu.in` addresses.
+- Sign-up and login accept any valid email address, via email/password or
+  Google. There is no domain restriction: an earlier note here claimed logins
+  were limited to `@svce.edu.in`, but nothing in the app ever enforced that.
+
+A Cloud Function in `functions/` (`authorizeAuthAttempt`) was written to enforce
+a domain allowlist and rate-limit auth attempts. No page has ever called it, and
+its allowlist is empty, so it has no effect. The unused client-side half was
+removed; the function itself is left in place for whoever wants to finish wiring
+it up.
 
 
 ## AI setup (free — Groq)

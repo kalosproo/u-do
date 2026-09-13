@@ -1,13 +1,12 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { auth, db } from "../services/firebase";
-import { publishHabitSummary } from "../services/friends";
+import { useAuth } from "../hooks/useAuth";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+import { fromDateKey, toDateKey } from "../utils/dateKeys";
+import { createHabit, deleteHabit, fetchHabits, setHabitLogs } from "../services/habits";
 import {
   getHabitStreakSnapshot,
   getRecentWindowKeys,
   getWindowKeyForDate,
-  toDateKey,
 } from "../utils/streaks";
 
 const FILTER_OPTIONS = [
@@ -18,8 +17,6 @@ const FILTER_OPTIONS = [
 
 // How far back the completion rate looks, counted in windows for that frequency.
 const RATE_WINDOW_COUNT = { daily: 30, weekly: 12 };
-
-const habitsCacheKey = (uid) => `u_do_habits_${uid}`;
 
 const getMonthCells = (baseDate) => {
   const year = baseDate.getFullYear();
@@ -37,14 +34,6 @@ const getMonthCells = (baseDate) => {
   return cells;
 };
 
-const normalizeHabit = (raw) => ({
-  id: raw.id,
-  title: raw.title || "Untitled",
-  frequency: raw.frequency || raw.type || "daily",
-  logs: raw.logs || raw.completedDays || {},
-  createdAt: raw.createdAt || new Date(),
-});
-
 const isCompletedOn = (habit, dateKey) => Boolean(habit.logs?.[dateKey]);
 
 // Collapse every ticked date into the window it belongs to: the day itself for
@@ -54,7 +43,7 @@ const getCompletedWindows = (habit, frequency) => {
 
   Object.entries(habit.logs || {}).forEach(([dateKey, done]) => {
     if (!done) return;
-    completed.add(getWindowKeyForDate(new Date(`${dateKey}T00:00:00`), frequency));
+    completed.add(getWindowKeyForDate(fromDateKey(dateKey), frequency));
   });
 
   return completed;
@@ -72,66 +61,50 @@ function Habits() {
   const [frequency, setFrequency] = useState("daily");
   const [filter, setFilter] = useState("all");
 
-  const user = auth.currentUser;
-  const navigate = useNavigate();
+  const [error, setError] = useState("");
+
+  const { user } = useAuth();
+  const requireUser = useAuthGuard();
   const today = useMemo(() => new Date(), []);
   const todayKey = toDateKey(today);
 
-  const fetchHabits = useCallback(async () => {
+  const loadHabits = useCallback(async () => {
     if (!user) return;
-
-    const cacheKey = habitsCacheKey(user.uid);
-
-    try {
-      const snapshot = await getDocs(collection(db, "users", user.uid, "habits"));
-      const list = snapshot.docs.map((item) => normalizeHabit({ id: item.id, ...item.data() }));
-      setHabits(list);
-      localStorage.setItem(cacheKey, JSON.stringify(list));
-
-      // Refresh what friends see. Best-effort: a failure here must never stop
-      // you ticking a habit, and it no-ops for accounts without a username.
-      publishHabitSummary(user, list).catch(() => {});
-    } catch {
-      const local = localStorage.getItem(cacheKey);
-      setHabits(local ? JSON.parse(local) : []);
-    }
+    setHabits(await fetchHabits(user));
   }, [user]);
 
+  // Deferred a tick: loading sets state, and React warns about doing that
+  // synchronously inside an effect. Every page in the app loads this way.
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchHabits();
-    }, 0);
-
+    const timer = setTimeout(loadHabits, 0);
     return () => clearTimeout(timer);
-  }, [fetchHabits]);
+  }, [loadHabits]);
 
   const addHabit = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
-    if (!title.trim()) return;
+    const currentUser = requireUser();
+    if (!currentUser || !title.trim()) return;
 
-    await addDoc(collection(db, "users", currentUser.uid, "habits"), {
-      title: title.trim(),
-      frequency,
-      createdAt: new Date(),
-      logs: {},
-    });
-
-    setTitle("");
-    setFrequency("daily");
-    fetchHabits();
+    try {
+      await createHabit(currentUser.uid, { title: title.trim(), frequency });
+      setTitle("");
+      setFrequency("daily");
+      setError("");
+      loadHabits();
+    } catch (addError) {
+      setError(addError?.message || "Couldn't add that habit.");
+    }
   };
 
   const toggleCurrentWindow = async (habit) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
 
     const habitFrequency = habit.frequency || "daily";
     const windowKey = getWindowKeyForDate(today, habitFrequency);
     const nextLogs = { ...(habit.logs || {}) };
 
     const inCurrentWindow = (dateKey) =>
-      getWindowKeyForDate(new Date(`${dateKey}T00:00:00`), habitFrequency) === windowKey;
+      getWindowKeyForDate(fromDateKey(dateKey), habitFrequency) === windowKey;
 
     const alreadyDone = Object.keys(nextLogs).some((dateKey) => nextLogs[dateKey] && inCurrentWindow(dateKey));
 
@@ -145,18 +118,26 @@ function Habits() {
       nextLogs[todayKey] = true;
     }
 
-    await updateDoc(doc(db, "users", currentUser.uid, "habits", habit.id), {
-      logs: nextLogs,
-    });
-
-    fetchHabits();
+    try {
+      await setHabitLogs(currentUser.uid, habit.id, nextLogs);
+      setError("");
+      loadHabits();
+    } catch (toggleError) {
+      setError(toggleError?.message || "Couldn't save that. Check your connection.");
+    }
   };
 
   const removeHabit = async (habitId) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
-    await deleteDoc(doc(db, "users", currentUser.uid, "habits", habitId));
-    fetchHabits();
+    const currentUser = requireUser();
+    if (!currentUser) return;
+
+    try {
+      await deleteHabit(currentUser.uid, habitId);
+      setError("");
+      loadHabits();
+    } catch (removeError) {
+      setError(removeError?.message || "Couldn't delete that habit.");
+    }
   };
 
   const visibleHabits = useMemo(
@@ -201,6 +182,7 @@ function Habits() {
     <section className="habits-page">
       <header className="habits-header glass-panel">
         <h2>Habit Tracker</h2>
+        {error ? <p className="page-error">{error}</p> : null}
         <div className="habits-filter-group" role="tablist" aria-label="Habit filter">
           {FILTER_OPTIONS.map(([value, label]) => (
             <button

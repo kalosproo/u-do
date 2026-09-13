@@ -3212,3 +3212,10 @@ input,
     padding: 20px;
   }
 }
+
+/* Inline failure notice on a page header. Writes used to fail silently. */
+.page-error {
+  color: #ff9a9a;
+  font-size: 13px;
+  margin-top: 6px;
+}

@@ -1,33 +1,19 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  updateDoc,
-} from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { auth, db } from "../services/firebase";
+import { useAuth } from "../hooks/useAuth";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+import { todayKey as getTodayKey } from "../utils/dateKeys";
+import {
+  createTask,
+  deleteTask as deleteTaskDoc,
+  fetchTasks,
+  setTaskStatus,
+} from "../services/tasks";
 
 const KANBAN_COLUMNS = [
   { key: "todo", title: "To Do" },
   { key: "progress", title: "In Progress" },
   { key: "done", title: "Done" },
 ];
-
-function normalizeTask(rawTask) {
-  const status = rawTask.status || (rawTask.completed ? "done" : "todo");
-
-  return {
-    ...rawTask,
-    dueDate: rawTask.dueDate || "",
-    priority: rawTask.priority || "medium",
-    status,
-    completed: status === "done",
-    createdAt: rawTask.createdAt || new Date(),
-  };
-}
 
 function formatDueDate(value) {
   if (!value) return "No due date";
@@ -47,62 +33,62 @@ function Tasks() {
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("medium");
   const [filter, setFilter] = useState("all");
+  const [error, setError] = useState("");
 
-  const user = auth.currentUser;
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const requireUser = useAuthGuard();
 
-  const fetchTasks = useCallback(async () => {
+  const loadTasks = useCallback(async () => {
     if (!user) return;
 
-    const querySnapshot = await getDocs(collection(db, "users", user.uid, "tasks"));
-
-    const taskList = querySnapshot.docs.map((taskDoc) =>
-      normalizeTask({
-        id: taskDoc.id,
-        ...taskDoc.data(),
-      })
-    );
-
-    setTasks(taskList);
+    try {
+      setTasks(await fetchTasks(user.uid));
+      setError("");
+    } catch (loadError) {
+      setError(loadError?.message || "Couldn't load your tasks.");
+    }
   }, [user]);
 
   const addTask = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
-    if (!title.trim()) return;
+    const currentUser = requireUser();
+    if (!currentUser || !title.trim()) return;
 
-    await addDoc(collection(db, "users", currentUser.uid, "tasks"), {
-      title: title.trim(),
-      dueDate,
-      priority,
-      status: "todo",
-      completed: false,
-      createdAt: new Date(),
-    });
-
-    setTitle("");
-    setDueDate("");
-    setPriority("medium");
-    fetchTasks();
+    try {
+      await createTask(currentUser.uid, { title: title.trim(), dueDate, priority });
+      setTitle("");
+      setDueDate("");
+      setPriority("medium");
+      setError("");
+      loadTasks();
+    } catch (addError) {
+      setError(addError?.message || "Couldn't add that task.");
+    }
   };
 
   const deleteTask = async (id) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
-    await deleteDoc(doc(db, "users", currentUser.uid, "tasks", id));
-    fetchTasks();
+    const currentUser = requireUser();
+    if (!currentUser) return;
+
+    try {
+      await deleteTaskDoc(currentUser.uid, id);
+      setError("");
+      loadTasks();
+    } catch (deleteError) {
+      setError(deleteError?.message || "Couldn't delete that task.");
+    }
   };
 
   const updateTaskStatus = async (task, nextStatus) => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
 
-    await updateDoc(doc(db, "users", currentUser.uid, "tasks", task.id), {
-      status: nextStatus,
-      completed: nextStatus === "done",
-    });
-
-    fetchTasks();
+    try {
+      await setTaskStatus(currentUser.uid, task.id, nextStatus);
+      setError("");
+      loadTasks();
+    } catch (updateError) {
+      setError(updateError?.message || "Couldn't update that task.");
+    }
   };
 
   const toggleCompleted = async (task) => {
@@ -110,17 +96,14 @@ function Tasks() {
     await updateTaskStatus(task, nextStatus);
   };
 
+  // Deferred a tick: loading sets state, and React warns about doing that
+  // synchronously inside an effect. Every page in the app loads this way.
   useEffect(() => {
-    if (!user) return;
-
-    const timer = setTimeout(() => {
-      fetchTasks();
-    }, 0);
-
+    const timer = setTimeout(loadTasks, 0);
     return () => clearTimeout(timer);
-  }, [fetchTasks, user]);
+  }, [loadTasks]);
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = getTodayKey();
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -168,6 +151,7 @@ function Tasks() {
     <section className="tasks-page">
       <header className="tasks-header glass-panel">
         <h2>Tasks</h2>
+        {error ? <p className="page-error">{error}</p> : null}
       </header>
 
       <div className="tasks-controls glass-panel">
