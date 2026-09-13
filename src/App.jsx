@@ -23,6 +23,18 @@ function AppLayout() {
       <Sidebar user={user} />
       <QuickCapture />
 
+      <div className="adsense-container">
+        <ins
+          className="adsbygoogle"
+          style={{ display: "block" }}
+          data-ad-client="ca-pub-1234327380102132"
+          data-ad-slot="4768251063"
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+        <script>{`(adsbygoogle = window.adsbygoogle || []).push({});`}</script>
+      </div>
+
       <main className="main-content with-sidebar">
         <Outlet />
       </main>
