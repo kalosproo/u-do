@@ -131,7 +131,14 @@ export const getHabitStreakSnapshot = (habit, todayDate = new Date()) => {
   let freezesLeft = rules.freezeAllowance;
   let freezesUsed = 0;
 
-  for (let index = windows.length - 1; index >= 0; index -= 1) {
+  // Nothing before the first ever completion counts as a miss: the lookback
+  // reaches back further than most habits have existed, and scanning into that
+  // empty prehistory would burn the grace window and every freeze token.
+  const firstCompletedIndex = windows.findIndex((window) => completions[window.key]);
+
+  for (let index = windows.length - 1; index >= firstCompletedIndex; index -= 1) {
+    if (firstCompletedIndex === -1) break;
+
     const window = windows[index];
     const completed = completions[window.key];
 
@@ -181,11 +188,13 @@ export const getHabitStreakSnapshot = (habit, todayDate = new Date()) => {
     ? "onTrack"
     : missedWindows <= rules.graceWindow
       ? "grace"
-      : freezesUsed > 0
-        ? "frozen"
-        : recoveryEligible
-          ? "recovery"
-          : "broken";
+      : currentStreak === 0
+        ? "broken"
+        : freezesUsed > 0
+          ? "frozen"
+          : recoveryEligible
+            ? "recovery"
+            : "broken";
 
   return {
     frequency,
@@ -245,7 +254,9 @@ export const buildHabitMetadata = (habit, todayDate = new Date()) => {
 
   return {
     currentStreak: snapshot.currentStreak,
-    bestStreak: Math.max(snapshot.bestStreak, existingMeta.bestStreak || 0),
+    // A run still in progress counts towards the best streak, otherwise a habit
+    // on its longest ever run reports a "best" lower than its current one.
+    bestStreak: Math.max(snapshot.bestStreak, snapshot.currentStreak, existingMeta.bestStreak || 0),
     freezeAllowance: freezeCapacity,
     freezesLeft,
     graceWindow: snapshot.rules.graceWindow,

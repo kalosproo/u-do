@@ -128,6 +128,9 @@ function Profile() {
       );
 
       localStorage.removeItem(`u_do_expenses_${currentUser.uid}`);
+      localStorage.removeItem(`u_do_habits_${currentUser.uid}`);
+      // Older builds cached habits under a key shared by every account on this
+      // browser. Clear it too so no stale copy survives.
       localStorage.removeItem("u_do_habits");
 
       setStatus("All account data has been cleared.");
