@@ -6,6 +6,7 @@ import {
   FiCalendar,
   FiCheckSquare,
   FiActivity,
+  FiUsers,
   FiLogOut,
 } from "react-icons/fi";
 import { auth } from "../services/firebase";
@@ -19,6 +20,7 @@ const links = [
   { to: "/planner", label: "Planner", icon: <FiCalendar /> },
   { to: "/tasks", label: "Tasks", icon: <FiCheckSquare /> },
   { to: "/habits", label: "Habits", icon: <FiActivity /> },
+  { to: "/friends", label: "Friends", icon: <FiUsers /> },
 ];
 
 function Sidebar({ user }) {

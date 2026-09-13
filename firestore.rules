@@ -1,0 +1,102 @@
+rules_version = '2';
+
+// U.Do Firestore rules.
+//
+// Workspace data (tasks, planner, expenses, habits) stays private to its owner.
+// The friends feature never opens that up: it reads a separate, deliberately
+// small summary document that the owner publishes for themselves.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // A friendship is recorded on both sides. Someone may read an owner's
+    // shared card only while the owner's own friend list names them.
+    function isFriendOf(ownerId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/profiles/$(ownerId)/friends/$(request.auth.uid));
+    }
+
+    // Private workspace: tasks, planner, expenses, habits and their logs.
+    // Nothing here is ever readable by another account, friend or not.
+    match /users/{uid}/{document=**} {
+      allow read, write: if isOwner(uid);
+    }
+
+    match /profiles/{uid} {
+      // The public card: display name, handle, photo, invite code. Readable by
+      // any signed-in account so that search and invite links can resolve.
+      allow read: if isSignedIn();
+      allow write: if isOwner(uid);
+
+      // Habit names, streaks and completion rates. Friends only.
+      match /shared/{docId} {
+        allow read: if isOwner(uid) || isFriendOf(uid);
+        allow write: if isOwner(uid);
+      }
+
+      match /requests/{fromUid} {
+        allow read: if isOwner(uid);
+
+        // Anyone signed in may ask, but only ever as themselves.
+        allow create: if isOwner(fromUid)
+          && fromUid != uid
+          && request.resource.data.uid == fromUid;
+
+        // The recipient accepts or declines; the sender may withdraw.
+        allow delete: if isOwner(uid) || isOwner(fromUid);
+      }
+
+      match /friends/{friendUid} {
+        allow read: if isOwner(uid) || isOwner(friendUid);
+
+        // Adding someone to your own list only ever widens who may see your
+        // card, so you may do it freely.
+        allow create, update: if isOwner(uid);
+
+        // The other half of an accept. This write grants friendUid sight of
+        // uid's card, so it is allowed only while uid's pending request to
+        // friendUid still exists to prove uid asked first. Accepting must
+        // therefore write both sides before clearing the request.
+        allow create: if isOwner(friendUid)
+          && exists(/databases/$(database)/documents/profiles/$(friendUid)/requests/$(uid));
+
+        // Either side can end the friendship.
+        allow delete: if isOwner(uid) || isOwner(friendUid);
+      }
+    }
+
+    // Handle -> uid. Create only succeeds on a free handle, which is what makes
+    // usernames first come, first served.
+    match /usernames/{username} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // Invite code -> uid.
+    match /inviteCodes/{code} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // Written by the auth Cloud Function through the Admin SDK, which bypasses
+    // these rules entirely. No client should ever reach it.
+    match /authRateLimits/{document} {
+      allow read, write: if false;
+    }
+
+    // Anything not matched above is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -75,3 +75,59 @@ It shows a 1-tap confirm card (editable) before saving anything — nothing is w
 ### AI Auto-Plan Week (Planner page)
 
 Click **"AI Auto-Plan Week"** at the top of the Planner. It reads your pending Tasks and whatever's already on this week's planner, then proposes which day to schedule each task on (respecting due dates and a max of 4 items/day, without duplicating anything already scheduled). Review the proposed list, drop anything you don't want, then confirm to add the rest.
+
+## Friends (streaks + habit progress)
+
+Friends can see **your habit names, current streaks and completion rates** — and
+nothing else. Tasks, planner entries, finance and the raw day-by-day habit logs
+are never readable by another account.
+
+That boundary is structural, not cosmetic. Your workspace lives under
+`users/{uid}/…` and stays owner-only. The Habits page separately publishes a
+small summary card to `profiles/{uid}/shared/summary`, and only accounts on your
+friend list can read it.
+
+### Deploy the rules first
+
+The feature will not work until `firestore.rules` is live — reads will fail with
+`permission-denied`.
+
+```bash
+npx firebase deploy --only firestore:rules
+```
+
+> Heads up: this **replaces** whatever rules are currently in the Firebase
+> console. `firestore.rules` covers everything the app uses today (tasks,
+> planner, expenses, habits, the friends collections, and the `authRateLimits`
+> collection the auth Cloud Function writes through the Admin SDK). If you have
+> added anything else in the console, fold it in before deploying.
+
+To re-check the rules after editing them:
+
+```bash
+npm i --no-save @firebase/rules-unit-testing firebase-tools
+npx firebase emulators:exec --only firestore --project u-do-rules-test \
+  "node firestore.rules.test.mjs"
+```
+
+That suite covers the cases worth being sure about: a stranger cannot read your
+habits, a non-friend cannot read your summary, nobody can add themselves to your
+friend list, and unfriending revokes access both ways. It needs a JDK for the
+emulator.
+
+### Using it
+
+Open **Friends** in the sidebar and claim a username — that also generates your
+invite code and link. There are three ways to add someone, all of which end in a
+request they have to accept:
+
+- **Username** — search `@theirname`.
+- **Invite code** — an 8-character code, no ambiguous `I`/`O`/`0`/`1`.
+- **Invite link** — `…/friends?add=CODE`, which opens the app with their profile
+  already looked up.
+
+Until they accept, neither side can see anything. Removing a friend clears both
+sides of the friendship immediately.
+
+Your shared card refreshes whenever you open the Habits page or tick a habit.
+Accounts that never claim a username publish nothing at all.
