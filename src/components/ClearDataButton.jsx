@@ -8,6 +8,10 @@ import { useAuthGuard } from "../hooks/useAuthGuard";
  * Each page passes its own `clear` from its own service, so Tasks can never
  * reach habits and Finance can never reach tasks. The typed confirmation is
  * deliberate: this is unrecoverable, so a mis-click must not be enough.
+ *
+ * Renders as a row inside PageMenu rather than as a button in the page
+ * header — a destructive action should take a deliberate detour to reach,
+ * not sit next to Add.
  */
 function ClearDataButton({ label, noun, count = 0, clear, onCleared }) {
   const requireUser = useAuthGuard();
@@ -43,12 +47,15 @@ function ClearDataButton({ label, noun, count = 0, clear, onCleared }) {
   return (
     <button
       type="button"
-      className="btn btn-danger btn-sm"
+      className="page-menu-item is-danger"
+      role="menuitem"
       onClick={run}
       disabled={busy || !count}
       title={count ? `Delete all ${noun}` : `No ${noun} to clear`}
     >
-      <FiTrash2 /> {busy ? "Clearing…" : label}
+      <FiTrash2 />
+      <span className="page-menu-item-text">{busy ? "Clearing…" : label}</span>
+      <span className="page-menu-item-count">{count || "none"}</span>
     </button>
   );
 }

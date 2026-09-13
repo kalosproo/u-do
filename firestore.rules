@@ -85,6 +85,20 @@ service cloud.firestore {
         allow delete: if isOwner(uid) || isOwner(fromUid);
       }
 
+      /**
+       * The sender's own index of requests they have sent. The request itself
+       * lives on the recipient and is readable only by them, so this mirror is
+       * what lets a sender show "Pending" and withdraw.
+       *
+       * The recipient may delete it — and only delete it — so that accepting
+       * or declining clears the sender's pending state instead of stranding it.
+       */
+      match /outgoing/{toUid} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && request.resource.data.uid == toUid;
+        allow delete: if isOwner(uid) || isOwner(toUid);
+      }
+
       match /friends/{friendUid} {
         allow read: if isOwner(uid) || isOwner(friendUid);
 

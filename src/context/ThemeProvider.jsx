@@ -13,7 +13,7 @@ const readStoredTheme = () => {
 };
 
 /**
- * Dark charcoal is the default; cream white is opt-in and remembered. The
+ * Dark is the default; light is opt-in and remembered. The
  * choice is written to the root element, which is what tokens.css keys off.
  */
 export function ThemeProvider({ children }) {

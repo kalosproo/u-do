@@ -1,8 +1,23 @@
 /* =========================================================================
    DESIGN TOKENS — the only place a colour is chosen.
-   Two themes: dark charcoal (default) and cream white. Every surface, text,
-   border and chart colour resolves through these, so a theme is a token swap
-   and nothing else.
+
+   Three layers, in order:
+
+     1. RAMP     --n-0 … --n-950. A 12-step neutral scale. It REVERSES
+                 between themes: --n-0 is always the theme's "paper" and
+                 --n-950 always its "ink". So --n-900 is near-black in
+                 light and near-white in dark.
+     2. SEMANTIC --text, --surface, --border … Every one resolves to a ramp
+                 step. Because the ramp reverses, text/border/accent tokens
+                 use the SAME expression in both themes; only the surface
+                 stack differs, because elevation moves toward paper in
+                 light and away from it in dark.
+     3. ACCENT   --success/--danger/--warning/--info and the chart hues.
+                 Muted on purpose: saturation sits near 34% instead of the
+                 ~85% these were before, while measured contrast against
+                 their own surface went up, not down.
+
+   Components never name a colour. They name a role.
    ========================================================================= */
 
 :root {
@@ -36,89 +51,134 @@
   --tap-target: 44px;
 }
 
-/* ----------------------------------------------------- DARK CHARCOAL (default) */
+/* =========================================================================
+   1. RAMP
+   ========================================================================= */
+
+/* Dark is the default theme: --n-0 black (paper) climbing to --n-950 near-white (ink). */
+:root,
+:root[data-theme="dark"] {
+  --n-0: #000000;
+  --n-50: #0a0a0a;
+  --n-100: #171717;
+  --n-200: #262626;
+  --n-300: #373737;
+  --n-400: #525252;
+  --n-500: #8a8a8a;
+  --n-600: #a3a3a3;
+  --n-700: #d4d4d4;
+  --n-800: #e5e5e5;
+  --n-900: #f5f5f5;
+  --n-950: #fafafa;
+}
+
+/* Light mirrors it: --n-0 white (paper) descending to --n-950 near-black (ink). */
+:root[data-theme="light"] {
+  --n-0: #ffffff;
+  --n-50: #fafafa;
+  --n-100: #f5f5f5;
+  --n-200: #e5e5e5;
+  --n-300: #d4d4d4;
+  --n-400: #a3a3a3;
+  --n-500: #737373;
+  --n-600: #525252;
+  --n-700: #404040;
+  --n-800: #262626;
+  --n-900: #171717;
+  --n-950: #0a0a0a;
+}
+
+/* =========================================================================
+   2. SEMANTIC — shared expressions
+   These read identically in both themes because the ramp already flipped.
+   ========================================================================= */
+
+:root {
+  --text: var(--n-900);
+  --text-muted: var(--n-600);
+  --text-subtle: var(--n-500);
+
+  --border: var(--n-300);
+  --border-strong: var(--n-400);
+
+  /* Control fills — buttons, active nav, progress tracks. These sit on both
+     the page ground and on cards, so they take a step that separates from
+     each; that is why they are not tied to --surface. */
+  --surface-2: var(--n-200);
+  --surface-hover: var(--n-300);
+
+  --accent: var(--n-900);
+  --accent-contrast: var(--n-50);
+
+  /* Focus is its own token so it can stay loud while --info stays muted. */
+  --focus: var(--info);
+}
+
+/* =========================================================================
+   2b. PAPER + ACCENTS — the only per-theme groups
+   Just three tokens differ in expression: the page ground, the chrome and
+   the card. Elevation moves toward paper in light and away from it in dark,
+   so those cannot be shared. Everything else above already resolved.
+   ========================================================================= */
+
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #14161a;
-  --bg-elevated: #191c21;
-  --surface: #1d2026;
-  --surface-2: #23272e;
-  --surface-hover: #2a2f37;
+  --bg: var(--n-50);           /* #0a0a0a page ground */
+  --bg-elevated: var(--n-100); /* #171717 sidebar / chrome */
+  --surface: var(--n-100);     /* #171717 cards */
 
-  --text: #f4f5f7;
-  --text-muted: #a2a9b5;
-  --text-subtle: #6e7681;
+  --accent-soft: rgba(250, 250, 250, 0.08);
+  --grid-line: rgba(250, 250, 250, 0.07);
+  --dot-empty: rgba(250, 250, 250, 0.13);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.36);
+  --overlay: rgba(0, 0, 0, 0.72);
 
-  --border: #2c313a;
-  --border-strong: #3a414d;
+  /* Muted accents. Every one clears AA on --surface; see the contrast audit. */
+  --success: #8fb89a;
+  --danger: #d69292;
+  --warning: #d4b483;
+  --info: #9db4ce;
 
-  --accent: #e8eaed;
-  --accent-contrast: #14161a;
-  --accent-soft: rgba(232, 234, 237, 0.1);
+  --success-soft: rgba(143, 184, 154, 0.13);
+  --danger-soft: rgba(214, 146, 146, 0.13);
+  --warning-soft: rgba(212, 180, 131, 0.13);
 
-  --success: #4ade80;
-  --danger: #f87171;
-  --warning: #fbbf24;
-  --info: #60a5fa;
-
-  --success-soft: rgba(74, 222, 128, 0.14);
-  --danger-soft: rgba(248, 113, 113, 0.14);
-  --warning-soft: rgba(251, 191, 36, 0.14);
-
-  --chart-1: #7dd3fc;
-  --chart-2: #a78bfa;
-  --chart-3: #4ade80;
-  --chart-4: #fbbf24;
-  --chart-5: #f472b6;
-  --chart-6: #fb923c;
-
-  --grid-line: rgba(255, 255, 255, 0.07);
-  --dot-empty: rgba(255, 255, 255, 0.14);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);
-  --overlay: rgba(8, 9, 11, 0.72);
+  --chart-1: #8ba1c6;
+  --chart-2: #84c29e;
+  --chart-3: #cd9f98;
+  --chart-4: #bca276;
+  --chart-5: #b792c9;
+  --chart-6: #84b8c2;
 }
 
-/* ------------------------------------------------------------ CREAM WHITE */
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg: #f6f3ec;
-  --bg-elevated: #fbf9f4;
-  --surface: #fffdf8;
-  --surface-2: #f2eee4;
-  --surface-hover: #eae5d8;
+  --bg: var(--n-100);          /* #f5f5f5 page ground — deliberately not pure white */
+  --bg-elevated: var(--n-0);   /* #ffffff sidebar / chrome */
+  --surface: var(--n-0);       /* #ffffff cards */
 
-  --text: #23201a;
-  --text-muted: #6b6458;
-  --text-subtle: #948d7e;
+  --accent-soft: rgba(23, 23, 23, 0.06);
+  --grid-line: rgba(23, 23, 23, 0.08);
+  --dot-empty: rgba(23, 23, 23, 0.12);
+  --shadow: 0 1px 2px rgba(10, 10, 10, 0.05), 0 8px 24px rgba(10, 10, 10, 0.07);
+  --overlay: rgba(10, 10, 10, 0.42);
 
-  --border: #e2dcce;
-  --border-strong: #cfc7b4;
+  --success: #456349;
+  --danger: #7f4242;
+  --warning: #6f552c;
+  --info: #3a5270;
 
-  --accent: #23201a;
-  --accent-contrast: #fffdf8;
-  --accent-soft: rgba(35, 32, 26, 0.07);
+  --success-soft: rgba(69, 99, 73, 0.09);
+  --danger-soft: rgba(127, 66, 66, 0.09);
+  --warning-soft: rgba(111, 85, 44, 0.09);
 
-  --success: #15803d;
-  --danger: #b91c1c;
-  --warning: #a16207;
-  --info: #1d4ed8;
-
-  --success-soft: rgba(21, 128, 61, 0.1);
-  --danger-soft: rgba(185, 28, 28, 0.1);
-  --warning-soft: rgba(161, 98, 7, 0.1);
-
-  --chart-1: #2563eb;
-  --chart-2: #7c3aed;
-  --chart-3: #15803d;
-  --chart-4: #b45309;
-  --chart-5: #be185d;
-  --chart-6: #c2410c;
-
-  --grid-line: rgba(35, 32, 26, 0.08);
-  --dot-empty: rgba(35, 32, 26, 0.12);
-  --shadow: 0 1px 2px rgba(80, 70, 50, 0.06), 0 8px 24px rgba(80, 70, 50, 0.08);
-  --overlay: rgba(35, 32, 26, 0.4);
+  --chart-1: #3d557b;
+  --chart-2: #397452;
+  --chart-3: #894d43;
+  --chart-4: #675332;
+  --chart-5: #6c4082;
+  --chart-6: #396a74;
 }

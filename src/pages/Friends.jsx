@@ -5,7 +5,9 @@ import { FiCheck, FiCopy, FiUserPlus, FiX } from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
 import {
   CLAIM_ERRORS,
+  RELATIONSHIP,
   acceptFriendRequest,
+  cancelFriendRequest,
   clearFriendGraph,
   buildInviteLink,
   claimUsername,
@@ -13,8 +15,10 @@ import {
   findUserByInviteCode,
   findUserByUsername,
   getMyProfile,
+  getRelationship,
   listFriends,
   listIncomingRequests,
+  listOutgoingRequests,
   normalizeInviteCode,
   normalizeUsername,
   removeFriend,
@@ -22,6 +26,7 @@ import {
   validateUsername,
 } from "../services/friends";
 import ClearDataButton from "../components/ClearDataButton";
+import PageMenu, { PageMenuLabel } from "../components/PageMenu";
 
 const SEARCH_MODES = [
   ["username", "By username"],
@@ -73,9 +78,11 @@ function Friends() {
   const [searchMode, setSearchMode] = useState("username");
   const [searchValue, setSearchValue] = useState("");
   const [searchResult, setSearchResult] = useState(null);
+  const [searchRelationship, setSearchRelationship] = useState(RELATIONSHIP.NONE);
   const [searching, setSearching] = useState(false);
 
   const [requests, setRequests] = useState([]);
+  const [outgoing, setOutgoing] = useState([]);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyUid, setBusyUid] = useState("");
@@ -94,11 +101,13 @@ function Friends() {
 
     setLoading(true);
     try {
-      const [nextRequests, nextFriends] = await Promise.all([
+      const [nextRequests, nextOutgoing, nextFriends] = await Promise.all([
         listIncomingRequests(user.uid),
+        listOutgoingRequests(user.uid),
         listFriends(user.uid),
       ]);
       setRequests(nextRequests);
+      setOutgoing(nextOutgoing);
       setFriends(nextFriends);
     } catch (error) {
       setStatus(error?.message || "Couldn't load your friends right now.");
@@ -130,27 +139,34 @@ function Friends() {
     };
   }, [refresh, user]);
 
-  const runSearch = useCallback(async (mode, value) => {
-    setSearching(true);
-    setSearchResult(null);
-    setStatus("");
+  const runSearch = useCallback(
+    async (mode, value) => {
+      setSearching(true);
+      setSearchResult(null);
+      setStatus("");
 
-    try {
-      const found =
-        mode === "code" ? await findUserByInviteCode(value) : await findUserByUsername(value);
+      try {
+        const found =
+          mode === "code" ? await findUserByInviteCode(value) : await findUserByUsername(value);
 
-      if (!found) {
-        setStatus(mode === "code" ? "No account uses that invite code." : "No account uses that username.");
-        return;
+        if (!found) {
+          setStatus(mode === "code" ? "No account uses that invite code." : "No account uses that username.");
+          return;
+        }
+
+        // Resolve what we already are to them, so the row offers the right
+        // action instead of always offering to send.
+        const relationship = user ? await getRelationship(user.uid, found.uid) : RELATIONSHIP.NONE;
+        setSearchRelationship(relationship);
+        setSearchResult(found);
+      } catch (error) {
+        setStatus(error?.message || "Search failed. Please try again.");
+      } finally {
+        setSearching(false);
       }
-
-      setSearchResult(found);
-    } catch (error) {
-      setStatus(error?.message || "Search failed. Please try again.");
-    } finally {
-      setSearching(false);
-    }
-  }, []);
+    },
+    [user]
+  );
 
   // An invite link lands here as /friends?add=CODE.
   const invitedCode = searchParams.get("add");
@@ -226,12 +242,36 @@ function Friends() {
     setStatus("");
 
     try {
-      await sendFriendRequest(currentUser, targetUid);
-      setStatus("Request sent. They'll see it on their Friends page.");
-      setSearchResult(null);
-      setSearchValue("");
+      const outcome = await sendFriendRequest(currentUser, targetUid);
+
+      if (outcome === RELATIONSHIP.FRIENDS) {
+        // They had already asked us, so this became an accept.
+        setStatus("You're now friends — they'd already sent you a request.");
+      } else {
+        setStatus("Request sent. They'll see it on their Friends page.");
+      }
+
+      setSearchRelationship(outcome);
+      await refresh();
     } catch (error) {
       setStatus(error?.message || "Couldn't send that request.");
+    } finally {
+      setBusyUid("");
+    }
+  };
+
+  const handleCancelRequest = async (targetUid) => {
+    const currentUser = requireUser();
+    if (!currentUser) return;
+
+    setBusyUid(targetUid);
+    try {
+      await cancelFriendRequest(currentUser, targetUid);
+      setOutgoing((current) => current.filter((item) => item.uid !== targetUid));
+      if (searchResult?.uid === targetUid) setSearchRelationship(RELATIONSHIP.NONE);
+      setStatus("Request withdrawn.");
+    } catch (error) {
+      setStatus(error?.message || "Couldn't withdraw that request.");
     } finally {
       setBusyUid("");
     }
@@ -244,6 +284,7 @@ function Friends() {
     setBusyUid(requesterUid);
     try {
       await acceptFriendRequest(currentUser, requesterUid);
+      if (searchResult?.uid === requesterUid) setSearchRelationship(RELATIONSHIP.FRIENDS);
       await refresh();
     } catch (error) {
       setStatus(error?.message || "Couldn't accept that request.");
@@ -260,6 +301,7 @@ function Friends() {
     try {
       await declineFriendRequest(currentUser, requesterUid);
       setRequests((current) => current.filter((item) => item.uid !== requesterUid));
+      if (searchResult?.uid === requesterUid) setSearchRelationship(RELATIONSHIP.NONE);
     } catch (error) {
       setStatus(error?.message || "Couldn't decline that request.");
     } finally {
@@ -276,6 +318,7 @@ function Friends() {
     try {
       await removeFriend(currentUser, friendUid);
       setFriends((current) => current.filter((item) => item.uid !== friendUid));
+      if (searchResult?.uid === friendUid) setSearchRelationship(RELATIONSHIP.NONE);
     } catch (error) {
       setStatus(error?.message || "Couldn't remove that friend.");
     } finally {
@@ -311,10 +354,25 @@ function Friends() {
   return (
     <section className="friends-page">
       <header className="friends-header glass-panel">
-        <h2>Friends</h2>
-        <p className="friends-subtitle">
-          Friends see your habit names, streaks and completion rates — nothing else.
-        </p>
+        <div className="page-head-row">
+          <div>
+            <h2>Friends</h2>
+            <p className="friends-subtitle">
+              Friends see your habit names, streaks and completion rates — nothing else.
+            </p>
+          </div>
+
+          <PageMenu label="Friend actions">
+            <PageMenuLabel>Danger zone</PageMenuLabel>
+            <ClearDataButton
+              label="Remove all friends"
+              noun="friendships and pending requests"
+              count={friends.length + requests.length}
+              clear={clearFriendGraph}
+              onCleared={refresh}
+            />
+          </PageMenu>
+        </div>
       </header>
 
       <article className="wire-card friends-handle-card">
@@ -431,17 +489,75 @@ function Friends() {
               <strong>{searchResult.displayName}</strong>
               {searchResult.username ? <small>@{searchResult.username}</small> : null}
             </div>
-            <button
-              type="button"
-              className="button-primary"
-              onClick={() => handleSendRequest(searchResult.uid)}
-              disabled={busyUid === searchResult.uid}
-            >
-              <FiUserPlus /> {busyUid === searchResult.uid ? "Sending..." : "Send request"}
-            </button>
+
+            {/* The action follows the real relationship, so the row can never
+                offer to send a request that already exists. */}
+            {searchRelationship === RELATIONSHIP.SELF ? (
+              <span className="friends-state-note">That's you</span>
+            ) : searchRelationship === RELATIONSHIP.FRIENDS ? (
+              <span className="friends-state-note is-friends">
+                <FiCheck /> Friends
+              </span>
+            ) : searchRelationship === RELATIONSHIP.OUTGOING ? (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => handleCancelRequest(searchResult.uid)}
+                disabled={busyUid === searchResult.uid}
+              >
+                <FiX /> {busyUid === searchResult.uid ? "Cancelling..." : "Cancel request"}
+              </button>
+            ) : searchRelationship === RELATIONSHIP.INCOMING ? (
+              <button
+                type="button"
+                className="button-primary"
+                onClick={() => handleAccept(searchResult.uid)}
+                disabled={busyUid === searchResult.uid}
+              >
+                <FiCheck /> {busyUid === searchResult.uid ? "Accepting..." : "Accept request"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="button-primary"
+                onClick={() => handleSendRequest(searchResult.uid)}
+                disabled={busyUid === searchResult.uid}
+              >
+                <FiUserPlus /> {busyUid === searchResult.uid ? "Sending..." : "Send request"}
+              </button>
+            )}
           </div>
         ) : null}
       </article>
+
+      {outgoing.length > 0 && (
+        <article className="wire-card">
+          <h3>Sent ({outgoing.length})</h3>
+          <p className="friends-muted">
+            Waiting on them to accept. Withdrawing removes the request from their page.
+          </p>
+          <div className="friends-request-list is-scrollable">
+            {outgoing.map((person) => (
+              <div key={person.uid} className="friends-result-row">
+                <Avatar person={person} />
+                <div className="friends-result-meta">
+                  <strong>{person.displayName}</strong>
+                  {person.username ? <small>@{person.username}</small> : null}
+                </div>
+                <span className="friends-state-note">Pending</span>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => handleCancelRequest(person.uid)}
+                  disabled={busyUid === person.uid}
+                >
+                  <FiX /> {busyUid === person.uid ? "Cancelling..." : "Cancel"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </article>
+      )}
 
       {requests.length > 0 && (
         <article className="wire-card">
@@ -479,13 +595,6 @@ function Friends() {
       <article className="wire-card">
         <div className="panel-head">
           <h3 className="panel-title">Their streaks</h3>
-          <ClearDataButton
-            label="Remove all friends"
-            noun="friendships and pending requests"
-            count={friends.length + requests.length}
-            clear={clearFriendGraph}
-            onCleared={refresh}
-          />
         </div>
 
         {loading ? (

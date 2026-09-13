@@ -133,11 +133,11 @@ function Sidebar({ user }) {
             type="button"
             className="logout-btn"
             onClick={toggleTheme}
-            aria-label={`Switch to ${theme === "dark" ? "cream" : "charcoal"} theme`}
-            title={theme === "dark" ? "Cream theme" : "Charcoal theme"}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            title={theme === "dark" ? "Light theme" : "Dark theme"}
           >
             {theme === "dark" ? <FiSun /> : <FiMoon />}
-            <span>{theme === "dark" ? "Cream" : "Charcoal"}</span>
+            <span>{theme === "dark" ? "Light" : "Dark"}</span>
           </button>
 
           <button

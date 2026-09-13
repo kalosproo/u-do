@@ -54,9 +54,15 @@ button { cursor: pointer; background: none; border: none; }
 ::placeholder { color: var(--text-subtle); }
 
 :focus-visible {
-  outline: 2px solid var(--info);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
+  border-radius: 2px;
 }
+
+/* Inputs draw their own ring so the outline never clips inside a panel. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible { outline-offset: 0; }
 
 /* =========================================================================
    APP SHELL
@@ -364,7 +370,13 @@ button { cursor: pointer; background: none; border: none; }
   color: var(--danger);
 }
 
-.btn-danger:hover,
+/* Outline at rest, filled on hover: the commitment reads before the click. */
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--accent-contrast);
+}
+
 .btn-icon {
   width: 34px;
   min-height: 34px;
@@ -379,7 +391,28 @@ button { cursor: pointer; background: none; border: none; }
 
 .btn:disabled,
 .button-primary:disabled,
-.button-secondary:disabled,
+.button-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* A disabled control must not keep offering hover feedback. */
+.btn:disabled:hover,
+.button-primary:disabled:hover,
+.button-secondary:disabled:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.btn-primary:disabled:hover,
+.button-primary:disabled:hover { background: var(--accent); border-color: var(--accent); }
+
+.btn-danger:disabled:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .btn-sm { min-height: 30px; padding: 0 var(--s-3); font-size: 12.5px; }
 
 /* Inputs ----------------------------------------------------------------- */
@@ -1525,8 +1558,124 @@ input[type="file"].upload-input { display: none; }
 .date-badge.is-undated { color: var(--text-subtle); border-style: dashed; }
 
 /* Sidebar toolbars on Tasks/Habits sit opposite the filters. */
-.tasks-toolbar,
-.habits-toolbar { display: flex; align-items: center; gap: var(--s-2); }
+/* Friend relationship state ---------------------------------------------- */
+.friends-state-note {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex-shrink: 0;
+  padding: 0 var(--s-3);
+  min-height: 30px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.friends-state-note.is-friends {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.friends-state-note svg { width: 13px; height: 13px; }
+
+/* Page actions menu ------------------------------------------------------ */
+/* Title and its menu stay on one line even where .page-head stacks. */
+.page-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+}
+
+.page-menu { position: relative; flex-shrink: 0; }
+
+.page-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease),
+    border-color var(--speed) var(--ease);
+}
+
+.page-menu-trigger:hover,
+.page-menu-trigger[aria-expanded="true"] {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.page-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 45;
+  min-width: 232px;
+  max-width: min(280px, calc(100vw - var(--s-8)));
+  padding: var(--s-1);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+
+.page-menu-label {
+  padding: var(--s-2) var(--s-3) var(--s-1);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.page-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--s-3);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 550;
+  text-align: left;
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+
+.page-menu-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+.page-menu-item-text { flex: 1; min-width: 0; }
+
+/* The count is what makes "Clear tasks" honest about its blast radius. */
+.page-menu-item-count {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-subtle);
+}
+
+.page-menu-item:hover:not(:disabled) { background: var(--surface-hover); }
+
+.page-menu-item.is-danger { color: var(--danger); }
+.page-menu-item.is-danger:hover:not(:disabled) { background: var(--danger-soft); }
+.page-menu-item.is-danger:hover:not(:disabled) .page-menu-item-count { color: var(--danger); }
+
+.page-menu-item:disabled { opacity: 0.45; cursor: not-allowed; }
+
 
 /* Hamburger that replaces the wordmark in the collapsed rail. */
 .sidebar-collapse.is-rail {
@@ -1646,6 +1795,13 @@ input[type="file"].upload-input { display: none; }
   .friends-mode-pill { min-height: 36px; flex-shrink: 0; }
 
   .week-grid { grid-template-columns: repeat(7, 82vw); }
+
+  /* Header row never stacks: the menu stays beside the title, top-right,
+     far from the bottom-right capture button. */
+  .page-head-row { align-items: flex-start; }
+  .page-menu-trigger { width: var(--tap-target); height: var(--tap-target); }
+  .page-menu-panel { max-width: calc(100vw - var(--s-6)); }
+  .page-menu-item { min-height: var(--tap-target); }
 
   .quickcap-fab { right: var(--s-4); bottom: var(--s-4); width: 50px; height: 50px; }
 
