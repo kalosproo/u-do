@@ -1,241 +1,251 @@
-import { useCallback, useMemo, useState } from "react";
-import { addDoc, getDocs } from "firebase/firestore";
-import { generateAssistantPlan } from "../services/aiAssistant";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { FiAlertCircle, FiCheck, FiCpu, FiX } from "react-icons/fi";
 import { useAuthGuard } from "../hooks/useAuthGuard";
-import { todayKey } from "../utils/dateKeys";
-import { expensesCollection, workspaceCollection } from "../services/paths";
-import { createHabit } from "../services/habits";
-import { createPlan } from "../services/planner";
-import { createTask } from "../services/tasks";
+import { ask, formatAssistantError } from "../services/ai/assistant";
+import { applyCalls } from "../services/ai/runtime";
+import { isDestructive, summarizeCall } from "../services/ai/tools";
 
-const QUICK_ACTIONS = [
-  "Build a focused plan for today",
-  "Create a balanced study and habit routine",
-  "Prioritize urgent tasks and schedule them",
+const SUGGESTIONS = [
+  "What should I focus on today?",
+  "How much did I spend this month?",
+  "Which habits am I behind on?",
 ];
 
-function summarizeWorkspace({ tasks, plans, expenses, habits }) {
-  const today = todayKey();
-  const completedTasks = tasks.filter((task) => task.status === "done" || task.completed).length;
-
-  return {
-    tasks: {
-      totalTasks: tasks.length,
-      completedTasks,
-      pendingTasks: Math.max(0, tasks.length - completedTasks),
-    },
-    planner: {
-      todaysPlans: plans.filter((plan) => plan.date === today).length,
-      upcoming: plans
-        .filter((plan) => !plan.completed)
-        .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
-        .slice(0, 3)
-        .map((plan) => ({ title: plan.title, date: plan.date || "" })),
-    },
-    finance: {
-      spendRatio: expenses.length
-        ? Math.min(
-            100,
-            Math.round(
-              (expenses.filter((entry) => entry.type === "expense").reduce((a, b) => a + Number(b.amount || 0), 0) /
-                (expenses.reduce((a, b) => a + Math.abs(Number(b.amount || 0)), 0) || 1)) *
-                100
-            )
-          )
-        : 0,
-    },
-    habits: habits.slice(0, 4).map((habit) => ({
-      title: habit.title,
-      frequency: habit.frequency || "daily",
-    })),
-  };
-}
-
-function AIAssistant() {
+/**
+ * Thin shell around services/ai: it collects a question, shows what the
+ * assistant read, and applies staged actions only when the user confirms.
+ * None of the reasoning or data access lives here.
+ */
+function AIAssistant({ collapsed = false }) {
   const requireUser = useAuthGuard();
+  const inputRef = useRef(null);
+
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState("");
-  const [plan, setPlan] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [applying, setApplying] = useState(false);
+  const [reply, setReply] = useState("");
+  const [pending, setPending] = useState([]);
+  const [outcome, setOutcome] = useState(null);
 
-  const fallbackQuestion = useMemo(() => "Create a high-impact plan for my day and add it to my workspace.", []);
+  const reset = () => {
+    setReply("");
+    setPending([]);
+    setOutcome(null);
+    setStatus("");
+  };
 
-  const fetchWorkspaceContext = useCallback(async (user) => {
-    if (!user) throw new Error("Please login first.");
+  const close = () => {
+    setIsOpen(false);
+    setQuestion("");
+    reset();
+  };
 
-    const [taskSnap, planSnap, expenseSnap, habitSnap] = await Promise.all([
-      getDocs(workspaceCollection(user.uid, "tasks")),
-      getDocs(workspaceCollection(user.uid, "planner")),
-      getDocs(workspaceCollection(user.uid, "expenses")),
-      getDocs(workspaceCollection(user.uid, "habits")),
-    ]);
+  // The textarea grows with the text instead of hiding it on one line.
+  const autoGrow = (element) => {
+    if (!element) return;
+    element.style.height = "auto";
+    element.style.height = `${Math.min(element.scrollHeight, 160)}px`;
+  };
 
-    return summarizeWorkspace({
-      tasks: taskSnap.docs.map((docItem) => ({ id: docItem.id, ...docItem.data() })),
-      plans: planSnap.docs.map((docItem) => ({ id: docItem.id, ...docItem.data() })),
-      expenses: expenseSnap.docs.map((docItem) => ({ id: docItem.id, ...docItem.data() })),
-      habits: habitSnap.docs.map((docItem) => ({ id: docItem.id, ...docItem.data() })),
-    });
-  }, []);
-
-  const applySingleAction = async (action) => {
+  const submit = async (text = question) => {
     const user = requireUser();
-    if (!user) throw new Error("Please login first.");
+    if (!user || !text.trim() || busy) return;
 
-    if (action.type === "task") {
-      await createTask(user.uid, {
-        title: action.title,
-        dueDate: action.date || "",
-        priority: action.priority || "medium",
-      });
-      return;
-    }
+    setBusy(true);
+    reset();
 
-    if (action.type === "plan") {
-      await createPlan(user.uid, {
-        title: action.title,
-        date: action.date || todayKey(),
-        priority: action.priority || "medium",
-      });
-      return;
-    }
-
-    if (action.type === "habit") {
-      await createHabit(user.uid, { title: action.title, frequency: action.frequency || "daily" });
-      return;
-    }
-
-    if (action.type === "finance") {
-      await addDoc(expensesCollection(user.uid), {
-        title: action.title,
-        amount: Number(action.amount) || 0,
-        category: action.category || "General",
-        type: action.transactionType === "income" ? "income" : "expense",
-        date: action.date || todayKey(),
-        createdAt: new Date(),
-      });
+    try {
+      const result = await ask({ uid: user.uid, user }, text.trim());
+      setReply(result.reply || "Done.");
+      setPending(result.actions);
+    } catch (error) {
+      setStatus(formatAssistantError(error));
+    } finally {
+      setBusy(false);
     }
   };
 
-  const applyActions = async (actions) => {
-    if (!actions?.length) return 0;
-    let successCount = 0;
+  const confirmActions = async () => {
+    const user = requireUser();
+    if (!user || !pending.length) return;
 
-    for (const action of actions) {
-      try {
-        await applySingleAction(action);
-        successCount += 1;
-      } catch {
-        // continue remaining actions
-      }
+    const destructive = pending.filter((call) => isDestructive(call.tool));
+
+    if (destructive.length) {
+      const lines = destructive.map((call) => `• ${summarizeCall(call)}`).join("\n");
+      if (!window.confirm(`This permanently deletes data:\n\n${lines}\n\nContinue?`)) return;
     }
 
-    return successCount;
-  };
-
-  const handleAsk = async (prompt = question, autoApply = false) => {
-    const currentUser = requireUser();
-    if (!currentUser) return;
-    setLoading(true);
+    setBusy(true);
     setStatus("");
 
     try {
-      const context = await fetchWorkspaceContext(currentUser);
-      const response = await generateAssistantPlan(prompt || fallbackQuestion, context);
-      setPlan(response.plan);
-
-      if (response.error) {
-        setStatus(response.error);
-        return;
-      }
-
-      if (autoApply && response.plan?.actions?.length) {
-        setApplying(true);
-        const applied = await applyActions(response.plan.actions);
-        setStatus(
-          applied
-            ? `Completed: ${applied} actions were added to your workspace.`
-            : "No actions could be applied. Please retry."
-        );
-      }
+      // Reported straight from what actually ran — never assumed.
+      const result = await applyCalls({ uid: user.uid, user }, pending, { confirmedDestructive: true });
+      setOutcome(result);
+      setPending([]);
     } catch (error) {
-      setStatus(error?.message || "Unable to generate your plan right now.");
+      setStatus(error?.message || "Couldn't apply those changes.");
     } finally {
-      setLoading(false);
-      setApplying(false);
+      setBusy(false);
     }
   };
 
+  const launcher = collapsed ? (
+    <button
+      type="button"
+      className="assistant-launch-btn is-icon"
+      onClick={() => setIsOpen(true)}
+      aria-label="Open AI Assistant"
+      title="AI Assistant"
+    >
+      <FiCpu />
+    </button>
+  ) : (
+    <button type="button" className="assistant-launch-btn" onClick={() => setIsOpen(true)}>
+      <FiCpu />
+      <span>AI Assistant</span>
+    </button>
+  );
+
   return (
     <>
-      <button type="button" className="assistant-launch-btn button-secondary" onClick={() => setIsOpen(true)}>
-        Open AI Assistant
-      </button>
+      {launcher}
 
-      {isOpen ? (
-        <div className="assistant-overlay" role="dialog" aria-modal="true" aria-label="U.Do Assistant">
-          <section className="assistant-popup">
-            <div className="assistant-popup-header">
-              <h4>U.Do Assistant</h4>
-              <button type="button" className="assistant-close-btn" onClick={() => setIsOpen(false)}>
-                ✕
-              </button>
-            </div>
-
-            <p className="assistant-muted">Ask once, and I can generate and apply actions for your workspace.</p>
-
-            <div className="assistant-quick-actions">
-              {QUICK_ACTIONS.map((prompt) => (
-                <button key={prompt} type="button" className="assistant-chip" onClick={() => handleAsk(prompt, true)}>
-                  {prompt}
+      {isOpen &&
+        createPortal(
+          <div className="assistant-overlay" role="dialog" aria-modal="true" aria-label="AI Assistant">
+            <section className="assistant-popup">
+              <header className="assistant-popup-header">
+                <h4 className="panel-title">U.Do Assistant</h4>
+                <button type="button" className="assistant-close-btn" onClick={close} aria-label="Close">
+                  <FiX />
                 </button>
-              ))}
-            </div>
+              </header>
 
-            <textarea
-              className="assistant-input"
-              placeholder="Example: Plan my day with top priorities and auto add everything"
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              rows={3}
-            />
+              <p className="assistant-muted">
+                Ask about your tasks, habits, spending or friends. I read your real data, and any
+                change is shown for you to confirm first.
+              </p>
 
-            <div className="assistant-cta-row">
-              <button type="button" className="button-primary" onClick={() => handleAsk(question, true)} disabled={loading || applying}>
-                {loading || applying ? "Processing..." : "Generate + Apply"}
-              </button>
-              <button type="button" className="assistant-apply-btn button-secondary" onClick={() => handleAsk(question, false)} disabled={loading || applying}>
-                Generate Only
-              </button>
-            </div>
-
-            {status ? <p className="assistant-status">{status}</p> : null}
-
-            <div className="assistant-response">
-              <p className="assistant-summary">{plan?.summary || "Your assistant output appears here."}</p>
-
-              {plan?.actions?.length ? (
-                <ul className="assistant-action-list">
-                  {plan.actions.map((action, index) => (
-                    <li key={`${action.type}-${action.title}-${index}`}>
-                      <strong>{action.title}</strong>
-                      <span>
-                        {action.type.toUpperCase()}
-                        {action.date ? ` • ${action.date}` : ""}
-                      </span>
-                      <small>{action.why}</small>
-                    </li>
+              {!reply && !outcome ? (
+                <div className="assistant-quick-actions">
+                  {SUGGESTIONS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className="assistant-chip"
+                      onClick={() => {
+                        setQuestion(item);
+                        submit(item);
+                      }}
+                    >
+                      {item}
+                    </button>
                   ))}
-                </ul>
+                </div>
               ) : null}
 
-              {plan?.motivation ? <em className="assistant-motivation">{plan.motivation}</em> : null}
-            </div>
-          </section>
-        </div>
-      ) : null}
+              <textarea
+                ref={inputRef}
+                className="assistant-input"
+                rows={1}
+                placeholder="e.g. add a task to submit the lab report, no due date"
+                value={question}
+                onChange={(event) => {
+                  setQuestion(event.target.value);
+                  autoGrow(event.target);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    submit();
+                  }
+                }}
+              />
+
+              <div className="assistant-cta-row">
+                <button
+                  type="button"
+                  className="assistant-apply-btn"
+                  onClick={() => submit()}
+                  disabled={busy || !question.trim()}
+                >
+                  {busy ? "Thinking…" : "Ask"}
+                </button>
+              </div>
+
+              {status ? (
+                <p className="assistant-status">
+                  <FiAlertCircle /> {status}
+                </p>
+              ) : null}
+
+              {reply ? <p className="assistant-summary">{reply}</p> : null}
+
+              {pending.length ? (
+                <div className="assistant-response">
+                  <p className="assistant-muted">
+                    {pending.length} change{pending.length === 1 ? "" : "s"} ready — nothing is saved
+                    until you confirm.
+                  </p>
+
+                  <div className="assistant-action-list">
+                    {pending.map((call, index) => (
+                      <div
+                        key={`${call.tool}-${index}`}
+                        className={`assistant-action ${isDestructive(call.tool) ? "is-destructive" : ""}`}
+                      >
+                        <span>{summarizeCall(call)}</span>
+                        <button
+                          type="button"
+                          className="autoplan-remove"
+                          aria-label={`Drop: ${summarizeCall(call)}`}
+                          onClick={() => setPending((list) => list.filter((_, i) => i !== index))}
+                        >
+                          <FiX />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="assistant-cta-row">
+                    <button type="button" className="assistant-apply-btn" onClick={confirmActions} disabled={busy}>
+                      <FiCheck /> {busy ? "Applying…" : `Apply ${pending.length}`}
+                    </button>
+                    <button type="button" className="quickcap-secondary" onClick={() => setPending([])} disabled={busy}>
+                      Discard
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {outcome ? (
+                <div className="assistant-response">
+                  <p className="assistant-summary">
+                    {outcome.succeeded} change{outcome.succeeded === 1 ? "" : "s"} applied
+                    {outcome.failed.length ? `, ${outcome.failed.length} failed` : ""}.
+                  </p>
+
+                  {outcome.failed.length ? (
+                    <div className="assistant-action-list">
+                      {outcome.failed.map((entry, index) => (
+                        <p key={`${entry.tool}-${index}`} className="assistant-status">
+                          <FiAlertCircle /> {entry.tool}: {entry.error}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <p className="assistant-muted">Reopen the page to see the changes.</p>
+                </div>
+              ) : null}
+            </section>
+          </div>,
+          document.body
+        )}
     </>
   );
 }

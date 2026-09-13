@@ -353,6 +353,33 @@ export const getFriendSummary = async (friendUid) => {
   return snap.exists() ? snap.data() : null;
 };
 
+/**
+ * Removes every friendship and pending request for this account, on both
+ * sides. The handle, invite code and profile card are deliberately left alone:
+ * clearing friends should not silently release a username someone else could
+ * then take.
+ */
+export const clearFriendGraph = async (uid) => {
+  const [friends, requests] = await Promise.all([
+    getDocs(friendsCollection(uid)),
+    getDocs(requestsCollection(uid)),
+  ]);
+
+  await Promise.all([
+    ...friends.docs.map(async (item) => {
+      await deleteDoc(friendDoc(uid, item.id));
+      // The other side may already be gone; that is not a failure.
+      await deleteDoc(friendDoc(item.id, uid)).catch(() => {});
+    }),
+    ...requests.docs.map((item) => deleteDoc(requestDoc(uid, item.id))),
+  ]);
+
+  return { friends: friends.size, requests: requests.size };
+};
+
+/** Removes the shared streak card so friends stop seeing habit data. */
+export const clearSharedSummary = (uid) => deleteDoc(sharedSummaryDoc(uid));
+
 export const listFriends = async (uid) => {
   const snap = await getDocs(friendsCollection(uid));
 

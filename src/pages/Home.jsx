@@ -130,8 +130,10 @@ function Home() {
         </div>
       ) : null}
 
+      {/* Every tile links to the page the number comes from, with the filter
+          that isolates it, so a figure is always traceable to its source. */}
       <div className="stat-grid">
-        <div className="stat">
+        <Link to="/tasks?filter=done" className="stat is-linked">
           <span className="stat-label">Tasks done</span>
           <strong className="stat-value">{tasksSummary.rate}%</strong>
           <div className="bar">
@@ -140,25 +142,25 @@ function Home() {
           <span className="stat-note">
             {tasksSummary.done} of {tasksSummary.total}
           </span>
-        </div>
+        </Link>
 
-        <div className="stat">
+        <Link to="/tasks?filter=overdue" className="stat is-linked">
           <span className="stat-label">Overdue</span>
           <strong className={`stat-value ${tasksSummary.overdue ? "is-negative" : ""}`}>
             {tasksSummary.overdue}
           </strong>
           <span className="stat-note">{tasksSummary.dueToday} due today</span>
-        </div>
+        </Link>
 
-        <div className="stat">
+        <Link to="/habits" className="stat is-linked">
           <span className="stat-label">Habit streak</span>
           <strong className="stat-value">{habitsSummary.longestStreak}</strong>
           <span className="stat-note">
             {habitsSummary.doneNow}/{habitsSummary.total} done now
           </span>
-        </div>
+        </Link>
 
-        <div className="stat">
+        <Link to="/finance" className="stat is-linked">
           <span className="stat-label">This month</span>
           <strong className={`stat-value ${finance.balance < 0 ? "is-negative" : "is-positive"}`}>
             {money(finance.balance)}
@@ -166,14 +168,16 @@ function Home() {
           <span className="stat-note">
             {money(finance.income)} in · {money(finance.spend)} out
           </span>
-        </div>
+        </Link>
       </div>
 
       <div className="dash-grid">
         <article className="panel dash-col-8">
           <div className="panel-head">
             <h3 className="panel-title">Cash flow</h3>
-            <span className="panel-note">Last 6 months</span>
+            <Link to="/finance" className="panel-note panel-link">
+              Open Finance
+            </Link>
           </div>
 
           {finance.allTimeCount ? (
@@ -199,6 +203,9 @@ function Home() {
         <article className="panel dash-col-4">
           <div className="panel-head">
             <h3 className="panel-title">Task breakdown</h3>
+            <Link to="/tasks" className="panel-note panel-link">
+              Open Tasks
+            </Link>
           </div>
 
           {tasksSummary.total ? (
@@ -240,7 +247,7 @@ function Home() {
 
           <div className="line-list">
             {habitsSummary.rows.slice(0, 5).map((habit) => (
-              <div key={habit.id} className="habit-line-row">
+              <Link key={habit.id} to="/habits" className="habit-line-row is-linked">
                 <span>
                   {habit.title}
                   <small>
@@ -248,7 +255,7 @@ function Home() {
                   </small>
                 </span>
                 <strong className={`streak-badge state-${habit.streakState}`}>{habit.streak}</strong>
-              </div>
+              </Link>
             ))}
 
             {habitsSummary.total === 0 ? (
@@ -269,10 +276,10 @@ function Home() {
 
           <div className="line-list">
             {planner.upcoming.map((plan) => (
-              <div key={plan.id} className="upcoming-plan-row">
+              <Link key={plan.id} to="/planner" className="upcoming-plan-row is-linked">
                 <span className="date-badge">{plan.date || "No date"}</span>
                 <strong>{plan.title}</strong>
-              </div>
+              </Link>
             ))}
 
             {planner.upcoming.length === 0 ? (

@@ -3,7 +3,8 @@ import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { fromDateKey, toDateKey } from "../utils/dateKeys";
-import { createHabit, deleteHabit, fetchHabits, setHabitLogs } from "../services/habits";
+import { clearHabits, createHabit, deleteHabit, fetchHabits, setHabitLogs } from "../services/habits";
+import ClearDataButton from "../components/ClearDataButton";
 import {
   getHabitStreakSnapshot,
   getRecentWindowKeys,
@@ -213,6 +214,16 @@ function Habits() {
           </p>
         </div>
 
+        <div className="habits-toolbar">
+          <ClearDataButton
+            label="Clear habits"
+            noun="habits"
+            count={habits.length}
+            clear={clearHabits}
+            onCleared={loadHabits}
+          />
+        </div>
+
         <div className="habits-filter-group">
           {FILTER_OPTIONS.map(([value, label]) => (
             <button
@@ -281,7 +292,7 @@ function Habits() {
             <span className="panel-note">Tap the circle to log it</span>
           </div>
 
-          <div className="today-list">
+          <div className="today-list is-scrollable">
             {enrichedHabits.map((habit) => (
               <article key={habit.id} className={`habit-row ${habit.completedNow ? "is-done" : ""}`}>
                 <button
@@ -347,7 +358,7 @@ function Habits() {
               </span>
             </div>
 
-            <div className="analytics-list">
+            <div className="analytics-list is-scrollable">
               {enrichedHabits.map((habit) => (
                 <article key={`${habit.id}-analytics`} className="analytics-card">
                   <div>

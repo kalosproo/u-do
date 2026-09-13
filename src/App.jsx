@@ -9,9 +9,11 @@ import Tasks from "./pages/Tasks";
 import Habits from "./pages/Habits";
 import Friends from "./pages/Friends";
 import Profile from "./pages/Profile";
+import NotFound from "./pages/NotFound";
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ErrorBoundary from "./components/ErrorBoundary";
 import QuickCapture from "./components/QuickCapture";
 
 /** The signed-in chrome. Login sits outside it, on its own full-page canvas. */
@@ -36,7 +38,9 @@ function AppLayout() {
       </div>
 
       <main className="main-content with-sidebar">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </>
   );
@@ -69,9 +73,11 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-      </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+        {/* A real 404 inside the app shell, rather than bouncing to the
+            dashboard and leaving the user wondering what happened. */}
+        <Route path="*" element={<NotFound />} />
+      </Route>
     </Routes>
   );
 }

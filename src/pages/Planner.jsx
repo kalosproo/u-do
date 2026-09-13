@@ -408,7 +408,7 @@ function Planner() {
                   <span className="day-date">{date.getDate()}</span>
                 </div>
 
-                <div className="day-body">
+                <div className="day-body is-scrollable">
                   {activePlans.map((plan) => (
                     <PlannerTaskCard
                       key={plan.id}

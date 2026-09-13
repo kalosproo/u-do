@@ -32,10 +32,12 @@ import {
 } from "../utils/financeReport";
 import {
   addExpense as addExpenseRecord,
+  clearExpenses,
   editExpense,
   fetchExpenses,
   removeExpense as removeExpenseRecord,
 } from "../services/finance";
+import ClearDataButton from "../components/ClearDataButton";
 
 const CHART_COLORS = [
   "var(--chart-1)",
@@ -57,6 +59,9 @@ const CHART_MODES = [
 ];
 
 const money = (value) => `₹${Math.round(value).toLocaleString("en-IN")}`;
+
+/** History shows a page at a time; a year of spending should not render at once. */
+const PAGE_SIZE = 12;
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -92,11 +97,18 @@ function Finance() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
+  const [visibleRows, setVisibleRows] = useState(PAGE_SIZE);
 
   const categories = useMemo(
     () => (type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES),
     [type]
   );
+
+  // A new filter means a new list, so paging starts from the top again.
+  const applyFilter = (setter) => (value) => {
+    setter(value);
+    setVisibleRows(PAGE_SIZE);
+  };
 
   const loadExpenses = useCallback(async () => {
     if (!user) return;
@@ -249,7 +261,7 @@ function Finance() {
               key={value}
               type="button"
               className={`chip ${range === value ? "active" : ""}`}
-              onClick={() => setRange(value)}
+              onClick={() => applyFilter(setRange)(value)}
             >
               {label}
             </button>
@@ -461,18 +473,27 @@ function Finance() {
           <div className="panel recent-transactions">
             <div className="panel-head">
               <h3 className="panel-title">History</h3>
-              <span className="panel-note">
-                {history.length} of {scoped.length} shown
-              </span>
+              <div className="toolbar">
+                <span className="panel-note">
+                  {Math.min(visibleRows, history.length)} of {history.length} shown
+                </span>
+                <ClearDataButton
+                  label="Clear finance"
+                  noun="transactions"
+                  count={expenses.length}
+                  clear={clearExpenses}
+                  onCleared={loadExpenses}
+                />
+              </div>
             </div>
 
             <div className="history-filters">
               <input
                 placeholder="Search title or category"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => applyFilter(setSearch)(e.target.value)}
               />
-              <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <select value={categoryFilter} onChange={(e) => applyFilter(setCategoryFilter)(e.target.value)}>
                 <option value="all">All categories</option>
                 {knownCategories.map((item) => (
                   <option key={item} value={item}>
@@ -495,7 +516,7 @@ function Finance() {
                     </tr>
                   </thead>
                   <tbody>
-                    {history.map((entry) => (
+                    {history.slice(0, visibleRows).map((entry) => (
                       <tr key={entry.id}>
                         <td className="text-muted">{entry.date}</td>
                         <td>{entry.title}</td>
@@ -528,6 +549,16 @@ function Finance() {
                     ))}
                   </tbody>
                 </table>
+
+                {history.length > visibleRows ? (
+                  <button
+                    type="button"
+                    className="btn show-more"
+                    onClick={() => setVisibleRows((rows) => rows + PAGE_SIZE)}
+                  >
+                    Show {Math.min(PAGE_SIZE, history.length - visibleRows)} more
+                  </button>
+                ) : null}
               </div>
             ) : (
               <p className="empty">

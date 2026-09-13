@@ -232,7 +232,7 @@ button { cursor: pointer; background: none; border: none; }
 .sidebar.is-collapsed .assistant-launch-btn { justify-content: center; }
 
 .sidebar.is-collapsed .brand { padding: 0 0 var(--s-2); justify-content: center; }
-.sidebar.is-collapsed .sidebar-collapse { position: absolute; top: var(--s-2); right: var(--s-2); }
+.sidebar.is-collapsed .sidebar-brand-row { justify-content: center; padding-bottom: var(--s-2); }
 .sidebar.is-collapsed .assistant-launch-btn span { display: none; }
 
 /* Mobile nav trigger — hidden on desktop, shown in the responsive block. */
@@ -1378,6 +1378,167 @@ input[type="file"].upload-input { display: none; }
 .chart-tooltip-row { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
 
 /* =========================================================================
+   SCROLLABLE LISTS — a long list scrolls inside its card instead of
+   stretching the page, which is what made planner and kanban columns grow
+   without limit.
+   ========================================================================= */
+.is-scrollable {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.column-list.is-scrollable { max-height: min(58vh, 560px); padding-right: 2px; }
+.day-body.is-scrollable { max-height: min(46vh, 420px); padding-right: 2px; }
+.today-list.is-scrollable { max-height: min(56vh, 520px); padding-right: 2px; }
+.analytics-list.is-scrollable { max-height: 300px; padding-right: 2px; }
+.friends-list.is-scrollable { max-height: min(60vh, 620px); padding-right: 2px; }
+.friends-request-list.is-scrollable { max-height: 280px; padding-right: 2px; }
+
+/* A restrained scrollbar so a scrolling card still looks like a card. */
+.is-scrollable::-webkit-scrollbar { width: 8px; }
+.is-scrollable::-webkit-scrollbar-track { background: transparent; }
+.is-scrollable::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--r-pill);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.is-scrollable::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); background-clip: content-box; }
+.is-scrollable { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+.show-more { width: 100%; margin-top: var(--s-3); }
+
+/* =========================================================================
+   CLICKABLE DASHBOARD — a metric links to the page it came from
+   ========================================================================= */
+.stat.is-linked,
+.habit-line-row.is-linked,
+.upcoming-plan-row.is-linked {
+  cursor: pointer;
+  transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease),
+    transform var(--speed) var(--ease);
+}
+
+.stat.is-linked:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.habit-line-row.is-linked:hover,
+.upcoming-plan-row.is-linked:hover {
+  background: var(--surface-hover);
+  border-radius: var(--r-sm);
+}
+
+.panel-link {
+  color: var(--text-muted);
+  border-bottom: 1px solid transparent;
+}
+
+.panel-link:hover { color: var(--text); border-bottom-color: var(--border-strong); }
+
+/* =========================================================================
+   ERROR PAGES
+   ========================================================================= */
+.error-page {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-card {
+  max-width: 520px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  text-align: center;
+  align-items: center;
+}
+
+.error-code {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.error-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--s-2);
+}
+
+.error-links .panel-note { display: inline-flex; align-items: center; gap: 6px; }
+
+/* =========================================================================
+   ASSISTANT — staged actions and a chat box that grows with its text
+   ========================================================================= */
+.assistant-input {
+  resize: none;
+  overflow-y: auto;
+  min-height: 40px;
+  max-height: 160px;
+  line-height: 1.45;
+  padding: var(--s-2) var(--s-3);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.assistant-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.assistant-action.is-destructive {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.assistant-status { display: flex; align-items: flex-start; gap: 6px; }
+.assistant-summary { overflow-wrap: anywhere; }
+
+/* Icon-only launcher for the collapsed rail. */
+.assistant-launch-btn.is-icon {
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  margin: var(--s-2) auto 0;
+  justify-content: center;
+}
+
+/* Undated tasks say so rather than showing nothing at all. */
+.date-badge.is-undated { color: var(--text-subtle); border-style: dashed; }
+
+/* Sidebar toolbars on Tasks/Habits sit opposite the filters. */
+.tasks-toolbar,
+.habits-toolbar { display: flex; align-items: center; gap: var(--s-2); }
+
+/* Hamburger that replaces the wordmark in the collapsed rail. */
+.sidebar-collapse.is-rail {
+  position: static;
+  width: 38px;
+  height: 38px;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* =========================================================================
    RESPONSIVE — tablet and phone are laid out, not shrunk
    ========================================================================= */
 
@@ -1514,6 +1675,12 @@ input[type="file"].upload-input { display: none; }
 
   .friend-card-header { gap: var(--s-2); }
   .friend-headline { align-items: flex-start; }
+
+  .column-list.is-scrollable,
+  .today-list.is-scrollable,
+  .friends-list.is-scrollable { max-height: none; }
+
+  .day-body.is-scrollable { max-height: 60vh; }
 
   .month-cell { font-size: 10px; }
   .activity-cell { width: 10px; height: 10px; }
