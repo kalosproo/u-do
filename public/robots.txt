@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://u-do-sigma.vercel.app/sitemap.xml
