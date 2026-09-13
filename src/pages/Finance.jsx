@@ -31,11 +31,10 @@ import {
   totalSpend,
 } from "../utils/financeReport";
 import {
-  deleteExpense as deleteExpenseDoc,
+  addExpense as addExpenseRecord,
+  editExpense,
   fetchExpenses,
-  saveExpense,
-  updateExpense,
-  writeCachedExpenses,
+  removeExpense as removeExpenseRecord,
 } from "../services/finance";
 
 const CHART_COLORS = [
@@ -168,18 +167,12 @@ function Finance() {
     }
 
     const expense = buildExpense({ title, amount, type, category, date });
-    const next = [...expenses, expense];
-
-    setExpenses(next);
-    writeCachedExpenses(currentUser.uid, next);
     resetForm();
 
-    try {
-      await saveExpense(currentUser.uid, expense);
-      setStatus("");
-    } catch (error) {
-      setStatus(error?.message || "Saved on this device, but syncing failed.");
-    }
+    const { list, error } = await addExpenseRecord(currentUser.uid, expense, expenses);
+
+    setExpenses(list);
+    setStatus(error ? "Saved on this device — it will sync when you're back online." : "");
   };
 
   const saveEdit = async () => {
@@ -200,13 +193,7 @@ function Finance() {
     };
 
     try {
-      const patch = await updateExpense(currentUser.uid, editing.id, changes);
-      const next = expenses.map((entry) =>
-        entry.id === editing.id ? { ...entry, ...patch } : entry
-      );
-
-      setExpenses(next);
-      writeCachedExpenses(currentUser.uid, next);
+      setExpenses(await editExpense(currentUser.uid, editing.id, changes, expenses));
       setEditing(null);
       setStatus("");
     } catch (error) {
@@ -220,15 +207,11 @@ function Finance() {
 
     if (!window.confirm(`Delete "${entry.title}"? This can't be undone.`)) return;
 
-    const next = expenses.filter((item) => item.id !== entry.id);
-    setExpenses(next);
-    writeCachedExpenses(currentUser.uid, next);
-
     try {
-      await deleteExpenseDoc(currentUser.uid, entry.id);
+      setExpenses(await removeExpenseRecord(currentUser.uid, entry.id, expenses));
       setStatus("");
     } catch (error) {
-      setStatus(error?.message || "Removed here, but the server still has it.");
+      setStatus(error?.message || "Couldn't delete that — it still exists on the server.");
     }
   };
 

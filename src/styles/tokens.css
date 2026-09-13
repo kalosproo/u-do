@@ -32,6 +32,7 @@
 
   /* Layout */
   --sidebar-w: 240px;
+  --sidebar-rail-w: 66px;
   --tap-target: 44px;
 }
 

@@ -1,4 +1,5 @@
 import { deleteDoc, getDocs, writeBatch } from "firebase/firestore";
+import { recordTimestamp } from "../utils/dateKeys";
 import { db } from "./firebase";
 import { WORKSPACE_COLLECTIONS, workspaceCollection, workspaceDoc } from "./paths";
 import { expensesCacheKey } from "./finance";
@@ -10,6 +11,13 @@ const BATCH_SIZE = 400;
 
 /** A backup with more than this is refused rather than half-written. */
 const MAX_IMPORT_DOCS = 5000;
+
+/**
+ * "merge" keeps whichever copy was touched most recently, so restoring an old
+ * backup cannot silently roll back work done since. "replace" takes the file
+ * as the truth for the ids it contains.
+ */
+export const IMPORT_MODES = ["merge", "replace"];
 
 export const exportWorkspace = async (uid) => {
   const sections = await Promise.all(
@@ -72,31 +80,64 @@ export const inspectBackup = (raw) => {
 /**
  * Writes a checked backup into the signed-in account.
  *
- * Two boundaries are deliberate: every path is built from the uid passed in by
- * the caller, never from the file, so a backup exported by someone else cannot
- * redirect a write; and `id` is stripped from the body so it only ever names
- * the document, not a field inside it. Existing documents with the same id are
- * overwritten — it is a restore, not a merge.
+ * Three boundaries are deliberate. Every path is built from the uid passed in
+ * by the caller, never from the file, so a backup exported by someone else
+ * cannot redirect a write. `id` is stripped from the body, so it only ever
+ * names the document rather than becoming a field inside it. And in the
+ * default "merge" mode an existing document is left alone when it is newer
+ * than the copy in the file — importing a week-old backup no longer discards
+ * a week of work. "replace" is the explicit opt-in to overwrite.
  */
-export const importWorkspace = async (uid, raw) => {
+export const importWorkspace = async (uid, raw, { mode = "merge" } = {}) => {
+  if (!IMPORT_MODES.includes(mode)) {
+    throw new Error(`Unknown import mode "${mode}".`);
+  }
+
   const { counts } = inspectBackup(raw);
   const data = JSON.parse(raw).data;
 
   const written = {};
+  const skipped = {};
 
   for (const name of WORKSPACE_COLLECTIONS) {
     const rows = Array.isArray(data[name]) ? data[name] : [];
     const usable = rows.filter((row) => row && typeof row === "object" && !Array.isArray(row));
 
     written[name] = 0;
+    skipped[name] = 0;
 
-    for (let start = 0; start < usable.length; start += BATCH_SIZE) {
+    if (usable.length === 0) continue;
+
+    // In merge mode the current documents decide what is safe to overwrite.
+    let existing = new Map();
+
+    if (mode === "merge") {
+      const snapshot = await getDocs(workspaceCollection(uid, name));
+      existing = new Map(snapshot.docs.map((item) => [item.id, item.data()]));
+    }
+
+    const queue = [];
+
+    usable.forEach((row) => {
+      const { id, ...body } = row;
+      const docId = typeof id === "string" && id.trim() ? id.trim() : crypto.randomUUID();
+
+      if (mode === "merge") {
+        const current = existing.get(docId);
+
+        if (current && recordTimestamp(current) > recordTimestamp(body)) {
+          skipped[name] += 1;
+          return;
+        }
+      }
+
+      queue.push({ docId, body });
+    });
+
+    for (let start = 0; start < queue.length; start += BATCH_SIZE) {
       const batch = writeBatch(db);
 
-      usable.slice(start, start + BATCH_SIZE).forEach((row) => {
-        const { id, ...body } = row;
-        const docId = typeof id === "string" && id.trim() ? id.trim() : crypto.randomUUID();
-
+      queue.slice(start, start + BATCH_SIZE).forEach(({ docId, body }) => {
         batch.set(workspaceDoc(uid, name, docId), body);
         written[name] += 1;
       });
@@ -105,7 +146,9 @@ export const importWorkspace = async (uid, raw) => {
     }
   }
 
-  return { counts, written, total: Object.values(written).reduce((sum, n) => sum + n, 0) };
+  const sum = (obj) => Object.values(obj).reduce((total, n) => total + n, 0);
+
+  return { counts, written, skipped, mode, total: sum(written), skippedTotal: sum(skipped) };
 };
 
 export const clearWorkspace = async (uid) => {

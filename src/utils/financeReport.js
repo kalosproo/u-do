@@ -21,24 +21,40 @@ export const normalizeExpense = (raw) => ({
 });
 
 /**
+ * Marks a cached entry that has not reached Firestore yet. Local only — it is
+ * stripped before any write, so it never becomes a document field.
+ */
+export const PENDING_FLAG = "__pendingSync";
+
+export const isPending = (entry) => Boolean(entry?.[PENDING_FLAG]);
+
+/** Drops local-only bookkeeping so a record is safe to persist. */
+export const stripLocalFields = (entry) => {
+  const clean = { ...entry };
+  delete clean[PENDING_FLAG];
+  return clean;
+};
+
+/**
  * Merges the remote and cached copies document by document, newest wins.
  *
- * This used to pick one list wholesale by comparing their newest timestamps,
- * which lost every entry held only by the other side. It also compared with
- * `new Date(...)`, which is an Invalid Date for the Firestore Timestamp shape
- * the AI Assistant writes, so the comparison went NaN and silently kept the
- * local copy forever. Both are handled here: recordTimestamp understands every
- * shape, and nothing is dropped for being on one side only.
+ * Two bugs lived here. It used to pick one list wholesale by comparing their
+ * newest timestamps, discarding every entry held only by the other side; and
+ * it compared with `new Date(...)`, which is an Invalid Date for the Firestore
+ * Timestamp shape the AI Assistant writes, so the comparison went NaN and
+ * silently kept the local copy forever.
  *
- * Caveat: an entry deleted remotely while this device was offline reappears,
- * because a cached copy is indistinguishable from one not yet synced.
+ * A cached entry the server does not have is only kept when it is still
+ * pending. Once an entry has synced, the server is authoritative about whether
+ * it exists, so one deleted on another device stays deleted instead of being
+ * resurrected from this device's cache.
  */
 export const mergeExpenses = (remoteList, cachedList) => {
+  const remote = (remoteList || []).filter((entry) => entry?.id);
+  const remoteIds = new Set(remote.map((entry) => entry.id));
   const byId = new Map();
 
   const absorb = (entry) => {
-    if (!entry?.id) return;
-
     const normalized = normalizeExpense(entry);
     const existing = byId.get(normalized.id);
 
@@ -47,10 +63,22 @@ export const mergeExpenses = (remoteList, cachedList) => {
     }
   };
 
-  (remoteList || []).forEach(absorb);
-  (cachedList || []).forEach(absorb);
+  remote.forEach(absorb);
 
-  return [...byId.values()];
+  (cachedList || []).forEach((entry) => {
+    if (!entry?.id) return;
+
+    // Synced, and the server no longer lists it: deleted elsewhere.
+    if (!remoteIds.has(entry.id) && !isPending(entry)) return;
+
+    absorb(entry);
+  });
+
+  // Only an entry the server confirms is safe to call synced. Stripping the
+  // flag from one still in flight would make the next merge drop it.
+  return [...byId.values()].map((entry) =>
+    remoteIds.has(entry.id) ? stripLocalFields(entry) : entry
+  );
 };
 
 /** Builds a record with both timestamps as ISO strings, the one shape everything reads. */

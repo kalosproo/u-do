@@ -4,7 +4,17 @@ import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { todayKey } from "../utils/dateKeys";
 import { resolveUserPhoto } from "../utils/profilePhoto";
-import { clearWorkspace, exportWorkspace, importWorkspace, inspectBackup } from "../services/workspace";
+import {
+  clearWorkspace,
+  exportWorkspace,
+  importWorkspace,
+  inspectBackup,
+} from "../services/workspace";
+
+const IMPORT_MODE_OPTIONS = [
+  ["merge", "Keep newer", "Existing entries stay if they were changed more recently than the backup."],
+  ["replace", "Overwrite", "The backup wins for every entry it contains."],
+];
 
 const SECTION_LABEL = {
   tasks: "Tasks",
@@ -21,6 +31,7 @@ function Profile() {
   const [status, setStatus] = useState({ tone: "", text: "" });
   const [busyAction, setBusyAction] = useState("");
   const [pendingImport, setPendingImport] = useState(null);
+  const [importMode, setImportMode] = useState("merge");
 
   const userName = user?.displayName || user?.email?.split("@")[0] || "U.Do User";
   const photo = useMemo(() => resolveUserPhoto(user), [user]);
@@ -88,9 +99,13 @@ function Profile() {
     setBusyAction("import");
 
     try {
-      const result = await importWorkspace(currentUser.uid, pendingImport.raw);
+      const result = await importWorkspace(currentUser.uid, pendingImport.raw, { mode: importMode });
       setPendingImport(null);
-      say("success", `Imported ${result.total} record${result.total === 1 ? "" : "s"}.`);
+
+      const kept = result.skippedTotal
+        ? `, kept ${result.skippedTotal} newer local ${result.skippedTotal === 1 ? "entry" : "entries"}`
+        : "";
+      say("success", `Imported ${result.total} record${result.total === 1 ? "" : "s"}${kept}.`);
     } catch (error) {
       say("error", error?.message || "Import failed. Nothing else was changed.");
     } finally {
@@ -199,6 +214,26 @@ function Profile() {
                 <strong>{count}</strong>
               </span>
             ))}
+
+            <div className="field">
+              <span>If an entry already exists</span>
+              <div className="toolbar">
+                {IMPORT_MODE_OPTIONS.map(([value, label, hint]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    title={hint}
+                    className={`chip ${importMode === value ? "active" : ""}`}
+                    onClick={() => setImportMode(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <span className="panel-note">
+                {IMPORT_MODE_OPTIONS.find(([value]) => value === importMode)?.[2]}
+              </span>
+            </div>
 
             <div className="modal-actions">
               <button

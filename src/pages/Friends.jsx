@@ -4,6 +4,7 @@ import { useAuthGuard } from "../hooks/useAuthGuard";
 import { FiCheck, FiCopy, FiUserPlus, FiX } from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
 import {
+  CLAIM_ERRORS,
   acceptFriendRequest,
   buildInviteLink,
   claimUsername,
@@ -177,12 +178,39 @@ function Friends() {
     setStatus("");
 
     try {
-      const saved = await claimUsername(currentUser, usernameInput);
+      const { profile: saved, alreadyYours, previousUsername } = await claimUsername(
+        currentUser,
+        usernameInput
+      );
+
       setProfile(saved);
       setUsernameInput(saved.username);
-      setStatus(`Your handle is @${saved.username}.`);
+
+      if (alreadyYours) {
+        setStatus(`@${saved.username} is already your handle.`);
+      } else if (previousUsername) {
+        setStatus(`Changed from @${previousUsername} to @${saved.username}. The old handle is free again.`);
+      } else {
+        setStatus(`@${saved.username} is yours.`);
+      }
     } catch (error) {
-      setStatus(error?.message || "Couldn't save that username.");
+      // Each failure reads differently, so say which one it was.
+      switch (error?.reason) {
+        case CLAIM_ERRORS.TAKEN:
+          setStatus(`@${normalizeUsername(usernameInput)} is already taken — try another.`);
+          break;
+        case CLAIM_ERRORS.INVALID:
+          setStatus(error.message);
+          break;
+        case CLAIM_ERRORS.DENIED:
+          setStatus(error.message);
+          break;
+        case CLAIM_ERRORS.UNAVAILABLE:
+          setStatus(error.message);
+          break;
+        default:
+          setStatus(error?.message || "Couldn't save that username.");
+      }
     } finally {
       setSavingUsername(false);
     }
@@ -291,8 +319,8 @@ function Friends() {
         <h3>Your handle</h3>
         <p className="friends-muted">
           {profile?.username
-            ? "Friends can find you with any of these."
-            : "Pick a username so friends can find and add you."}
+            ? `You're @${profile.username}. Friends can find you with any of these — changing your handle frees the old one.`
+            : "Pick a username so friends can find and add you. Letters, numbers and underscores, 3-20 characters."}
         </p>
 
         <div className="friends-field-row">
