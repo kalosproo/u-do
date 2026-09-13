@@ -1,0 +1,124 @@
+/* =========================================================================
+   DESIGN TOKENS — the only place a colour is chosen.
+   Two themes: dark charcoal (default) and cream white. Every surface, text,
+   border and chart colour resolves through these, so a theme is a token swap
+   and nothing else.
+   ========================================================================= */
+
+:root {
+  /* Type */
+  --font-sans: "Inter", "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, monospace;
+
+  /* Spacing scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+
+  /* Radii */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --speed: 0.18s;
+
+  /* Layout */
+  --sidebar-w: 240px;
+  --sidebar-rail-w: 66px;
+  --tap-target: 44px;
+}
+
+/* ----------------------------------------------------- DARK CHARCOAL (default) */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #14161a;
+  --bg-elevated: #191c21;
+  --surface: #1d2026;
+  --surface-2: #23272e;
+  --surface-hover: #2a2f37;
+
+  --text: #f4f5f7;
+  --text-muted: #a2a9b5;
+  --text-subtle: #6e7681;
+
+  --border: #2c313a;
+  --border-strong: #3a414d;
+
+  --accent: #e8eaed;
+  --accent-contrast: #14161a;
+  --accent-soft: rgba(232, 234, 237, 0.1);
+
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+
+  --success-soft: rgba(74, 222, 128, 0.14);
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --warning-soft: rgba(251, 191, 36, 0.14);
+
+  --chart-1: #7dd3fc;
+  --chart-2: #a78bfa;
+  --chart-3: #4ade80;
+  --chart-4: #fbbf24;
+  --chart-5: #f472b6;
+  --chart-6: #fb923c;
+
+  --grid-line: rgba(255, 255, 255, 0.07);
+  --dot-empty: rgba(255, 255, 255, 0.14);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --overlay: rgba(8, 9, 11, 0.72);
+}
+
+/* ------------------------------------------------------------ CREAM WHITE */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f6f3ec;
+  --bg-elevated: #fbf9f4;
+  --surface: #fffdf8;
+  --surface-2: #f2eee4;
+  --surface-hover: #eae5d8;
+
+  --text: #23201a;
+  --text-muted: #6b6458;
+  --text-subtle: #948d7e;
+
+  --border: #e2dcce;
+  --border-strong: #cfc7b4;
+
+  --accent: #23201a;
+  --accent-contrast: #fffdf8;
+  --accent-soft: rgba(35, 32, 26, 0.07);
+
+  --success: #15803d;
+  --danger: #b91c1c;
+  --warning: #a16207;
+  --info: #1d4ed8;
+
+  --success-soft: rgba(21, 128, 61, 0.1);
+  --danger-soft: rgba(185, 28, 28, 0.1);
+  --warning-soft: rgba(161, 98, 7, 0.1);
+
+  --chart-1: #2563eb;
+  --chart-2: #7c3aed;
+  --chart-3: #15803d;
+  --chart-4: #b45309;
+  --chart-5: #be185d;
+  --chart-6: #c2410c;
+
+  --grid-line: rgba(35, 32, 26, 0.08);
+  --dot-empty: rgba(35, 32, 26, 0.12);
+  --shadow: 0 1px 2px rgba(80, 70, 50, 0.06), 0 8px 24px rgba(80, 70, 50, 0.08);
+  --overlay: rgba(35, 32, 26, 0.4);
+}

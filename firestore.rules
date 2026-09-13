@@ -17,6 +17,35 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // The canonical username form, mirrored from services/friends.js. Any
+    // ledger id outside this shape is refused, so lookups (which always
+    // canonicalise first) can never miss a legitimately claimed handle.
+    function isCanonicalUsername(name) {
+      return name.size() >= 3 && name.size() <= 20 && name.matches('^[a-z0-9_]+$');
+    }
+
+    function ownsLedgerEntry(path, uid) {
+      return exists(path) && get(path).data.uid == uid;
+    }
+
+    /**
+     * A profile card may only advertise a handle and invite code this account
+     * actually holds in the ledger. Without this a user could write anyone
+     * else's username onto their own card and have it shown to other people
+     * — friend requests carry the requester's username from here.
+     */
+    function cardMatchesLedger(uid) {
+      return (
+        !('username' in request.resource.data)
+        || request.resource.data.username == ''
+        || ownsLedgerEntry(/databases/$(database)/documents/usernames/$(request.resource.data.username), uid)
+      ) && (
+        !('inviteCode' in request.resource.data)
+        || request.resource.data.inviteCode == ''
+        || ownsLedgerEntry(/databases/$(database)/documents/inviteCodes/$(request.resource.data.inviteCode), uid)
+      );
+    }
+
     // A friendship is recorded on both sides. Someone may read an owner's
     // shared card only while the owner's own friend list names them.
     function isFriendOf(ownerId) {
@@ -34,7 +63,9 @@ service cloud.firestore {
       // The public card: display name, handle, photo, invite code. Readable by
       // any signed-in account so that search and invite links can resolve.
       allow read: if isSignedIn();
-      allow write: if isOwner(uid);
+
+      // Writable only by its owner, and only advertising handles they hold.
+      allow write: if isOwner(uid) && cardMatchesLedger(uid);
 
       // Habit names, streaks and completion rates. Friends only.
       match /shared/{docId} {
@@ -73,19 +104,47 @@ service cloud.firestore {
       }
     }
 
-    // Handle -> uid. Create only succeeds on a free handle, which is what makes
-    // usernames first come, first served.
+    /**
+     * Handle -> uid. This collection IS the uniqueness constraint.
+     *
+     * `create` only applies to a document that does not exist, so a handle
+     * someone already holds cannot be taken by a second account — not through
+     * the app, and not by writing to Firestore directly. `update` is limited
+     * to the current holder re-affirming their own entry, which stops an
+     * existing entry being repointed at anyone else. Reads return only a uid,
+     * so checking whether a handle is free reveals nothing else about its
+     * owner.
+     */
     match /usernames/{username} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && isCanonicalUsername(username)
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+
+      allow update: if isSignedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
-    // Invite code -> uid.
+    // Invite code -> uid, under the same first-come rules as handles.
     match /inviteCodes/{code} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+
+      allow update: if isSignedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
     // Written by the auth Cloud Function through the Admin SDK, which bypasses

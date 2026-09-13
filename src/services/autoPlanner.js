@@ -1,4 +1,5 @@
 import { askGroq } from "./groq";
+import { todayKey } from "../utils/dateKeys";
 
 function extractJson(content) {
   const cleaned = (content || "").trim();
@@ -32,7 +33,7 @@ function formatPlannerError(error) {
 export async function generateWeeklyPlan({ weekDates, pendingTasks, scheduledByDate }) {
   if (!pendingTasks.length) return { summary: "No pending tasks to schedule — your Tasks board is clear.", assignments: [], error: null };
   const validDates = weekDates.map((item) => item.date);
-  const prompt = `You are U.Do's weekly auto-planner. TODAY: ${new Date().toISOString().slice(0, 10)}. WEEK: ${weekDates.map((item) => `${item.date} (${item.weekday})`).join(", ")}.
+  const prompt = `You are U.Do's weekly auto-planner. TODAY: ${todayKey()}. WEEK: ${weekDates.map((item) => `${item.date} (${item.weekday})`).join(", ")}.
 PENDING TASKS:\n${pendingTasks.map((item) => `- "${item.title}" | due: ${item.dueDate || "none"} | priority: ${item.priority}`).join("\n")}
 SCHEDULED:\n${Object.entries(scheduledByDate).map(([date, titles]) => `${date}: ${titles.join(", ") || "(empty)"}`).join("\n")}
 Assign pending tasks to one valid week date. Schedule due tasks on or before their due date; prefer lighter days; max 4 total items/day; do not duplicate scheduled titles; don't invent tasks. Return JSON only: {"summary":"short sentence","assignments":[{"taskTitle":"exact pending title","date":"YYYY-MM-DD","priority":"low" | "medium" | "high"}]}.`;

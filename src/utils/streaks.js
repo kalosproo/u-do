@@ -1,3 +1,5 @@
+import { fromDateKey, toDateKey } from "./dateKeys";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const STREAK_MILESTONES = [7, 30, 100];
@@ -16,14 +18,6 @@ const FREQUENCY_RULES = {
     freezeAllowance: 1,
     lookbackWindows: 160,
   },
-};
-
-export const toDateKey = (dateValue) => {
-  const date = new Date(dateValue);
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
 };
 
 const startOfWeek = (dateValue) => {
@@ -99,7 +93,7 @@ const mapCompletionsByWindow = (logs, frequency, windows) => {
 
   Object.entries(logs || {}).forEach(([dateKey, done]) => {
     if (!done) return;
-    const windowKey = getWindowMeta(new Date(`${dateKey}T00:00:00`), frequency).key;
+    const windowKey = getWindowMeta(fromDateKey(dateKey), frequency).key;
     if (windowKey in completeByWindow) completeByWindow[windowKey] = true;
   });
 
@@ -215,7 +209,7 @@ export const isHabitCompletedInWindow = (habit, windowKey, frequency = habit.fre
   const logs = habit.logs || {};
   return Object.entries(logs).some(([dateKey, done]) => {
     if (!done) return false;
-    return getWindowKeyForDate(new Date(`${dateKey}T00:00:00`), frequency) === windowKey;
+    return getWindowKeyForDate(fromDateKey(dateKey), frequency) === windowKey;
   });
 };
 

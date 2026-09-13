@@ -1,8 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { addDoc, collection, getDocs } from "firebase/firestore";
-import { auth, db } from "../services/firebase";
+import { addDoc, getDocs } from "firebase/firestore";
 import { generateAssistantPlan } from "../services/aiAssistant";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+import { todayKey } from "../utils/dateKeys";
+import { expensesCollection, workspaceCollection } from "../services/paths";
+import { createHabit } from "../services/habits";
+import { createPlan } from "../services/planner";
+import { createTask } from "../services/tasks";
 
 const QUICK_ACTIONS = [
   "Build a focused plan for today",
@@ -11,7 +15,7 @@ const QUICK_ACTIONS = [
 ];
 
 function summarizeWorkspace({ tasks, plans, expenses, habits }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayKey();
   const completedTasks = tasks.filter((task) => task.status === "done" || task.completed).length;
 
   return {
@@ -48,7 +52,7 @@ function summarizeWorkspace({ tasks, plans, expenses, habits }) {
 }
 
 function AIAssistant() {
-  const navigate = useNavigate();
+  const requireUser = useAuthGuard();
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [plan, setPlan] = useState(null);
@@ -58,15 +62,14 @@ function AIAssistant() {
 
   const fallbackQuestion = useMemo(() => "Create a high-impact plan for my day and add it to my workspace.", []);
 
-  const fetchWorkspaceContext = useCallback(async () => {
-    const user = auth.currentUser;
+  const fetchWorkspaceContext = useCallback(async (user) => {
     if (!user) throw new Error("Please login first.");
 
     const [taskSnap, planSnap, expenseSnap, habitSnap] = await Promise.all([
-      getDocs(collection(db, "users", user.uid, "tasks")),
-      getDocs(collection(db, "users", user.uid, "planner")),
-      getDocs(collection(db, "users", user.uid, "expenses")),
-      getDocs(collection(db, "users", user.uid, "habits")),
+      getDocs(workspaceCollection(user.uid, "tasks")),
+      getDocs(workspaceCollection(user.uid, "planner")),
+      getDocs(workspaceCollection(user.uid, "expenses")),
+      getDocs(workspaceCollection(user.uid, "habits")),
     ]);
 
     return summarizeWorkspace({
@@ -78,53 +81,39 @@ function AIAssistant() {
   }, []);
 
   const applySingleAction = async (action) => {
-    const user = auth.currentUser;
-    if (!user) {
-      navigate("/login");
-      throw new Error("Please login first.");
-    }
+    const user = requireUser();
+    if (!user) throw new Error("Please login first.");
 
     if (action.type === "task") {
-      await addDoc(collection(db, "users", user.uid, "tasks"), {
+      await createTask(user.uid, {
         title: action.title,
         dueDate: action.date || "",
         priority: action.priority || "medium",
-        status: "todo",
-        completed: false,
-        createdAt: new Date(),
       });
       return;
     }
 
     if (action.type === "plan") {
-      await addDoc(collection(db, "users", user.uid, "planner"), {
+      await createPlan(user.uid, {
         title: action.title,
-        date: action.date || new Date().toISOString().slice(0, 10),
+        date: action.date || todayKey(),
         priority: action.priority || "medium",
-        completed: false,
-        order: 0,
-        createdAt: new Date(),
       });
       return;
     }
 
     if (action.type === "habit") {
-      await addDoc(collection(db, "users", user.uid, "habits"), {
-        title: action.title,
-        frequency: action.frequency || "daily",
-        createdAt: new Date(),
-        logs: {},
-      });
+      await createHabit(user.uid, { title: action.title, frequency: action.frequency || "daily" });
       return;
     }
 
     if (action.type === "finance") {
-      await addDoc(collection(db, "users", user.uid, "expenses"), {
+      await addDoc(expensesCollection(user.uid), {
         title: action.title,
         amount: Number(action.amount) || 0,
         category: action.category || "General",
         type: action.transactionType === "income" ? "income" : "expense",
-        date: action.date || new Date().toISOString().slice(0, 10),
+        date: action.date || todayKey(),
         createdAt: new Date(),
       });
     }
@@ -147,12 +136,13 @@ function AIAssistant() {
   };
 
   const handleAsk = async (prompt = question, autoApply = false) => {
-    if (!auth.currentUser) return navigate("/login");
+    const currentUser = requireUser();
+    if (!currentUser) return;
     setLoading(true);
     setStatus("");
 
     try {
-      const context = await fetchWorkspaceContext();
+      const context = await fetchWorkspaceContext(currentUser);
       const response = await generateAssistantPlan(prompt || fallbackQuestion, context);
       setPlan(response.plan);
 

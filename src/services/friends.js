@@ -1,32 +1,85 @@
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-} from "firebase/firestore";
+import { deleteDoc, getDoc, getDocs, runTransaction, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
+import {
+  friendDoc,
+  friendsCollection,
+  inviteCodeDoc,
+  profileDoc,
+  requestDoc,
+  requestsCollection,
+  sharedSummaryDoc,
+  usernameDoc,
+} from "./paths";
 import { buildHabitSummary } from "../utils/habitSummary";
 
+/**
+ * The canonical form of a username: lowercase, 3-20 of [a-z0-9_].
+ *
+ * This exact expression is mirrored in firestore.rules, which refuses any
+ * usernames/{id} document whose id does not match — so the ledger cannot be
+ * polluted with non-canonical ids that lookups would never find.
+ */
 const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/;
+export const USERNAME_MIN = 3;
+export const USERNAME_MAX = 20;
+
+/** Why a claim failed, so the UI can say something specific. */
+export const CLAIM_ERRORS = {
+  INVALID: "username/invalid",
+  TAKEN: "username/taken",
+  DENIED: "username/denied",
+  UNAVAILABLE: "username/unavailable",
+  EXHAUSTED: "username/code-exhausted",
+};
+
+const claimError = (reason, message) => Object.assign(new Error(message), { reason });
+
+/** Turns a Firestore failure into one of ours, so callers never read raw codes. */
+const translateFirestoreError = (error) => {
+  if (error?.reason) return error;
+
+  if (error?.code === "permission-denied") {
+    return claimError(
+      CLAIM_ERRORS.DENIED,
+      "You don't have permission to do that. If this keeps happening the Firestore rules may not be deployed."
+    );
+  }
+
+  if (error?.code === "unavailable" || error?.code === "deadline-exceeded") {
+    return claimError(CLAIM_ERRORS.UNAVAILABLE, "Couldn't reach the server. Check your connection and try again.");
+  }
+
+  return claimError(CLAIM_ERRORS.UNAVAILABLE, error?.message || "Something went wrong. Please try again.");
+};
 
 // No I, O, 0 or 1: invite codes get read aloud and typed by hand.
 const INVITE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const INVITE_CODE_LENGTH = 8;
 
-export const normalizeUsername = (value = "") => value.trim().toLowerCase().replace(/^@+/, "");
+/**
+ * The one canonical form, used for storing, claiming and looking up alike.
+ * Strips a leading @, collapses case, and trims on both sides of the @ so
+ * " @Haneesh " and "haneesh" are the same handle.
+ */
+export const normalizeUsername = (value = "") =>
+  String(value ?? "")
+    .trim()
+    .replace(/^@+/, "")
+    .trim()
+    .toLowerCase();
 
 export const normalizeInviteCode = (value = "") => value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 export const validateUsername = (value) => {
   const username = normalizeUsername(value);
+
   if (!username) return "Pick a username first.";
+  if (username.length < USERNAME_MIN) return `Usernames need at least ${USERNAME_MIN} characters.`;
+  if (username.length > USERNAME_MAX) return `Usernames can be at most ${USERNAME_MAX} characters.`;
   if (!USERNAME_PATTERN.test(username)) {
-    return "3-20 characters: lowercase letters, numbers and underscores only.";
+    return "Use letters, numbers and underscores only — no spaces or symbols.";
   }
+
   return "";
 };
 
@@ -38,10 +91,8 @@ const generateInviteCode = () =>
 
 export const buildInviteLink = (code) => `${window.location.origin}/friends?add=${code}`;
 
-const profileRef = (uid) => doc(db, "profiles", uid);
-
 const readProfile = async (uid) => {
-  const snap = await getDoc(profileRef(uid));
+  const snap = await getDoc(profileDoc(uid));
   if (!snap.exists()) return null;
 
   const data = snap.data();
@@ -58,6 +109,27 @@ export const getMyProfile = (uid) => readProfile(uid);
 
 export const getPublicProfile = (uid) => readProfile(uid);
 
+/** Retries only the rules-lag case; a genuine denial still surfaces. */
+const writeProfileCard = async (user, username, inviteCode) => {
+  const card = {
+    uid: user.uid,
+    username,
+    inviteCode,
+    ...describeUser(user),
+    updatedAt: serverTimestamp(),
+  };
+
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await setDoc(profileDoc(user.uid), card, { merge: true });
+      return;
+    } catch (error) {
+      if (error?.code !== "permission-denied" || attempt >= 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 120 * 2 ** attempt));
+    }
+  }
+};
+
 const describeUser = (user) => ({
   displayName: user.displayName || user.email?.split("@")[0] || "U.Do user",
   photoURL: user.photoURL || "",
@@ -67,45 +139,128 @@ const describeUser = (user) => ({
  * Claims a username for this account, creating the public profile card and an
  * invite code on the way. Renaming releases the previous username.
  */
+/**
+ * Claims a username for this account.
+ *
+ * Uniqueness is enforced by the usernames/{canonical} ledger, not by a
+ * client-side "is it free?" query: the check and the write happen inside one
+ * transaction, so two accounts racing for the same handle cannot both win —
+ * the loser re-runs, sees the document, and is rejected. firestore.rules backs
+ * this up by refusing to let anyone create a ledger entry that already exists
+ * or update one they do not own, so the constraint holds even against a client
+ * writing to Firestore directly.
+ *
+ * The ledger is claimed first and the profile card written second, rather than
+ * both in one transaction. Rules evaluate get()/exists() against the state
+ * *before* a transaction, so a rule binding the card's username to the ledger
+ * could never see an entry created in the same transaction. Writing second
+ * means the binding is checkable. If the second write fails the ledger entry is
+ * still yours and re-claiming finishes the job, so no handle is left stranded
+ * under another account.
+ */
 export const claimUsername = async (user, requestedUsername) => {
   const username = normalizeUsername(requestedUsername);
   const validationError = validateUsername(username);
-  if (validationError) throw new Error(validationError);
 
-  const existing = await readProfile(user.uid);
-  if (existing?.username === username) return existing;
+  if (validationError) throw claimError(CLAIM_ERRORS.INVALID, validationError);
 
-  const inviteCode = existing?.inviteCode || generateInviteCode();
+  // A fresh invite code may collide, astronomically rarely. Reading it inside
+  // the transaction turns that into a retry rather than a stolen code.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const candidateCode = generateInviteCode();
 
-  await runTransaction(db, async (transaction) => {
-    const nameRef = doc(db, "usernames", username);
-    const nameSnap = await transaction.get(nameRef);
+    try {
+      const result = await runTransaction(db, async (transaction) => {
+        const [nameSnap, profileSnap] = await Promise.all([
+          transaction.get(usernameDoc(username)),
+          transaction.get(profileDoc(user.uid)),
+        ]);
 
-    if (nameSnap.exists() && nameSnap.data()?.uid !== user.uid) {
-      throw new Error(`@${username} is already taken.`);
+        const profile = profileSnap.exists() ? profileSnap.data() : null;
+        const previousUsername = profile?.username || "";
+
+        if (nameSnap.exists() && nameSnap.data()?.uid !== user.uid) {
+          throw claimError(CLAIM_ERRORS.TAKEN, `@${username} is already taken.`);
+        }
+
+        // Already yours: report it rather than writing the same thing again.
+        if (previousUsername === username && nameSnap.exists()) {
+          return { username, inviteCode: profile?.inviteCode || "", previousUsername, alreadyYours: true };
+        }
+
+        const inviteCode = profile?.inviteCode || candidateCode;
+
+        if (!profile?.inviteCode) {
+          const codeSnap = await transaction.get(inviteCodeDoc(inviteCode));
+
+          if (codeSnap.exists() && codeSnap.data()?.uid !== user.uid) {
+            throw claimError(CLAIM_ERRORS.EXHAUSTED, "retry with another invite code");
+          }
+
+          transaction.set(inviteCodeDoc(inviteCode), { uid: user.uid });
+        }
+
+        transaction.set(usernameDoc(username), { uid: user.uid });
+
+        // Releasing the old handle rides in the same transaction, so a rename
+        // can never hold two entries or drop both.
+        if (previousUsername && previousUsername !== username) {
+          transaction.delete(usernameDoc(previousUsername));
+        }
+
+        return { username, inviteCode, previousUsername, alreadyYours: false };
+      });
+
+      if (result.alreadyYours) {
+        return {
+          profile: { uid: user.uid, ...describeUser(user), username, inviteCode: result.inviteCode },
+          alreadyYours: true,
+          previousUsername: result.previousUsername,
+        };
+      }
+
+      // Second phase: the card. The ledger entry above is committed, but the
+      // rule that checks it does its own get(), which can briefly still be
+      // looking at the state just before the commit — under contention that
+      // surfaces as permission-denied on a write we are entitled to make. We
+      // hold the handle at this point, so give it a moment and try again
+      // rather than failing a claim that actually succeeded.
+      await writeProfileCard(user, username, result.inviteCode);
+
+      return {
+        profile: { uid: user.uid, ...describeUser(user), username, inviteCode: result.inviteCode },
+        alreadyYours: false,
+        previousUsername: result.previousUsername,
+      };
+    } catch (error) {
+      const translated = translateFirestoreError(error);
+
+      if (translated.reason === CLAIM_ERRORS.EXHAUSTED) continue;
+
+      // Under contention Firestore aborts the transaction before our own check
+      // runs, which would otherwise surface as a vague network error. Settle it
+      // by reading the ledger: if the handle now belongs to someone else, the
+      // honest answer is that it was taken.
+      if (translated.reason === CLAIM_ERRORS.UNAVAILABLE) {
+        const holder = await getDoc(usernameDoc(username)).catch(() => null);
+
+        if (holder?.exists() && holder.data()?.uid !== user.uid) {
+          throw claimError(CLAIM_ERRORS.TAKEN, `@${username} is already taken.`);
+        }
+      }
+
+      throw translated;
     }
+  }
 
-    transaction.set(nameRef, { uid: user.uid });
-    transaction.set(doc(db, "inviteCodes", inviteCode), { uid: user.uid });
-    transaction.set(
-      profileRef(user.uid),
-      { uid: user.uid, username, inviteCode, ...describeUser(user), updatedAt: serverTimestamp() },
-      { merge: true }
-    );
-
-    if (existing?.username && existing.username !== username) {
-      transaction.delete(doc(db, "usernames", existing.username));
-    }
-  });
-
-  return { uid: user.uid, username, inviteCode, ...describeUser(user) };
+  throw claimError(CLAIM_ERRORS.EXHAUSTED, "Couldn't generate a unique invite code. Please try again.");
 };
 
 export const findUserByUsername = async (value) => {
   const username = normalizeUsername(value);
   if (validateUsername(username)) return null;
 
-  const snap = await getDoc(doc(db, "usernames", username));
+  const snap = await getDoc(usernameDoc(username));
   if (!snap.exists()) return null;
 
   return readProfile(snap.data().uid);
@@ -115,14 +270,14 @@ export const findUserByInviteCode = async (value) => {
   const code = normalizeInviteCode(value);
   if (!code) return null;
 
-  const snap = await getDoc(doc(db, "inviteCodes", code));
+  const snap = await getDoc(inviteCodeDoc(code));
   if (!snap.exists()) return null;
 
   return readProfile(snap.data().uid);
 };
 
 export const isFriend = async (uid, otherUid) =>
-  (await getDoc(doc(db, "profiles", uid, "friends", otherUid))).exists();
+  (await getDoc(friendDoc(uid, otherUid))).exists();
 
 export const sendFriendRequest = async (user, targetUid) => {
   if (targetUid === user.uid) throw new Error("That's your own profile.");
@@ -136,7 +291,7 @@ export const sendFriendRequest = async (user, targetUid) => {
     throw new Error("You're already friends.");
   }
 
-  await setDoc(doc(db, "profiles", targetUid, "requests", user.uid), {
+  await setDoc(requestDoc(targetUid, user.uid), {
     uid: user.uid,
     username: myProfile.username,
     displayName: myProfile.displayName,
@@ -146,7 +301,7 @@ export const sendFriendRequest = async (user, targetUid) => {
 };
 
 export const listIncomingRequests = async (uid) => {
-  const snap = await getDocs(collection(db, "profiles", uid, "requests"));
+  const snap = await getDocs(requestsCollection(uid));
   return snap.docs.map((item) => ({ uid: item.id, ...item.data() }));
 };
 
@@ -156,23 +311,23 @@ export const listIncomingRequests = async (uid) => {
  * to be added, so deleting it first would lock out the second write.
  */
 export const acceptFriendRequest = async (user, requesterUid) => {
-  await setDoc(doc(db, "profiles", user.uid, "friends", requesterUid), {
+  await setDoc(friendDoc(user.uid, requesterUid), {
     uid: requesterUid,
     since: serverTimestamp(),
   });
-  await setDoc(doc(db, "profiles", requesterUid, "friends", user.uid), {
+  await setDoc(friendDoc(requesterUid, user.uid), {
     uid: user.uid,
     since: serverTimestamp(),
   });
-  await deleteDoc(doc(db, "profiles", user.uid, "requests", requesterUid));
+  await deleteDoc(requestDoc(user.uid, requesterUid));
 };
 
 export const declineFriendRequest = (user, requesterUid) =>
-  deleteDoc(doc(db, "profiles", user.uid, "requests", requesterUid));
+  deleteDoc(requestDoc(user.uid, requesterUid));
 
 export const removeFriend = async (user, friendUid) => {
-  await deleteDoc(doc(db, "profiles", user.uid, "friends", friendUid));
-  await deleteDoc(doc(db, "profiles", friendUid, "friends", user.uid));
+  await deleteDoc(friendDoc(user.uid, friendUid));
+  await deleteDoc(friendDoc(friendUid, user.uid));
 };
 
 /**
@@ -183,7 +338,7 @@ export const publishHabitSummary = async (user, habits, today = new Date()) => {
   const profile = await readProfile(user.uid);
   if (!profile?.username) return false;
 
-  await setDoc(doc(db, "profiles", user.uid, "shared", "summary"), {
+  await setDoc(sharedSummaryDoc(user.uid), {
     ...buildHabitSummary(habits, today),
     updatedAt: serverTimestamp(),
   });
@@ -194,12 +349,12 @@ export const publishHabitSummary = async (user, habits, today = new Date()) => {
 export { buildHabitSummary };
 
 export const getFriendSummary = async (friendUid) => {
-  const snap = await getDoc(doc(db, "profiles", friendUid, "shared", "summary"));
+  const snap = await getDoc(sharedSummaryDoc(friendUid));
   return snap.exists() ? snap.data() : null;
 };
 
 export const listFriends = async (uid) => {
-  const snap = await getDocs(collection(db, "profiles", uid, "friends"));
+  const snap = await getDocs(friendsCollection(uid));
 
   return Promise.all(
     snap.docs.map(async (item) => {

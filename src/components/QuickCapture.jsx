@@ -1,41 +1,66 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
 import { FiCheck, FiX, FiZap } from "react-icons/fi";
-import { addDoc, collection, doc, getDocs, setDoc, updateDoc } from "firebase/firestore";
+import { getDocs, updateDoc } from "firebase/firestore";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../config/financeCategories";
-import { auth, db } from "../services/firebase";
 import { parseQuickCapture } from "../services/quickCapture";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+import { todayKey } from "../utils/dateKeys";
+import { habitDoc, habitsCollection } from "../services/paths";
+import { createHabit } from "../services/habits";
+import { createTask } from "../services/tasks";
+import { readCachedExpenses, saveExpense, writeCachedExpenses } from "../services/finance";
 
 const TYPE_OPTIONS = ["expense", "income", "task", "habit"];
-const todayKey = () => new Date().toISOString().slice(0, 10);
 
 async function saveEntry(entry, user) {
   if (["expense", "income"].includes(entry.type)) {
-    const expense = { id: crypto.randomUUID(), title: entry.title, amount: Number(entry.amount) || 0, type: entry.type, category: entry.category, date: entry.date || todayKey(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-    try { await setDoc(doc(db, "users", user.uid, "expenses", expense.id), expense); } catch { await addDoc(collection(db, "users", user.uid, "expenses"), expense); }
-    const key = `u_do_expenses_${user.uid}`;
-    try { localStorage.setItem(key, JSON.stringify([...JSON.parse(localStorage.getItem(key) || "[]"), expense])); } catch { /* The cache is best-effort. */ }
+    const expense = {
+      id: crypto.randomUUID(),
+      title: entry.title,
+      amount: Number(entry.amount) || 0,
+      type: entry.type,
+      category: entry.category,
+      date: entry.date || todayKey(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await saveExpense(user.uid, expense);
+    writeCachedExpenses(user.uid, [...readCachedExpenses(user.uid), expense]);
     return "Finance";
   }
+
   if (entry.type === "task") {
-    await addDoc(collection(db, "users", user.uid, "tasks"), { title: entry.title, dueDate: entry.date || "", priority: entry.priority || "medium", status: "todo", completed: false, createdAt: new Date() });
+    await createTask(user.uid, {
+      title: entry.title,
+      dueDate: entry.date || "",
+      priority: entry.priority || "medium",
+    });
     return "Tasks";
   }
-  const habits = await getDocs(collection(db, "users", user.uid, "habits"));
-  const existing = habits.docs.find((item) => (item.data()?.title || "").trim().toLowerCase() === entry.title.trim().toLowerCase());
-  if (existing) await updateDoc(doc(db, "users", user.uid, "habits", existing.id), { frequency: entry.frequency || "daily" });
-  else await addDoc(collection(db, "users", user.uid, "habits"), { title: entry.title, frequency: entry.frequency || "daily", createdAt: new Date(), logs: {} });
+
+  // Capturing a habit you already track updates it rather than duplicating it.
+  const habits = await getDocs(habitsCollection(user.uid));
+  const existing = habits.docs.find(
+    (item) => (item.data()?.title || "").trim().toLowerCase() === entry.title.trim().toLowerCase()
+  );
+
+  if (existing) {
+    await updateDoc(habitDoc(user.uid, existing.id), { frequency: entry.frequency || "daily" });
+  } else {
+    await createHabit(user.uid, { title: entry.title, frequency: entry.frequency || "daily" });
+  }
+
   return "Habits";
 }
 
 export default function QuickCapture() {
-  const navigate = useNavigate();
+  const requireUser = useAuthGuard();
   const [isOpen, setIsOpen] = useState(false); const [note, setNote] = useState(""); const [entry, setEntry] = useState(null); const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false); const [status, setStatus] = useState("");
   const reset = () => { setNote(""); setEntry(null); setStatus(""); };
   const close = () => { setIsOpen(false); reset(); };
   const capture = async () => { if (!note.trim()) return; setLoading(true); setStatus(""); const parsed = await parseQuickCapture(note); setEntry(parsed.entry); setStatus(parsed.error || ""); setLoading(false); };
-  const confirm = async () => { const user = auth.currentUser; if (!user) return navigate("/login"); if (!entry) return; setSaving(true); setStatus(""); try { const destination = await saveEntry(entry, user); setStatus(`Saved to ${destination}${entry.type === "income" ? " (income)" : ""}.`); setEntry(null); setNote(""); } catch (error) { setStatus(error?.message || "Couldn't save that. Please try again."); } finally { setSaving(false); } };
+  const confirm = async () => { const user = requireUser(); if (!user || !entry) return; setSaving(true); setStatus(""); try { const destination = await saveEntry(entry, user); setStatus(`Saved to ${destination}${entry.type === "income" ? " (income)" : ""}.`); setEntry(null); setNote(""); } catch (error) { setStatus(error?.message || "Couldn't save that. Please try again."); } finally { setSaving(false); } };
   const money = ["expense", "income"].includes(entry?.type);
   return <>
     <button type="button" className="quickcap-fab" onClick={() => setIsOpen(true)} aria-label="Quick capture" title="Open Quick Capture"><FiZap /></button>

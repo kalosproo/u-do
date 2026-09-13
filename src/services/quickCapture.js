@@ -1,11 +1,8 @@
 import { askGroq } from "./groq";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../config/financeCategories";
+import { todayKey } from "../utils/dateKeys";
 
 const TYPES = ["expense", "income", "task", "habit"];
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function extractJson(content) {
   const cleaned = (content || "").trim();
@@ -48,7 +45,7 @@ function formatCaptureError(error) {
 }
 
 function buildQuickCapturePrompt(text) {
-  return `You are the quick-capture parser for a productivity app called U.Do. Today's date is ${todayISO()} (YYYY-MM-DD).
+  return `You are the quick-capture parser for a productivity app called U.Do. Today's date is ${todayKey()} (YYYY-MM-DD).
 Read the user's one-line note and turn it into EXACTLY ONE structured entry. Return valid JSON only, no markdown:
 {"type":"expense" | "income" | "task" | "habit","title":"short specific label","amount":0,"category":"allowed category","date":"YYYY-MM-DD or empty string","priority":"low" | "medium" | "high","frequency":"daily" | "weekly","clarification":"empty string or one short question"}
 USER NOTE: """${text}"""
