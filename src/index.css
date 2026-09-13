@@ -219,6 +219,7 @@ textarea:focus-visible { outline-offset: 0; }
 
 .logout-btn:hover { background: var(--surface-hover); color: var(--text); }
 .sidebar-credits { font-size: 11px; color: var(--text-subtle); text-align: center; }
+.sidebar-credits-sub { font-size: 10px; margin-top: 2px; }
 
 /* Collapsed rail: icons only, labels hidden. The main content's margin follows
    the same root attribute so the two never disagree. */

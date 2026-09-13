@@ -150,7 +150,10 @@ function Sidebar({ user }) {
             <span>{user ? "Logout" : "Login"}</span>
           </button>
 
-          <p className="sidebar-credits">© 2026 U.Do — Crafted by Muttukuru Rahul.</p>
+          <div className="sidebar-credits">
+            <p>© 2026 U.Do — Crafted by Kalosproo</p>
+            <p className="sidebar-credits-sub">Designed by Haniii.</p>
+          </div>
         </div>
       </aside>
     </>
