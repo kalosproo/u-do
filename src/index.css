@@ -2533,6 +2533,31 @@ h3, .panel-title { letter-spacing: -0.013em; }
   vector-effect: non-scaling-stroke;
 }
 
+/* SVG puts a transform's origin at the user-space origin, which would swing
+   the field from its top-left corner. The canvas is 100 units square, so its
+   centre is 50,50 — pivoting there turns the field in place. */
+.udo-lines {
+  transform-origin: 50px 50px;
+}
+
+/* The second field sits behind the first, so it reads as further off. */
+.udo-lines-b { opacity: 0.62; }
+
+/* Motes crossing the field. Opacity is written per frame — the value here is
+   only what they fall back to when the clock is not running. */
+.udo-drifter {
+  fill: var(--bg-particle);
+  opacity: 0.05;
+}
+
+/* The bubble field. Same soft-rimmed gradient the orbs use, so a bubble is a
+   pool of light at its own scale rather than a drawn circle — and the same ink,
+   so nothing new enters the palette. */
+.udo-bubble {
+  fill: url(#udo-orb-fade);
+  opacity: 0;
+}
+
 /* Motes with a soft edge read as out-of-focus specks rather than as dots
    someone drew. */
 .udo-particle { fill: url(#udo-mote-fade); opacity: 0.05; }
@@ -2549,6 +2574,7 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .udo-orb-3 { opacity: 0.4; }
   .udo-lines { display: none; }
   .udo-particle { opacity: 0.04; }
+  .udo-drifter { opacity: 0.03; }
 }
 
 /* Belt and braces with the JS, which does not schedule anything at all when
@@ -2557,6 +2583,9 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .udo-particle { opacity: 0.05; }
   .udo-orb { opacity: 0.7; }
   .udo-orb-3 { opacity: 0.45; }
+  /* Nothing is scheduled, so these would sit frozen mid-journey. */
+  .udo-drifters,
+  .udo-bubbles { display: none; }
 }
 
 /* Friends' streaks, embedded on Habits and the dashboard ------------------ */
