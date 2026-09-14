@@ -16,6 +16,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import QuickCapture from "./components/QuickCapture";
 import UdoBackground from "./components/UdoBackground";
+import CommandPalette from "./components/CommandPalette";
+import KeyboardShortcuts from "./components/KeyboardShortcuts";
 
 /** The signed-in chrome. Login sits outside it, on its own full-page canvas. */
 function AppLayout() {
@@ -25,6 +27,8 @@ function AppLayout() {
     <>
       <Sidebar user={user} />
       <QuickCapture />
+      <CommandPalette />
+      <KeyboardShortcuts />
 
       <div className="adsense-container">
         <ins
