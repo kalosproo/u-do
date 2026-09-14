@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { useAuth } from "../hooks/useAuth";
 import { workspaceCollection } from "../services/paths";
+import FriendStreaks from "../components/FriendStreaks";
 import { monthlyTotals } from "../utils/financeReport";
 import {
   activityByDay,
@@ -22,7 +23,8 @@ import {
   taskStats,
 } from "../utils/dashboard";
 
-const STATUS_COLORS = ["var(--chart-1)", "var(--chart-4)", "var(--chart-3)"];
+// Widely spaced ramp steps: with no hue, adjacent tones read as one bar.
+const STATUS_COLORS = ["var(--chart-1)", "var(--chart-3)", "var(--chart-5)"];
 const money = (value) => `₹${Math.round(value).toLocaleString("en-IN")}`;
 
 function ChartTooltip({ active, payload, label }) {
@@ -188,8 +190,8 @@ function Home() {
                   <XAxis dataKey="month" tickLine={false} axisLine={false} />
                   <YAxis tickLine={false} axisLine={false} width={48} />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--accent-soft)" }} />
-                  <Bar dataKey="income" name="Income" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="spend" name="Spend" fill="var(--chart-5)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="income" name="Income" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="spend" name="Spend" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -264,6 +266,16 @@ function Home() {
               </p>
             ) : null}
           </div>
+        </article>
+
+        <article className="panel dash-col-6">
+          <div className="panel-head">
+            <h3 className="panel-title">Friends</h3>
+            <Link to="/friends" className="panel-note panel-link">
+              All friends
+            </Link>
+          </div>
+          <FriendStreaks limit={3} compact />
         </article>
 
         <article className="panel dash-col-6">

@@ -177,7 +177,7 @@ textarea:focus-visible { outline-offset: 0; }
   flex-shrink: 0;
 }
 
-.profile-avatar-image { object-fit: cover; }
+.profile-avatar-image { object-fit: cover; filter: grayscale(1); }
 .profile-name { font-size: 13px; font-weight: 600; }
 .profile-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -1120,7 +1120,7 @@ input[type="file"].upload-input { display: none; }
   flex-shrink: 0;
 }
 
-.friend-avatar-image { object-fit: cover; }
+.friend-avatar-image { object-fit: cover; filter: grayscale(1); }
 .friends-list { display: flex; flex-direction: column; gap: var(--s-3); }
 .friend-card { border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-4); }
 .friend-card-header { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-2); flex-wrap: wrap; }
@@ -1146,6 +1146,8 @@ input[type="file"].upload-input { display: none; }
   object-fit: cover;
   border: 1px solid var(--border);
   flex-shrink: 0;
+  /* Account photos arrive in colour; the palette has none. */
+  filter: grayscale(1);
 }
 
 .profile-photo-fallback {
@@ -1559,6 +1561,33 @@ input[type="file"].upload-input { display: none; }
 .date-badge.is-undated { color: var(--text-subtle); border-style: dashed; }
 
 /* Sidebar toolbars on Tasks/Habits sit opposite the filters. */
+/* Friends' streaks, embedded on Habits and the dashboard ------------------ */
+.friend-streak-list { display: flex; flex-direction: column; gap: var(--s-3); }
+
+.friend-streak-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+}
+
+.friend-streak-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-1);
+}
+
+.friend-streak-headline {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.friend-streak-headline strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.friend-streak-headline small { font-size: 11px; color: var(--text-subtle); }
+
 /* Friend relationship state ---------------------------------------------- */
 .friends-state-note {
   display: inline-flex;

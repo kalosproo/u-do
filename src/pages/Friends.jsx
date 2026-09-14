@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthGuard } from "../hooks/useAuthGuard";
-import { FiCheck, FiCopy, FiUserPlus, FiX } from "react-icons/fi";
+import { FiCheck, FiCopy, FiRefreshCw, FiUserPlus, FiX } from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
 import {
   CLAIM_ERRORS,
@@ -25,6 +25,7 @@ import {
   sendFriendRequest,
   validateUsername,
 } from "../services/friends";
+import { fetchHabits } from "../services/habits";
 import ClearDataButton from "../components/ClearDataButton";
 import PageMenu, { PageMenuLabel } from "../components/PageMenu";
 
@@ -100,20 +101,34 @@ function Friends() {
     }
 
     setLoading(true);
-    try {
-      const [nextRequests, nextOutgoing, nextFriends] = await Promise.all([
-        listIncomingRequests(user.uid),
-        listOutgoingRequests(user.uid),
-        listFriends(user.uid),
-      ]);
-      setRequests(nextRequests);
-      setOutgoing(nextOutgoing);
-      setFriends(nextFriends);
-    } catch (error) {
-      setStatus(error?.message || "Couldn't load your friends right now.");
-    } finally {
-      setLoading(false);
-    }
+
+    // Settled, not all: these are three independent reads, and one of them
+    // failing must not blank the other two. A rejected Promise.all here meant
+    // a permissions error on the sent-list wiped the incoming requests off the
+    // page, so a request you could plainly reach by search never showed up.
+    const [incoming, sent, mine] = await Promise.allSettled([
+      listIncomingRequests(user.uid),
+      listOutgoingRequests(user.uid),
+      listFriends(user.uid),
+    ]);
+
+    if (incoming.status === "fulfilled") setRequests(incoming.value);
+    if (sent.status === "fulfilled") setOutgoing(sent.value);
+    if (mine.status === "fulfilled") setFriends(mine.value);
+
+    // Name what actually failed rather than blaming the whole page.
+    const failed = [
+      incoming.status === "rejected" && "incoming requests",
+      sent.status === "rejected" && "sent requests",
+      mine.status === "rejected" && "your friends list",
+    ].filter(Boolean);
+
+    setStatus(
+      failed.length
+        ? `Couldn't load ${failed.join(" or ")}. If this persists the Firestore rules may not be deployed.`
+        : ""
+    );
+    setLoading(false);
   }, [user]);
 
   useEffect(() => {
@@ -203,6 +218,12 @@ function Friends() {
 
       setProfile(saved);
       setUsernameInput(saved.username);
+
+      // publishHabitSummary no-ops for anyone without a handle, so an account
+      // that claims one has nothing shared until it next opens the Habits
+      // page — friends would just see "Nothing shared yet". Publishing here
+      // means a newly findable account is immediately readable by friends.
+      fetchHabits(currentUser).catch(() => {});
 
       if (alreadyYours) {
         setStatus(`@${saved.username} is already your handle.`);
@@ -433,6 +454,57 @@ function Friends() {
         ) : null}
       </article>
 
+      {/* First card on the page: an incoming request should never have to be
+          hunted for by searching the sender's invite code. */}
+      <article className="wire-card">
+        <div className="panel-head">
+          <h3>Requests{requests.length ? ` (${requests.length})` : ""}</h3>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={refresh}
+            disabled={loading}
+            title="Check for new requests"
+          >
+            <FiRefreshCw /> {loading ? "Checking..." : "Refresh"}
+          </button>
+        </div>
+
+        {requests.length === 0 ? (
+          <p className="friends-muted">
+            No pending requests. When someone asks to be your friend they show up here.
+          </p>
+        ) : (
+          <div className="friends-request-list is-scrollable">
+            {requests.map((request) => (
+              <div key={request.uid} className="friends-result-row">
+                <Avatar person={request} />
+                <div className="friends-result-meta">
+                  <strong>{request.displayName || "U.Do user"}</strong>
+                  {request.username ? <small>@{request.username}</small> : null}
+                </div>
+                <button
+                  type="button"
+                  className="button-primary"
+                  onClick={() => handleAccept(request.uid)}
+                  disabled={busyUid === request.uid}
+                >
+                  <FiCheck /> {busyUid === request.uid ? "Accepting..." : "Accept"}
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => handleDecline(request.uid)}
+                  disabled={busyUid === request.uid}
+                >
+                  <FiX /> Decline
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </article>
+
       <article className="wire-card">
         <h3>Add a friend</h3>
 
@@ -552,39 +624,6 @@ function Friends() {
                   disabled={busyUid === person.uid}
                 >
                   <FiX /> {busyUid === person.uid ? "Cancelling..." : "Cancel"}
-                </button>
-              </div>
-            ))}
-          </div>
-        </article>
-      )}
-
-      {requests.length > 0 && (
-        <article className="wire-card">
-          <h3>Requests ({requests.length})</h3>
-          <div className="friends-request-list is-scrollable">
-            {requests.map((request) => (
-              <div key={request.uid} className="friends-result-row">
-                <Avatar person={request} />
-                <div className="friends-result-meta">
-                  <strong>{request.displayName || "U.Do user"}</strong>
-                  {request.username ? <small>@{request.username}</small> : null}
-                </div>
-                <button
-                  type="button"
-                  className="button-primary"
-                  onClick={() => handleAccept(request.uid)}
-                  disabled={busyUid === request.uid}
-                >
-                  <FiCheck /> Accept
-                </button>
-                <button
-                  type="button"
-                  className="button-secondary"
-                  onClick={() => handleDecline(request.uid)}
-                  disabled={busyUid === request.uid}
-                >
-                  <FiX /> Decline
                 </button>
               </div>
             ))}

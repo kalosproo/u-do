@@ -474,8 +474,8 @@ function Finance() {
                     <YAxis tickLine={false} axisLine={false} width={48} />
                     <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--accent-soft)" }} />
                     <Legend iconType="circle" iconSize={8} />
-                    <Bar dataKey="income" name="Income" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="spend" name="Spend" fill="var(--chart-5)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="income" name="Income" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="spend" name="Spend" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

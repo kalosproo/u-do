@@ -352,11 +352,18 @@ export const sendFriendRequest = async (user, targetUid) => {
     createdAt: serverTimestamp(),
   });
 
-  // The sender's own copy. Written after the request so a failure here leaves
+  // The sender's own copy, written after the request so a failure here leaves
   // a real request rather than a phantom "Pending" with nothing behind it.
+  //
+  // Best-effort on purpose: on a deployment whose rules predate this
+  // collection the write is denied, and the request itself has already
+  // succeeded. Throwing here would tell the user their request failed when
+  // the recipient can already see it.
   await setDoc(outgoingDoc(user.uid, targetUid), {
     uid: targetUid,
     createdAt: serverTimestamp(),
+  }).catch((error) => {
+    if (error?.code !== "permission-denied") throw error;
   });
 
   return RELATIONSHIP.OUTGOING;
@@ -364,8 +371,12 @@ export const sendFriendRequest = async (user, targetUid) => {
 
 /** Withdraws a request. The rules let the sender delete the recipient's copy. */
 export const cancelFriendRequest = async (user, targetUid) => {
-  await deleteDoc(requestDoc(targetUid, user.uid)).catch(() => {});
-  await deleteDoc(outgoingDoc(user.uid, targetUid));
+  // The recipient's copy is the one that matters — removing it is what
+  // actually withdraws the request. The mirror is only this account's index.
+  await deleteDoc(requestDoc(targetUid, user.uid));
+  await deleteDoc(outgoingDoc(user.uid, targetUid)).catch((error) => {
+    if (error?.code !== "permission-denied") throw error;
+  });
 };
 
 export const listIncomingRequests = async (uid) => {
@@ -381,7 +392,16 @@ export const listIncomingRequests = async (uid) => {
  * as perpetually pending.
  */
 export const listOutgoingRequests = async (uid) => {
-  const snap = await getDocs(outgoingCollection(uid));
+  // The mirror is the newest collection here, so it is the most likely to be
+  // unreadable on a deployment whose rules predate it. Sent requests are the
+  // least important part of this page; degrade to an empty list rather than
+  // taking the incoming requests and friends down with it.
+  const snap = await getDocs(outgoingCollection(uid)).catch((error) => {
+    if (error?.code === "permission-denied") return null;
+    throw error;
+  });
+
+  if (!snap) return [];
 
   const rows = await Promise.all(
     snap.docs.map(async (item) => {

@@ -5,6 +5,8 @@ import { useAuthGuard } from "../hooks/useAuthGuard";
 import { fromDateKey, toDateKey } from "../utils/dateKeys";
 import { clearHabits, createHabit, deleteHabit, fetchHabits, setHabitLogs } from "../services/habits";
 import ClearDataButton from "../components/ClearDataButton";
+import { Link } from "react-router-dom";
+import FriendStreaks from "../components/FriendStreaks";
 import PageMenu, { PageMenuLabel } from "../components/PageMenu";
 import {
   getHabitStreakSnapshot,
@@ -416,6 +418,16 @@ function Habits() {
           </div>
         </section>
       </div>
+      <article className="panel">
+        <div className="panel-head">
+          <h3 className="panel-title">Friends' streaks</h3>
+          <Link to="/friends" className="panel-note panel-link">
+            Manage
+          </Link>
+        </div>
+        <FriendStreaks />
+      </article>
+
     </section>
   );
 }
