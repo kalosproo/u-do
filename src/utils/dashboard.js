@@ -1,4 +1,4 @@
-import { toDateKey } from "./dateKeys";
+import { fromDateKey, monthLabel, toDateKey } from "./dateKeys";
 import { getHabitStreakSnapshot, getRecentWindowKeys, getWindowKeyForDate } from "./streaks";
 import { inMonth, monthPrefix, netBalance, totalIncome, totalSpend } from "./financeReport";
 
@@ -135,4 +135,42 @@ export const activityByDay = (
     activeDays: cells.filter((cell) => cell.count > 0).length,
     total: cells.reduce((sum, cell) => sum + cell.count, 0),
   };
+};
+
+/**
+ * Lays the activity cells out as weeks so the grid can be drawn as columns of
+ * seven rather than a row that wraps wherever the card happens to end — which
+ * left a part-filled last row that read as a rendering fault.
+ *
+ * The run of days starts on an arbitrary weekday, so it is padded at the front
+ * until the first real cell falls on its own row. Every column is then a whole
+ * week, and a column's label is the month it starts in, printed only when that
+ * differs from the column before it.
+ */
+export const activityWeekGrid = (cells = []) => {
+  if (!cells.length) return { cells: [], weeks: [] };
+
+  const pad = fromDateKey(cells[0].date).getDay();
+  const padded = [...Array.from({ length: pad }, () => null), ...cells];
+
+  // Trailing pad so the final column is whole and nothing is left mid-row.
+  while (padded.length % 7 !== 0) padded.push(null);
+
+  const weeks = [];
+  let previous = null;
+
+  for (let start = 0; start < padded.length; start += 7) {
+    const first = padded.slice(start, start + 7).find(Boolean);
+    const month = first ? monthLabel(first.date) : "";
+
+    weeks.push({
+      key: first ? first.date : `week-${start}`,
+      // A repeated month name across neighbouring columns is noise, not a label.
+      month: month && month !== previous ? month : "",
+    });
+
+    if (month) previous = month;
+  }
+
+  return { cells: padded, weeks };
 };

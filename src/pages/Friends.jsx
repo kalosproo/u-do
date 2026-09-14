@@ -359,8 +359,8 @@ function Friends() {
   if (!user) {
     return (
       <section className="friends-page">
-        <header className="friends-header glass-panel">
-          <h2>Friends</h2>
+        <header className="page-head">
+          <h1 className="page-title">Friends</h1>
         </header>
         <article className="wire-card friends-empty">
           <p>Log in to share your streaks and follow your friends&apos; habits.</p>
@@ -374,11 +374,11 @@ function Friends() {
 
   return (
     <section className="friends-page">
-      <header className="friends-header glass-panel">
+      <header className="page-head">
         <div className="page-head-row">
           <div>
-            <h2>Friends</h2>
-            <p className="friends-subtitle">
+            <h1 className="page-title">Friends</h1>
+            <p className="page-sub">
               Friends see your habit names, streaks and completion rates — nothing else.
             </p>
           </div>

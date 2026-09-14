@@ -18,7 +18,7 @@ import { seriesFill, seriesStyle } from "../utils/chartSeries";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../config/financeCategories";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
-import { todayKey } from "../utils/dateKeys";
+import { formatShortDate, todayKey } from "../utils/dateKeys";
 import {
   buildExpense,
   expensesToCSV,
@@ -53,6 +53,15 @@ const CHART_MODES = [
 ];
 
 const money = (value) => `₹${Math.round(value).toLocaleString("en-IN")}`;
+
+/** Axis ticks, in Indian grouping: 1,50,000 reads as 1.5L rather than 150k. */
+const compactMoney = (value) => {
+  const n = Math.abs(value);
+  if (n >= 1e7) return `₹${+(value / 1e7).toFixed(1)}Cr`;
+  if (n >= 1e5) return `₹${+(value / 1e5).toFixed(1)}L`;
+  if (n >= 1e3) return `₹${+(value / 1e3).toFixed(1)}k`;
+  return `₹${Math.round(value)}`;
+};
 
 /** History shows a page at a time; a year of spending should not render at once. */
 const PAGE_SIZE = 12;
@@ -420,7 +429,8 @@ function Finance() {
 
             {chartMode === "pie" ? (
               pieData.length ? (
-                <div className="chart-shell">
+                <div className="pie-layout">
+                  <div className="chart-shell">
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
                       <ChartPatterns scope="finance-pie" />
@@ -428,10 +438,11 @@ function Finance() {
                         data={pieData}
                         dataKey="value"
                         nameKey="name"
-                        innerRadius={58}
-                        outerRadius={95}
-                        paddingAngle={2}
+                        innerRadius={62}
+                        outerRadius={98}
+                        paddingAngle={1.5}
                         stroke="var(--surface)"
+                        strokeWidth={2}
                       >
                         {pieData.map((entry, index) => (
                           <Cell key={entry.name} fill={seriesFill("finance-pie", index)} />
@@ -440,6 +451,7 @@ function Finance() {
                       <Tooltip content={<ChartTooltip />} />
                     </PieChart>
                   </ResponsiveContainer>
+                  </div>
 
                   <div className="chart-legend">
                     {pieData.map((entry, index) => (
@@ -459,12 +471,30 @@ function Finance() {
                   <BarChart data={monthlySeries} barGap={4}>
                     <ChartPatterns scope="finance-bars" />
                     <CartesianGrid vertical={false} />
-                    <XAxis dataKey="month" tickLine={false} axisLine={false} />
-                    <YAxis tickLine={false} axisLine={false} width={48} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      width={52}
+                      tickMargin={6}
+                      tickFormatter={compactMoney}
+                    />
                     <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--accent-soft)" }} />
                     <Legend iconType="circle" iconSize={8} />
-                    <Bar dataKey="income" name="Income" fill={seriesFill("finance-bars", 0)} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="spend" name="Spend" fill={seriesFill("finance-bars", 3)} radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey="income"
+                      name="Income"
+                      fill={seriesFill("finance-bars", 0)}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={30}
+                    />
+                    <Bar
+                      dataKey="spend"
+                      name="Spend"
+                      fill={seriesFill("finance-bars", 3)}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={30}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -514,7 +544,9 @@ function Finance() {
                   <tbody>
                     {history.slice(0, visibleRows).map((entry) => (
                       <tr key={entry.id}>
-                        <td className="text-muted">{entry.date}</td>
+                        <td className="text-muted col-date" title={entry.date}>
+                          {formatShortDate(entry.date)}
+                        </td>
                         <td>{entry.title}</td>
                         <td className="text-muted">{entry.category}</td>
                         <td className={`num ${entry.type === "income" ? "amount-in" : "amount-out"}`}>

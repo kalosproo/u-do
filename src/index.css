@@ -230,7 +230,21 @@ textarea:focus-visible { outline-offset: 0; }
 }
 
 .logout-btn:hover { background: var(--surface-hover); color: var(--text); }
-.sidebar-credits { font-size: 11px; color: var(--text-subtle); text-align: center; }
+.sidebar-credits {
+  font-size: var(--t-xs);
+  color: var(--text-subtle);
+  text-align: center;
+  line-height: 1.45;
+}
+
+/* The second line is an aside to the first, so it steps down in both size and
+   weight rather than repeating it at the same volume. */
+.sidebar-credits-sub {
+  font-size: 10.5px;
+  color: var(--text-subtle);
+  opacity: 0.72;
+  margin-top: 1px;
+}
 
 /* Collapsed rail: icons only, labels hidden. The main content's margin follows
    the same root attribute so the two never disagree. */
@@ -637,6 +651,10 @@ input[type="file"].upload-input { display: none; }
 
 .table tr:hover td { background: var(--bg-elevated); }
 .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* A date is one token. Left to wrap, "14 Sep" broke after the number and the
+   column grew a second line for no reason. */
+.col-date { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .amount-in { color: var(--success); font-weight: 600; }
 .amount-out { color: var(--danger); font-weight: 600; }
 
@@ -658,6 +676,14 @@ input[type="file"].upload-input { display: none; }
 .dash-col-4 { grid-column: span 4; min-width: 0; }
 .dash-col-12 { grid-column: span 12; min-width: 0; }
 
+/* Habits, Friends and Coming up are one band of three. Three cards only fit
+   whole rows at three-up or one-up, so there is no half step: below the width
+   where a third is still comfortable they go full width rather than leaving
+   one card stranded beside six empty columns. */
+@media (max-width: 1200px) {
+  .dash-trio { grid-column: span 12; }
+}
+
 .line-list { display: flex; flex-direction: column; }
 
 .line-row,
@@ -677,19 +703,80 @@ input[type="file"].upload-input { display: none; }
 
 .habit-line-row small { display: block; color: var(--text-muted); font-size: 11.5px; }
 
-.activity-heat { display: flex; gap: 3px; flex-wrap: wrap; }
+/* Eight weeks as eight columns of seven days, rather than 56 squares wrapped at
+   whatever width the card happens to be — which ended in a part-filled row that
+   looked like a bug. The column count comes from the data, as --weeks. */
+.activity-heat-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  /* A year does not fit a phone at a legible cell size, so the graph scrolls
+     inside its own box. Scoped here and capped at the card width so it can
+     never hand a horizontal scrollbar to the page. */
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 2px;
+}
+
+/* minmax keeps a cell legible when the column count outruns the width: on a
+   wide card 1fr wins and the graph fills it; on a phone the floor wins and the
+   box scrolls instead of collapsing the cells to slivers. */
+.activity-heat,
+.activity-months {
+  display: grid;
+  grid-template-columns: repeat(var(--weeks, 52), minmax(9px, 1fr));
+  gap: 3px;
+}
+
+.activity-heat {
+  grid-template-rows: repeat(7, auto);
+  grid-auto-flow: column;
+}
+
+.activity-months {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-subtle);
+  /* The label belongs to the column its month starts in and must not be
+     centred away from it, nor widen the column to fit. */
+  overflow: visible;
+  white-space: nowrap;
+}
 
 .activity-cell {
-  width: 12px;
-  height: 12px;
+  aspect-ratio: 1;
   border-radius: 3px;
   background: var(--dot-empty);
 }
 
-.activity-cell.l1 { background: color-mix(in srgb, var(--success) 30%, transparent); }
-.activity-cell.l2 { background: color-mix(in srgb, var(--success) 55%, transparent); }
-.activity-cell.l3 { background: color-mix(in srgb, var(--success) 80%, transparent); }
-.activity-cell.l4 { background: var(--success); }
+/* Days before the run began. They hold the column's shape without claiming a
+   reading of zero for a day we have no record of either way. */
+.activity-cell.is-pad { background: transparent; }
+
+.activity-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--t-xs);
+  color: var(--text-subtle);
+}
+
+.activity-legend i {
+  width: 11px;
+  height: 11px;
+  aspect-ratio: auto;
+  flex: none;
+}
+
+.activity-legend span:last-child { margin-left: 2px; }
+.activity-legend span:first-child { margin-right: 2px; }
+
+.activity-cell.l1 { background: var(--heat-1); }
+.activity-cell.l2 { background: var(--heat-2); }
+.activity-cell.l3 { background: var(--heat-3); }
+.activity-cell.l4 { background: var(--heat-4); }
 
 /* =========================================================================
    TASKS
@@ -709,7 +796,10 @@ input[type="file"].upload-input { display: none; }
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--s-4);
-  align-items: start;
+  /* A board is one row. Columns that each stop at their own content left "In
+     progress" a third the height of "To do", which reads as a layout fault
+     rather than as an empty column. */
+  align-items: stretch;
 }
 
 .kanban-column {
@@ -799,6 +889,26 @@ input[type="file"].upload-input { display: none; }
 .task-delete, .habit-delete, .delete-icon { color: var(--text-subtle); flex-shrink: 0; cursor: pointer; }
 .task-delete:hover, .habit-delete:hover, .delete-icon:hover { color: var(--danger); }
 
+/* In a 155px day column the delete icon was holding 21px of the title's width
+   open at all times, which is what broke "Groceries" across two lines. Where
+   there is a pointer it waits for hover or keyboard focus; where there isn't,
+   it stays exactly where it was — there is no hover to reveal it with. */
+@media (hover: hover) and (pointer: fine) {
+  .day-column .delete-icon {
+    opacity: 0;
+    width: 0;
+    margin-left: 0;
+    transition: opacity var(--speed) var(--ease);
+  }
+
+  .day-column .task-card:hover .delete-icon,
+  .day-column .task-card:focus-within .delete-icon {
+    opacity: 1;
+    width: auto;
+    margin-left: var(--s-2);
+  }
+}
+
 /* =========================================================================
    HABITS
    ========================================================================= */
@@ -814,6 +924,15 @@ input[type="file"].upload-input { display: none; }
   gap: var(--s-4);
   align-items: start;
 }
+
+/* The right column (consistency + calendar) runs about twice the height of
+   Today, which left a screen-high void under Today and pushed Friends' streaks
+   below everything. Spanning the right column across both rows lets the left
+   column stack, so the two sides end together and the void is gone. Placement
+   is desktop-only; on one column the cards fall back to source order. */
+.habits-grid > .habits-today { grid-column: 1; grid-row: 1; }
+.habits-grid > .right-panel { grid-column: 2; grid-row: 1 / span 2; }
+.habits-grid > .habits-social { grid-column: 1; grid-row: 2; }
 
 .right-panel { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
 
@@ -912,7 +1031,9 @@ input[type="file"].upload-input { display: none; }
 }
 
 .month-empty { background: transparent; }
-.month-done { background: var(--success); color: var(--accent-contrast); font-weight: 600; }
+/* A logged day used --success (#e5e5e5), which turned a good week into a block
+   of white tiles loud enough to pull the eye off the rest of the page. */
+.month-done { background: var(--heat-4); color: var(--accent-contrast); font-weight: 600; }
 .month-today { outline: 1.5px solid var(--info); outline-offset: -1.5px; color: var(--text); }
 
 /* =========================================================================
@@ -971,6 +1092,32 @@ input[type="file"].upload-input { display: none; }
 .chart-toggle { display: flex; gap: var(--s-2); }
 .chart-card { min-width: 0; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-3); }
+
+/* A 200px donut centred in a 1000px card leaves most of the card empty and the
+   key stranded underneath it. Setting the key alongside uses the width the card
+   already has and takes about 60px of height out of the panel. */
+.pie-layout {
+  display: flex;
+  align-items: center;
+  gap: var(--s-8);
+}
+
+.pie-layout > .chart-shell { flex: 1 1 0; min-width: 0; }
+
+.pie-layout > .chart-legend {
+  flex: 0 0 auto;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin-top: 0;
+}
+
+/* Below this the two no longer sit side by side without squeezing the donut. */
+@media (max-width: 760px) {
+  .pie-layout { flex-direction: column; align-items: stretch; gap: var(--s-3); }
+  .pie-layout > .chart-legend { flex-direction: row; flex-wrap: wrap; }
+}
 .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
 .legend-swatch { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
 
@@ -1035,33 +1182,69 @@ input[type="file"].upload-input { display: none; }
   display: grid;
   grid-template-columns: repeat(7, minmax(150px, 1fr));
   gap: var(--s-2);
-  align-items: start;
+  /* Stretch, not start: a week is one band, and seven columns ending at seven
+     different heights read as a broken row rather than as a lighter Thursday. */
+  align-items: stretch;
 }
 
 .day-column {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  padding: var(--s-3);
+  padding: var(--s-2);
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  min-height: 160px;
+  min-height: 190px;
   min-width: 0;
 }
 
 .today-column { border-color: var(--info); }
 
-.day-header { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
-.day-name { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
-.day-date { font-size: 15px; font-weight: 650; }
+/* The name side carries a "Today" pill and a count, and with both present it
+   outgrew the column and pushed the date onto the card's border. It is the part
+   that can give way, so it shrinks and the date keeps its place. */
+.day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.day-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+/* A day column is 155px and the header has to hold a name, a "Today" marker, a
+   task count and the date. Full-size pills came to 122px of the 108 available,
+   so the count was being cut in half. They are compact here, and the row is
+   allowed to wrap: if a day ever carries a wider count it drops to a second
+   line rather than clipping. */
+.day-header { flex-wrap: wrap; row-gap: var(--s-1); }
+
+.day-name .today-pill,
+.day-name .task-dot {
+  padding: 1px 5px;
+  gap: 3px;
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+}
+
+.day-date { font-size: 15px; font-weight: 650; flex: none; }
 .day-body { display: flex; flex-direction: column; gap: var(--s-2); flex: 1; }
 
 .task-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  padding: var(--s-2) var(--s-3);
+  padding: var(--s-2);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1072,25 +1255,48 @@ input[type="file"].upload-input { display: none; }
 .task-card:hover { border-color: var(--border-strong); }
 .task-dragging { opacity: 0.45; }
 .task-completed .task-title { text-decoration: line-through; color: var(--text-subtle); }
-.task-main { display: flex; align-items: flex-start; gap: var(--s-2); flex: 1; min-width: 0; }
+.task-main { display: flex; align-items: flex-start; gap: 6px; flex: 1; min-width: 0; }
 .task-checkbox { margin-top: 2px; accent-color: var(--success); width: 15px; height: 15px; flex-shrink: 0; }
-.task-title-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* flex: 1 so the title owns whatever the checkbox leaves, rather than
+   shrink-wrapping and letting the row's spare width go nowhere. */
+.task-title-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .planner-task-title-button { flex: 1; text-align: left; }
-.task-card .task-title { overflow-wrap: anywhere; }
+/* `anywhere` breaks at any character, which turned "Groceries run" into
+   "Grocerie / s run" as soon as the column narrowed. `break-word` wraps between
+   words and only splits one that could not fit on a line by itself. */
+.task-card .task-title { overflow-wrap: break-word; }
 .completed-block { display: flex; flex-direction: column; gap: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--border); }
 .completed-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-subtle); font-weight: 600; }
 .inline-add-row { display: flex; gap: var(--s-2); }
 .inline-save { padding: 0 var(--s-3); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface-2); font-size: 12.5px; }
-.add-task { width: 100%; justify-content: center; }
+/* One per day column, so it is a repeated affordance rather than the page's
+   primary action — filled, it made a row of seven white slabs the loudest thing
+   on the screen. Quiet at rest, and it firms up under the pointer. */
+.add-task {
+  width: 100%;
+  justify-content: center;
+  background: transparent;
+  border-style: dashed;
+  color: var(--text-muted);
+  font-weight: 550;
+}
+
+.add-task:hover {
+  background: var(--surface-2);
+  border-style: solid;
+  color: var(--text);
+}
 .empty-day { text-align: center; padding: var(--s-4) 0; font-size: 12px; }
 
 /* =========================================================================
    FRIENDS
    ========================================================================= */
-.friends-header { display: flex; flex-direction: column; gap: var(--s-2); }
 .friends-handle-card { display: flex; flex-direction: column; gap: var(--s-2); }
 .friends-copy { flex-shrink: 0; }
-.friends-page { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s-5); }
+/* 1180px, like every other page. At 1000 the column was narrower than the rest
+   of the app, so moving between Friends and anything else shifted the whole
+   page sideways under the reader. */
+.friends-page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s-5); }
 .friends-subtitle { font-size: 13px; color: var(--text-muted); }
 .friends-muted { color: var(--text-muted); font-size: 13px; }
 .friends-empty { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); }
@@ -1649,7 +1855,15 @@ h3 { font-size: var(--t-md); line-height: var(--lh-snug); font-weight: 620; }
 }
 
 .stat { display: flex; flex-direction: column; gap: 6px; }
-.stat-note { margin-top: 2px; }
+
+/* A row of tiles only reads as a set if the parts line up across it. Some tiles
+   carry a progress bar and some don't, which left their notes at four different
+   heights — the difference between a designed row and an assembled one. Pinning
+   the last element to the bottom puts every note on one baseline, whatever sits
+   above it. The tiles are grid items, so they are already the same height. */
+.stat-note { margin-top: auto; padding-top: 2px; }
+.stat > .bar { margin-top: auto; }
+.stat > .bar + .stat-note { margin-top: 0; }
 
 /* --- Surface quality ---------------------------------------------------- */
 /* Cards were a flat fill with a hard border. Now they carry a faint fall of
@@ -2356,6 +2570,15 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .dash-col-4 { grid-column: span 12; }
 
   .habits-grid { grid-template-columns: 1fr; }
+
+  /* Source order again, so Today is still followed by consistency and the
+     calendar rather than by the friends card. */
+  .habits-grid > .habits-today,
+  .habits-grid > .right-panel,
+  .habits-grid > .habits-social {
+    grid-column: auto;
+    grid-row: auto;
+  }
   .finance-grid { grid-template-columns: 1fr; }
   .kanban-grid { grid-template-columns: 1fr; }
   .task-compose { grid-template-columns: 1fr 1fr; }
