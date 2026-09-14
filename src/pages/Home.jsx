@@ -14,6 +14,8 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import { workspaceCollection } from "../services/paths";
 import FriendStreaks from "../components/FriendStreaks";
+import ChartPatterns from "../components/ChartPatterns";
+import { seriesFill } from "../utils/chartSeries";
 import { monthlyTotals } from "../utils/financeReport";
 import {
   activityByDay,
@@ -23,8 +25,6 @@ import {
   taskStats,
 } from "../utils/dashboard";
 
-// Widely spaced ramp steps: with no hue, adjacent tones read as one bar.
-const STATUS_COLORS = ["var(--chart-1)", "var(--chart-3)", "var(--chart-5)"];
 const money = (value) => `₹${Math.round(value).toLocaleString("en-IN")}`;
 
 function ChartTooltip({ active, payload, label }) {
@@ -214,6 +214,7 @@ function Home() {
             <div className="chart-shell">
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={tasksSummary.byStatus} layout="vertical">
+                  <ChartPatterns scope="home-tasks" />
                   <CartesianGrid horizontal={false} />
                   <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
                   <YAxis
@@ -226,7 +227,7 @@ function Home() {
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--accent-soft)" }} />
                   <Bar dataKey="count" name="Tasks" radius={[0, 4, 4, 0]}>
                     {tasksSummary.byStatus.map((row, index) => (
-                      <Cell key={row.status} fill={STATUS_COLORS[index]} />
+                      <Cell key={row.status} fill={seriesFill("home-tasks", index * 2)} />
                     ))}
                   </Bar>
                 </BarChart>

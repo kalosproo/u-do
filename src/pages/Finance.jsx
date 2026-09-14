@@ -13,6 +13,8 @@ import {
   YAxis,
 } from "recharts";
 import { FiEdit2, FiTrash2, FiUpload } from "react-icons/fi";
+import ChartPatterns from "../components/ChartPatterns";
+import { seriesFill, seriesStyle } from "../utils/chartSeries";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../config/financeCategories";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
@@ -39,15 +41,6 @@ import {
 } from "../services/finance";
 import ClearDataButton from "../components/ClearDataButton";
 import PageMenu, { PageMenuLabel } from "../components/PageMenu";
-
-const CHART_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-  "var(--chart-6)",
-];
 
 const RANGES = [
   ["month", "This month"],
@@ -392,10 +385,7 @@ function Finance() {
                 {categoryRows.map((row, index) => (
                   <li key={row.category} className="category-row">
                     <span className="legend-item">
-                      <span
-                        className="legend-swatch"
-                        style={{ background: CHART_COLORS[index % CHART_COLORS.length] }}
-                      />
+                      <span className="legend-swatch" style={seriesStyle(index)} />
                       {row.category}
                     </span>
                     <span className="num">{money(row.amount)}</span>
@@ -433,6 +423,7 @@ function Finance() {
                 <div className="chart-shell">
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
+                      <ChartPatterns scope="finance-pie" />
                       <Pie
                         data={pieData}
                         dataKey="value"
@@ -443,7 +434,7 @@ function Finance() {
                         stroke="var(--surface)"
                       >
                         {pieData.map((entry, index) => (
-                          <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          <Cell key={entry.name} fill={seriesFill("finance-pie", index)} />
                         ))}
                       </Pie>
                       <Tooltip content={<ChartTooltip />} />
@@ -453,10 +444,7 @@ function Finance() {
                   <div className="chart-legend">
                     {pieData.map((entry, index) => (
                       <span key={entry.name} className="legend-item">
-                        <span
-                          className="legend-swatch"
-                          style={{ background: CHART_COLORS[index % CHART_COLORS.length] }}
-                        />
+                        <span className="legend-swatch" style={seriesStyle(index)} />
                         {entry.name}
                       </span>
                     ))}
@@ -469,13 +457,14 @@ function Finance() {
               <div className="chart-shell">
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={monthlySeries} barGap={4}>
+                    <ChartPatterns scope="finance-bars" />
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="month" tickLine={false} axisLine={false} />
                     <YAxis tickLine={false} axisLine={false} width={48} />
                     <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--accent-soft)" }} />
                     <Legend iconType="circle" iconSize={8} />
-                    <Bar dataKey="income" name="Income" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="spend" name="Spend" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="income" name="Income" fill={seriesFill("finance-bars", 0)} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="spend" name="Spend" fill={seriesFill("finance-bars", 3)} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
