@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getDocs } from "firebase/firestore";
 import { Link } from "react-router-dom";
+import { FiCheck, FiPlus } from "react-icons/fi";
+import { createTask, setTaskStatus } from "../services/tasks";
+import { todayKey } from "../utils/dateKeys";
 import {
   Bar,
   BarChart,
@@ -50,6 +53,8 @@ function Home() {
   const [expenses, setExpenses] = useState([]);
   const [habits, setHabits] = useState([]);
   const [error, setError] = useState("");
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [savingTask, setSavingTask] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     if (!user) return;
@@ -99,30 +104,59 @@ function Home() {
 
   const isEmpty =
     !tasks.length && !habits.length && !expenses.length && !plans.length && !loading;
+  const today = todayKey();
+  const todayTasks = useMemo(
+    () => tasks.filter((task) => task.status !== "done" && (!task.dueDate || task.dueDate <= today)).sort((a, b) => (a.dueDate || "9999").localeCompare(b.dueDate || "9999")).slice(0, 6),
+    [tasks, today]
+  );
+  const attentionCount = tasksSummary.overdue + tasksSummary.dueToday + Math.max(habitsSummary.total - habitsSummary.doneNow, 0);
+  const firstName = user?.displayName?.trim()?.split(/\s+/)[0] || "";
+  const hour = new Date().getHours();
+  const greeting = firstName ? `${hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"}, ${firstName}.` : "Welcome back.";
+
+  const addTodayTask = async () => {
+    if (!user || !newTaskTitle.trim()) return;
+    setSavingTask(true);
+    try {
+      await createTask(user.uid, { title: newTaskTitle.trim(), dueDate: today, priority: "medium" });
+      setNewTaskTitle("");
+      await loadDashboard();
+    } catch (saveError) {
+      setError(saveError?.message || "Couldn't add that task.");
+    } finally { setSavingTask(false); }
+  };
+
+  const completeTodayTask = async (task) => {
+    if (!user) return;
+    setTasks((items) => items.map((item) => item.id === task.id ? { ...item, status: "done", completed: true } : item));
+    try { await setTaskStatus(user.uid, task.id, "done"); await loadDashboard(); }
+    catch (saveError) { setError(saveError?.message || "Couldn't complete that task."); await loadDashboard(); }
+  };
 
   if (loading) {
-    return (
-      <section className="dashboard-page">
-        <p className="empty">Loading your dashboard…</p>
-      </section>
-    );
+    return <section className="dashboard-page dashboard-skeleton" aria-busy="true" aria-label="Loading dashboard">
+      <div className="skeleton skeleton-title" /><div className="skeleton skeleton-subtitle" />
+      <div className="today-panel panel"><div className="skeleton skeleton-section" /><div className="skeleton skeleton-row" /><div className="skeleton skeleton-row" /><div className="skeleton skeleton-row" /></div>
+      <div className="dash-grid"><div className="panel dash-col-6 skeleton-card" /><div className="panel dash-col-6 skeleton-card" /></div>
+    </section>;
   }
 
   return (
     <section className="dashboard-page">
       <header className="dashboard-header-block">
-        <h1 className="page-title">Dashboard</h1>
-        <p className="page-sub">
-          {user
-            ? `${tasksSummary.active} active task${tasksSummary.active === 1 ? "" : "s"}, ` +
-              `${habitsSummary.doneNow}/${habitsSummary.total} habits done, ` +
-              `${planner.todayTotal} planned today`
-            : "Log in to see your own numbers."}
-        </p>
+        <p className="eyebrow">HOME / OVERVIEW</p>
+        <h1 className="dashboard-greeting">{greeting}</h1>
+        <p className="page-sub">{user ? `You have ${attentionCount} thing${attentionCount === 1 ? "" : "s"} that need${attentionCount === 1 ? "s" : ""} your attention today.` : "Sign in to bring your day into focus."}</p>
+        {user ? <p className="dashboard-summary">{tasksSummary.active} active tasks <span>·</span> {habitsSummary.doneNow}/{habitsSummary.total} habits <span>·</span> {planner.todayTotal} plans today</p> : null}
       </header>
 
-      {error ? <p className="page-error">{error}</p> : null}
+      {error ? <div className="page-error" role="alert"><div><strong>Something went wrong</strong><span>Your data is safe. We couldn't load this right now.</span></div><button type="button" className="btn btn-sm" onClick={loadDashboard}>Try again</button></div> : null}
 
+      <article className="panel today-panel">
+        <div className="panel-head"><div><p className="eyebrow">TODAY</p><h2 className="today-title">The next things that matter.</h2></div><Link to="/tasks" className="panel-note panel-link">View all tasks</Link></div>
+        {user && todayTasks.length ? <div className="today-task-list">{todayTasks.map((task) => <div className="today-task" key={task.id}><button type="button" className="today-check" onClick={() => completeTodayTask(task)} aria-label={`Complete ${task.title}`}><FiCheck /></button><span className="today-task-title">{task.title}</span>{task.dueDate ? <span className={`today-pill ${task.dueDate < today ? "is-overdue" : ""}`}>{task.dueDate < today ? "Overdue" : "Today"}</span> : null}{task.priority && task.priority !== "medium" ? <span className={`priority-tag priority-${task.priority}`}>{task.priority}</span> : null}</div>)}</div> : <div className="today-empty"><strong>{user ? "No tasks are pressing today." : "Your day is ready when you are."}</strong><span>{user ? "Start with one thing you want to get done today." : "Sign in to see your personal plan."}</span></div>}
+        {user ? <form className="today-add" onSubmit={(event) => { event.preventDefault(); addTodayTask(); }}><FiPlus aria-hidden="true" /><input value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} placeholder="Add a task for today" aria-label="Add a task for today" /><button type="submit" className="btn btn-primary btn-sm" disabled={savingTask || !newTaskTitle.trim()}>{savingTask ? "Adding…" : "Add task"}</button></form> : <Link to="/login" className="btn btn-primary">Sign in</Link>}
+      </article>
       {isEmpty ? (
         <div className="panel">
           <p className="empty">

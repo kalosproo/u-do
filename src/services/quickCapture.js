@@ -52,9 +52,28 @@ USER NOTE: """${text}"""
 Rules: expense means spent/bought/paid money; income means received/earned/got paid; task is one-time; habit is recurring. For expense/income use the stated amount and an allowed category: expense (${EXPENSE_CATEGORIES.join(", ")}), income (${INCOME_CATEGORIES.join(", ")}). For task/habit use amount 0 and category General. Resolve relative dates using today's date. Habit frequency defaults daily; task priority defaults medium.`;
 }
 
+function parseDeterministicTask(text) {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dueTomorrow = /\btomorrow\b/i.test(text);
+  const priority = /\b(urgent|asap|high priority)\b/i.test(text) ? "high" : "medium";
+  const title = text.replace(/\btomorrow\b/gi, "").replace(/\s{2,}/g, " ").trim();
+
+  if (!title || /\b(spent|paid|bought|earned|received|daily|weekly|every day|each day)\b/i.test(text)) return null;
+  return { entry: normalizeEntry({ type: "task", title, date: dueTomorrow ? toDateKey(tomorrow) : "", priority }, text), error: null };
+}
+
+function toDateKey(date) {
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
 export async function parseQuickCapture(text) {
   const cleanedText = text?.trim();
   if (!cleanedText) return { entry: null, error: "Type something to capture first." };
+  const deterministicTask = parseDeterministicTask(cleanedText);
+  if (deterministicTask) return deterministicTask;
+
   try {
     const parsed = JSON.parse(extractJson(await askGroq(buildQuickCapturePrompt(cleanedText))));
     return { entry: normalizeEntry(parsed, cleanedText), error: null };
