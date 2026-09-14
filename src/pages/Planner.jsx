@@ -479,7 +479,7 @@ function Planner() {
                     </button>
                   </div>
                 ) : (
-                  <button type="button" className="add-task button-primary" onClick={() => startAddingTask(dateKey)}>
+                  <button type="button" className="add-task btn" onClick={() => startAddingTask(dateKey)}>
                     <FiPlus />
                     Add task
                   </button>

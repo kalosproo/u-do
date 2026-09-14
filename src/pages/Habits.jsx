@@ -292,7 +292,7 @@ function Habits() {
       </div>
 
       <div className="habits-grid">
-        <section className="panel">
+        <section className="panel habits-today">
           <div className="panel-head">
             <h3 className="panel-title">Today</h3>
             <span className="panel-note">Tap the circle to log it</span>
@@ -417,17 +417,17 @@ function Habits() {
             </div>
           </div>
         </section>
-      </div>
-      <article className="panel">
-        <div className="panel-head">
-          <h3 className="panel-title">Friends' streaks</h3>
-          <Link to="/friends" className="panel-note panel-link">
-            Manage
-          </Link>
-        </div>
-        <FriendStreaks />
-      </article>
 
+        <article className="panel habits-social">
+          <div className="panel-head">
+            <h3 className="panel-title">Friends' streaks</h3>
+            <Link to="/friends" className="panel-note panel-link">
+              Manage
+            </Link>
+          </div>
+          <FriendStreaks />
+        </article>
+      </div>
     </section>
   );
 }

@@ -230,7 +230,21 @@ textarea:focus-visible { outline-offset: 0; }
 }
 
 .logout-btn:hover { background: var(--surface-hover); color: var(--text); }
-.sidebar-credits { font-size: 11px; color: var(--text-subtle); text-align: center; }
+.sidebar-credits {
+  font-size: var(--t-xs);
+  color: var(--text-subtle);
+  text-align: center;
+  line-height: 1.45;
+}
+
+/* The second line is an aside to the first, so it steps down in both size and
+   weight rather than repeating it at the same volume. */
+.sidebar-credits-sub {
+  font-size: 10.5px;
+  color: var(--text-subtle);
+  opacity: 0.72;
+  margin-top: 1px;
+}
 
 /* Collapsed rail: icons only, labels hidden. The main content's margin follows
    the same root attribute so the two never disagree. */
@@ -637,6 +651,10 @@ input[type="file"].upload-input { display: none; }
 
 .table tr:hover td { background: var(--bg-elevated); }
 .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* A date is one token. Left to wrap, "14 Sep" broke after the number and the
+   column grew a second line for no reason. */
+.col-date { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .amount-in { color: var(--success); font-weight: 600; }
 .amount-out { color: var(--danger); font-weight: 600; }
 
@@ -658,6 +676,14 @@ input[type="file"].upload-input { display: none; }
 .dash-col-4 { grid-column: span 4; min-width: 0; }
 .dash-col-12 { grid-column: span 12; min-width: 0; }
 
+/* Habits, Friends and Coming up are one band of three. Three cards only fit
+   whole rows at three-up or one-up, so there is no half step: below the width
+   where a third is still comfortable they go full width rather than leaving
+   one card stranded beside six empty columns. */
+@media (max-width: 1200px) {
+  .dash-trio { grid-column: span 12; }
+}
+
 .line-list { display: flex; flex-direction: column; }
 
 .line-row,
@@ -677,19 +703,80 @@ input[type="file"].upload-input { display: none; }
 
 .habit-line-row small { display: block; color: var(--text-muted); font-size: 11.5px; }
 
-.activity-heat { display: flex; gap: 3px; flex-wrap: wrap; }
+/* Eight weeks as eight columns of seven days, rather than 56 squares wrapped at
+   whatever width the card happens to be — which ended in a part-filled row that
+   looked like a bug. The column count comes from the data, as --weeks. */
+.activity-heat-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  /* A year does not fit a phone at a legible cell size, so the graph scrolls
+     inside its own box. Scoped here and capped at the card width so it can
+     never hand a horizontal scrollbar to the page. */
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 2px;
+}
+
+/* minmax keeps a cell legible when the column count outruns the width: on a
+   wide card 1fr wins and the graph fills it; on a phone the floor wins and the
+   box scrolls instead of collapsing the cells to slivers. */
+.activity-heat,
+.activity-months {
+  display: grid;
+  grid-template-columns: repeat(var(--weeks, 52), minmax(9px, 1fr));
+  gap: 3px;
+}
+
+.activity-heat {
+  grid-template-rows: repeat(7, auto);
+  grid-auto-flow: column;
+}
+
+.activity-months {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-subtle);
+  /* The label belongs to the column its month starts in and must not be
+     centred away from it, nor widen the column to fit. */
+  overflow: visible;
+  white-space: nowrap;
+}
 
 .activity-cell {
-  width: 12px;
-  height: 12px;
+  aspect-ratio: 1;
   border-radius: 3px;
   background: var(--dot-empty);
 }
 
-.activity-cell.l1 { background: color-mix(in srgb, var(--success) 30%, transparent); }
-.activity-cell.l2 { background: color-mix(in srgb, var(--success) 55%, transparent); }
-.activity-cell.l3 { background: color-mix(in srgb, var(--success) 80%, transparent); }
-.activity-cell.l4 { background: var(--success); }
+/* Days before the run began. They hold the column's shape without claiming a
+   reading of zero for a day we have no record of either way. */
+.activity-cell.is-pad { background: transparent; }
+
+.activity-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--t-xs);
+  color: var(--text-subtle);
+}
+
+.activity-legend i {
+  width: 11px;
+  height: 11px;
+  aspect-ratio: auto;
+  flex: none;
+}
+
+.activity-legend span:last-child { margin-left: 2px; }
+.activity-legend span:first-child { margin-right: 2px; }
+
+.activity-cell.l1 { background: var(--heat-1); }
+.activity-cell.l2 { background: var(--heat-2); }
+.activity-cell.l3 { background: var(--heat-3); }
+.activity-cell.l4 { background: var(--heat-4); }
 
 /* =========================================================================
    TASKS
@@ -709,7 +796,10 @@ input[type="file"].upload-input { display: none; }
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--s-4);
-  align-items: start;
+  /* A board is one row. Columns that each stop at their own content left "In
+     progress" a third the height of "To do", which reads as a layout fault
+     rather than as an empty column. */
+  align-items: stretch;
 }
 
 .kanban-column {
@@ -799,6 +889,26 @@ input[type="file"].upload-input { display: none; }
 .task-delete, .habit-delete, .delete-icon { color: var(--text-subtle); flex-shrink: 0; cursor: pointer; }
 .task-delete:hover, .habit-delete:hover, .delete-icon:hover { color: var(--danger); }
 
+/* In a 155px day column the delete icon was holding 21px of the title's width
+   open at all times, which is what broke "Groceries" across two lines. Where
+   there is a pointer it waits for hover or keyboard focus; where there isn't,
+   it stays exactly where it was — there is no hover to reveal it with. */
+@media (hover: hover) and (pointer: fine) {
+  .day-column .delete-icon {
+    opacity: 0;
+    width: 0;
+    margin-left: 0;
+    transition: opacity var(--speed) var(--ease);
+  }
+
+  .day-column .task-card:hover .delete-icon,
+  .day-column .task-card:focus-within .delete-icon {
+    opacity: 1;
+    width: auto;
+    margin-left: var(--s-2);
+  }
+}
+
 /* =========================================================================
    HABITS
    ========================================================================= */
@@ -814,6 +924,15 @@ input[type="file"].upload-input { display: none; }
   gap: var(--s-4);
   align-items: start;
 }
+
+/* The right column (consistency + calendar) runs about twice the height of
+   Today, which left a screen-high void under Today and pushed Friends' streaks
+   below everything. Spanning the right column across both rows lets the left
+   column stack, so the two sides end together and the void is gone. Placement
+   is desktop-only; on one column the cards fall back to source order. */
+.habits-grid > .habits-today { grid-column: 1; grid-row: 1; }
+.habits-grid > .right-panel { grid-column: 2; grid-row: 1 / span 2; }
+.habits-grid > .habits-social { grid-column: 1; grid-row: 2; }
 
 .right-panel { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
 
@@ -912,7 +1031,9 @@ input[type="file"].upload-input { display: none; }
 }
 
 .month-empty { background: transparent; }
-.month-done { background: var(--success); color: var(--accent-contrast); font-weight: 600; }
+/* A logged day used --success (#e5e5e5), which turned a good week into a block
+   of white tiles loud enough to pull the eye off the rest of the page. */
+.month-done { background: var(--heat-4); color: var(--accent-contrast); font-weight: 600; }
 .month-today { outline: 1.5px solid var(--info); outline-offset: -1.5px; color: var(--text); }
 
 /* =========================================================================
@@ -971,6 +1092,32 @@ input[type="file"].upload-input { display: none; }
 .chart-toggle { display: flex; gap: var(--s-2); }
 .chart-card { min-width: 0; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-3); }
+
+/* A 200px donut centred in a 1000px card leaves most of the card empty and the
+   key stranded underneath it. Setting the key alongside uses the width the card
+   already has and takes about 60px of height out of the panel. */
+.pie-layout {
+  display: flex;
+  align-items: center;
+  gap: var(--s-8);
+}
+
+.pie-layout > .chart-shell { flex: 1 1 0; min-width: 0; }
+
+.pie-layout > .chart-legend {
+  flex: 0 0 auto;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin-top: 0;
+}
+
+/* Below this the two no longer sit side by side without squeezing the donut. */
+@media (max-width: 760px) {
+  .pie-layout { flex-direction: column; align-items: stretch; gap: var(--s-3); }
+  .pie-layout > .chart-legend { flex-direction: row; flex-wrap: wrap; }
+}
 .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
 .legend-swatch { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
 
@@ -1035,33 +1182,69 @@ input[type="file"].upload-input { display: none; }
   display: grid;
   grid-template-columns: repeat(7, minmax(150px, 1fr));
   gap: var(--s-2);
-  align-items: start;
+  /* Stretch, not start: a week is one band, and seven columns ending at seven
+     different heights read as a broken row rather than as a lighter Thursday. */
+  align-items: stretch;
 }
 
 .day-column {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  padding: var(--s-3);
+  padding: var(--s-2);
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  min-height: 160px;
+  min-height: 190px;
   min-width: 0;
 }
 
 .today-column { border-color: var(--info); }
 
-.day-header { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
-.day-name { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
-.day-date { font-size: 15px; font-weight: 650; }
+/* The name side carries a "Today" pill and a count, and with both present it
+   outgrew the column and pushed the date onto the card's border. It is the part
+   that can give way, so it shrinks and the date keeps its place. */
+.day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.day-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+/* A day column is 155px and the header has to hold a name, a "Today" marker, a
+   task count and the date. Full-size pills came to 122px of the 108 available,
+   so the count was being cut in half. They are compact here, and the row is
+   allowed to wrap: if a day ever carries a wider count it drops to a second
+   line rather than clipping. */
+.day-header { flex-wrap: wrap; row-gap: var(--s-1); }
+
+.day-name .today-pill,
+.day-name .task-dot {
+  padding: 1px 5px;
+  gap: 3px;
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+}
+
+.day-date { font-size: 15px; font-weight: 650; flex: none; }
 .day-body { display: flex; flex-direction: column; gap: var(--s-2); flex: 1; }
 
 .task-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  padding: var(--s-2) var(--s-3);
+  padding: var(--s-2);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1072,25 +1255,48 @@ input[type="file"].upload-input { display: none; }
 .task-card:hover { border-color: var(--border-strong); }
 .task-dragging { opacity: 0.45; }
 .task-completed .task-title { text-decoration: line-through; color: var(--text-subtle); }
-.task-main { display: flex; align-items: flex-start; gap: var(--s-2); flex: 1; min-width: 0; }
+.task-main { display: flex; align-items: flex-start; gap: 6px; flex: 1; min-width: 0; }
 .task-checkbox { margin-top: 2px; accent-color: var(--success); width: 15px; height: 15px; flex-shrink: 0; }
-.task-title-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* flex: 1 so the title owns whatever the checkbox leaves, rather than
+   shrink-wrapping and letting the row's spare width go nowhere. */
+.task-title-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .planner-task-title-button { flex: 1; text-align: left; }
-.task-card .task-title { overflow-wrap: anywhere; }
+/* `anywhere` breaks at any character, which turned "Groceries run" into
+   "Grocerie / s run" as soon as the column narrowed. `break-word` wraps between
+   words and only splits one that could not fit on a line by itself. */
+.task-card .task-title { overflow-wrap: break-word; }
 .completed-block { display: flex; flex-direction: column; gap: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--border); }
 .completed-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-subtle); font-weight: 600; }
 .inline-add-row { display: flex; gap: var(--s-2); }
 .inline-save { padding: 0 var(--s-3); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface-2); font-size: 12.5px; }
-.add-task { width: 100%; justify-content: center; }
+/* One per day column, so it is a repeated affordance rather than the page's
+   primary action — filled, it made a row of seven white slabs the loudest thing
+   on the screen. Quiet at rest, and it firms up under the pointer. */
+.add-task {
+  width: 100%;
+  justify-content: center;
+  background: transparent;
+  border-style: dashed;
+  color: var(--text-muted);
+  font-weight: 550;
+}
+
+.add-task:hover {
+  background: var(--surface-2);
+  border-style: solid;
+  color: var(--text);
+}
 .empty-day { text-align: center; padding: var(--s-4) 0; font-size: 12px; }
 
 /* =========================================================================
    FRIENDS
    ========================================================================= */
-.friends-header { display: flex; flex-direction: column; gap: var(--s-2); }
 .friends-handle-card { display: flex; flex-direction: column; gap: var(--s-2); }
 .friends-copy { flex-shrink: 0; }
-.friends-page { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s-5); }
+/* 1180px, like every other page. At 1000 the column was narrower than the rest
+   of the app, so moving between Friends and anything else shifted the whole
+   page sideways under the reader. */
+.friends-page { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s-5); }
 .friends-subtitle { font-size: 13px; color: var(--text-muted); }
 .friends-muted { color: var(--text-muted); font-size: 13px; }
 .friends-empty { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); }
@@ -1649,7 +1855,15 @@ h3 { font-size: var(--t-md); line-height: var(--lh-snug); font-weight: 620; }
 }
 
 .stat { display: flex; flex-direction: column; gap: 6px; }
-.stat-note { margin-top: 2px; }
+
+/* A row of tiles only reads as a set if the parts line up across it. Some tiles
+   carry a progress bar and some don't, which left their notes at four different
+   heights — the difference between a designed row and an assembled one. Pinning
+   the last element to the bottom puts every note on one baseline, whatever sits
+   above it. The tiles are grid items, so they are already the same height. */
+.stat-note { margin-top: auto; padding-top: 2px; }
+.stat > .bar { margin-top: auto; }
+.stat > .bar + .stat-note { margin-top: 0; }
 
 /* --- Surface quality ---------------------------------------------------- */
 /* Cards were a flat fill with a hard border. Now they carry a faint fall of
@@ -1986,6 +2200,170 @@ textarea:focus-visible { background: var(--surface); }
 .nav-scrim { animation: udo-fade var(--speed) var(--ease); }
 
 /* =========================================================================
+   MOTION — the second pass
+
+   Everything here is animation only. No colour, no size, no weight, no
+   spacing, no box geometry changes: every rule animates transform, opacity or
+   a paint-only property that leaves layout untouched, and every one settles on
+   the value the element already had.
+   ========================================================================= */
+
+/* --- The tick ------------------------------------------------------------ */
+/* Checking a habit is the thing this app is for, and it happened instantly:
+   the fill flipped and the mark appeared, with nothing to confirm the press
+   landed. A squash into a small overshoot is the whole gesture — it reads as
+   the control accepting the tap rather than as decoration. */
+@keyframes udo-tick {
+  0%   { transform: scale(1); }
+  32%  { transform: scale(0.86); }
+  68%  { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+
+.habit-checkbox.checked,
+.task-check.checked {
+  animation: udo-tick 0.32s var(--ease-out);
+}
+
+/* The mark itself was fading in on the colour transition alone, at the same
+   rate as the box behind it. Letting it arrive a beat later, and from slightly
+   under size, is what makes it read as being stamped on. */
+@keyframes udo-mark {
+  from { opacity: 0; transform: scale(0.55); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.today-check > svg {
+  transform-origin: center;
+}
+
+.today-check:not(:disabled):hover > svg {
+  animation: udo-mark 0.26s var(--ease-spring);
+}
+
+/* --- Progress ------------------------------------------------------------ */
+/* The bars transitioned on change but snapped to their value on first paint,
+   so the figure above one animated in and its bar was simply already there.
+   scaleX rather than width: it runs on the compositor and leaves the settled
+   geometry identical. */
+@keyframes udo-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.bar > span,
+.planner-progress-track > span {
+  transform-origin: left center;
+  animation: udo-fill 0.62s var(--ease-out) backwards;
+  animation-delay: 120ms;
+}
+
+/* --- Lists --------------------------------------------------------------- */
+/* Pages arrived in two steps, but every row inside a card landed at once, so a
+   card blinked into existence instead of resolving. A short stagger, capped at
+   six: past that it stops reading as arrival and starts reading as a queue. */
+.today-task-list > *,
+.today-list > *,
+.line-list > *,
+.friend-streak-list > *,
+.kanban-column .task-card {
+  animation: udo-rise 0.3s var(--ease-out) backwards;
+}
+
+.today-task-list > :nth-child(1),
+.today-list > :nth-child(1),
+.line-list > :nth-child(1),
+.friend-streak-list > :nth-child(1),
+.kanban-column .task-card:nth-child(1) { animation-delay: 60ms; }
+
+.today-task-list > :nth-child(2),
+.today-list > :nth-child(2),
+.line-list > :nth-child(2),
+.friend-streak-list > :nth-child(2),
+.kanban-column .task-card:nth-child(2) { animation-delay: 96ms; }
+
+.today-task-list > :nth-child(3),
+.today-list > :nth-child(3),
+.line-list > :nth-child(3),
+.friend-streak-list > :nth-child(3),
+.kanban-column .task-card:nth-child(3) { animation-delay: 132ms; }
+
+.today-task-list > :nth-child(4),
+.today-list > :nth-child(4),
+.line-list > :nth-child(4),
+.friend-streak-list > :nth-child(4),
+.kanban-column .task-card:nth-child(4) { animation-delay: 168ms; }
+
+.today-task-list > :nth-child(5),
+.today-list > :nth-child(5),
+.line-list > :nth-child(5),
+.friend-streak-list > :nth-child(5),
+.kanban-column .task-card:nth-child(5) { animation-delay: 204ms; }
+
+.today-task-list > :nth-child(n + 6),
+.today-list > :nth-child(n + 6),
+.line-list > :nth-child(n + 6),
+.friend-streak-list > :nth-child(n + 6),
+.kanban-column .task-card:nth-child(n + 6) { animation-delay: 240ms; }
+
+/* --- The activity graph --------------------------------------------------- */
+/* A year of cells appeared in one frame. They sweep in by week instead: --c is
+   the cell's column, set where the grid is built, so the delay is a multiple of
+   it and the graph fills left to right the way it was recorded. Opacity only —
+   371 elements is not the place to hand the compositor a transform each. */
+@keyframes udo-cell {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.activity-cell {
+  animation: udo-cell 0.24s var(--ease) backwards;
+  animation-delay: calc(var(--c, 0) * 7ms);
+}
+
+.activity-months > span {
+  animation: udo-fade 0.3s var(--ease) backwards;
+  animation-delay: 200ms;
+}
+
+.activity-legend {
+  animation: udo-fade 0.3s var(--ease) backwards;
+  animation-delay: 440ms;
+}
+
+/* --- Day columns ---------------------------------------------------------- */
+/* A week reads left to right, so it should arrive that way rather than as one
+   block of seven. */
+.week-grid > .day-column { animation: udo-rise 0.3s var(--ease-out) backwards; }
+.week-grid > .day-column:nth-child(1) { animation-delay: 40ms; }
+.week-grid > .day-column:nth-child(2) { animation-delay: 74ms; }
+.week-grid > .day-column:nth-child(3) { animation-delay: 108ms; }
+.week-grid > .day-column:nth-child(4) { animation-delay: 142ms; }
+.week-grid > .day-column:nth-child(5) { animation-delay: 176ms; }
+.week-grid > .day-column:nth-child(6) { animation-delay: 210ms; }
+.week-grid > .day-column:nth-child(7) { animation-delay: 244ms; }
+
+/* --- Stat tiles ----------------------------------------------------------- */
+/* The figure is the point of the tile, so it arrives fractionally after the
+   card it sits in rather than with it. */
+.stat-value { animation: udo-rise 0.34s var(--ease-out) backwards; animation-delay: 90ms; }
+
+/* --- Hover intent --------------------------------------------------------- */
+/* A link that leads somewhere nudges toward its destination. Transform only,
+   so nothing around it moves — and no display change to make it apply: these
+   sit in a flex panel head, so they are already blockified. */
+.panel-link:hover { transform: translateX(2px); }
+
+/* The collapse chevron turns with the rail it controls. */
+.sidebar-collapse > svg { transition: transform var(--speed-slow) var(--ease-out); }
+:root[data-sidebar="collapsed"] .sidebar-collapse > svg { transform: rotate(180deg); }
+
+/* --- Overlay exits -------------------------------------------------------- */
+/* Menus animated in and vanished on a frame. Matching the entrance on the way
+   out is what stops a panel feeling like it was cut rather than closed. */
+.page-menu-panel { will-change: transform, opacity; }
+
+/* =========================================================================
    TYPOGRAPHY DETAIL
    ========================================================================= */
 
@@ -2039,6 +2417,39 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .shortcut-overlay,
   .nav-scrim { animation: none; }
 
+  /* The motion pass stands down with the rest of it. Every one of these
+     settles on the value it already had, so removing the animation removes
+     only the arrival — never the result. */
+  .habit-checkbox.checked,
+  .task-check.checked,
+  .today-check:not(:disabled):hover > svg,
+  .bar > span,
+  .planner-progress-track > span,
+  .today-task-list > *,
+  .today-list > *,
+  .line-list > *,
+  .friend-streak-list > *,
+  .kanban-column .task-card,
+  .activity-cell,
+  .activity-months > span,
+  .activity-legend,
+  .week-grid > .day-column,
+  .stat-value {
+    animation: none;
+  }
+
+  .panel-link:hover { transform: none; }
+  .sidebar-collapse > svg { transition: none; }
+
+  /* Recharts grows its bars by transitioning the rect's own geometry and does
+     not consult prefers-reduced-motion, so a chart kept moving after the rest
+     of the app had stood down. The bars still draw — they just arrive at their
+     final size instead of travelling to it. */
+  .recharts-wrapper *,
+  .recharts-surface * {
+    transition: none !important;
+  }
+
   .btn:active:not(:disabled),
   .button-primary:active:not(:disabled),
   .button-secondary:active:not(:disabled),
@@ -2089,12 +2500,31 @@ h3, .panel-title { letter-spacing: -0.013em; }
   position: absolute;
   inset: 0;
   opacity: var(--bg-grain);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-  /* Grain is luminance only: it must not tint a monochrome palette. */
-  mix-blend-mode: overlay;
+  /* feTurbulence emits independent R, G and B noise — coloured grain. It used
+     to be composited with mix-blend-mode: overlay to keep it from tinting a
+     palette that carries no hue, but a blend mode forces the whole stacking
+     context to re-composite on every frame the orbs move: measured, it was the
+     only thing left keeping the field off 60fps (p95 33.3ms -> 16.8ms without
+     it, long frames 31 -> 0 in 200).
+     Desaturating the noise inside the tile gets the same guarantee for free:
+     grey grain cannot tint anything, so it composites normally. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-.udo-orb { fill: var(--bg-orb); }
+/* Orbs read as light, not as shapes: the gradient carries them from a soft
+   centre to nothing, so no rim is ever visible. */
+.udo-orb { fill: url(#udo-orb-fade); }
+
+/* The same --bg-orb the flat fill used, spread across the radius rather than
+   flooded edge to edge, so the shape loses its rim without any new colour
+   entering the palette. */
+.udo-stop-core { stop-color: var(--bg-orb); }
+.udo-stop-mid { stop-color: var(--bg-orb); stop-opacity: 0.45; }
+.udo-stop-edge { stop-color: var(--bg-orb); stop-opacity: 0; }
+.udo-stop-mote { stop-color: var(--bg-particle); }
+
+/* The large one sits furthest back, so it is the faintest of the three. */
+.udo-orb-3 { opacity: 0.55; }
 
 .udo-line {
   fill: none;
@@ -2103,7 +2533,9 @@ h3, .panel-title { letter-spacing: -0.013em; }
   vector-effect: non-scaling-stroke;
 }
 
-.udo-particle { fill: var(--bg-particle); opacity: 0.05; }
+/* Motes with a soft edge read as out-of-focus specks rather than as dots
+   someone drew. */
+.udo-particle { fill: url(#udo-mote-fade); opacity: 0.05; }
 
 /* Everything the app draws sits above the field. One context at the root
    rather than per page, so a page that never heard of the background still
@@ -2114,6 +2546,7 @@ h3, .panel-title { letter-spacing: -0.013em; }
    drop out entirely rather than being animated for no visible gain. */
 @media (max-width: 768px) {
   .udo-orb { opacity: 0.6; }
+  .udo-orb-3 { opacity: 0.4; }
   .udo-lines { display: none; }
   .udo-particle { opacity: 0.04; }
 }
@@ -2123,6 +2556,7 @@ h3, .panel-title { letter-spacing: -0.013em; }
 @media (prefers-reduced-motion: reduce) {
   .udo-particle { opacity: 0.05; }
   .udo-orb { opacity: 0.7; }
+  .udo-orb-3 { opacity: 0.45; }
 }
 
 /* Friends' streaks, embedded on Habits and the dashboard ------------------ */
@@ -2356,6 +2790,15 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .dash-col-4 { grid-column: span 12; }
 
   .habits-grid { grid-template-columns: 1fr; }
+
+  /* Source order again, so Today is still followed by consistency and the
+     calendar rather than by the friends card. */
+  .habits-grid > .habits-today,
+  .habits-grid > .right-panel,
+  .habits-grid > .habits-social {
+    grid-column: auto;
+    grid-row: auto;
+  }
   .finance-grid { grid-template-columns: 1fr; }
   .kanban-grid { grid-template-columns: 1fr; }
   .task-compose { grid-template-columns: 1fr 1fr; }

@@ -3,7 +3,7 @@ import { getDocs } from "firebase/firestore";
 import { Link } from "react-router-dom";
 import { FiCheck, FiPlus } from "react-icons/fi";
 import { createTask, setTaskStatus } from "../services/tasks";
-import { todayKey } from "../utils/dateKeys";
+import { formatDayLabel, formatRelativeDay, todayKey } from "../utils/dateKeys";
 import {
   Bar,
   BarChart,
@@ -22,6 +22,7 @@ import { seriesFill } from "../utils/chartSeries";
 import { monthlyTotals } from "../utils/financeReport";
 import {
   activityByDay,
+  activityWeekGrid,
   financeStats,
   habitStats,
   plannerStats,
@@ -29,6 +30,19 @@ import {
 } from "../utils/dashboard";
 
 const money = (value) => `₹${Math.round(value).toLocaleString("en-IN")}`;
+
+/**
+ * Axis ticks have about five characters before they start colliding, so a
+ * six-figure amount has to lose its digits rather than its axis. Indian
+ * grouping, so 1,50,000 reads as 1.5L and not 150k.
+ */
+const compactMoney = (value) => {
+  const n = Math.abs(value);
+  if (n >= 1e7) return `₹${+(value / 1e7).toFixed(1)}Cr`;
+  if (n >= 1e5) return `₹${+(value / 1e5).toFixed(1)}L`;
+  if (n >= 1e3) return `₹${+(value / 1e3).toFixed(1)}k`;
+  return `₹${Math.round(value)}`;
+};
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -96,9 +110,17 @@ function Home() {
   const habitsSummary = useMemo(() => habitStats(habits), [habits]);
   const finance = useMemo(() => financeStats(expenses), [expenses]);
   const planner = useMemo(() => plannerStats(plans), [plans]);
+  // A year, so the full-width card carries a full-width graph. Eight weeks was
+  // a 110px strip floating in 1100px of card, which is most of why the panel
+  // read as unfinished. Nothing extra is fetched: this is the same three
+  // collections the rest of the dashboard already has in memory.
   const activity = useMemo(
-    () => activityByDay({ habits, expenses, plans }),
+    () => activityByDay({ habits, expenses, plans }, 364),
     [expenses, habits, plans]
+  );
+  const { cells: activityCells, weeks: activityWeeks } = useMemo(
+    () => activityWeekGrid(activity.cells),
+    [activity.cells]
   );
   const cashSeries = useMemo(() => monthlyTotals(expenses, 6), [expenses]);
 
@@ -219,13 +241,36 @@ function Home() {
           {finance.allTimeCount ? (
             <div className="chart-shell">
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={cashSeries} barGap={4}>
+                <BarChart data={cashSeries} barGap={4} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                   <CartesianGrid vertical={false} />
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} width={48} />
+                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    width={52}
+                    tickMargin={6}
+                    tickFormatter={compactMoney}
+                  />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--accent-soft)" }} />
-                  <Bar dataKey="income" name="Income" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="spend" name="Spend" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="income"
+                    name="Income"
+                    fill="var(--chart-1)"
+                    radius={[3, 3, 0, 0]}
+                    maxBarSize={26}
+                    animationDuration={640}
+                    animationEasing="ease-out"
+                  />
+                  <Bar
+                    dataKey="spend"
+                    name="Spend"
+                    fill="var(--chart-4)"
+                    radius={[3, 3, 0, 0]}
+                    maxBarSize={26}
+                    animationDuration={640}
+                    animationEasing="ease-out"
+                    animationBegin={90}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -259,7 +304,15 @@ function Home() {
                     axisLine={false}
                   />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--accent-soft)" }} />
-                  <Bar dataKey="count" name="Tasks" radius={[0, 4, 4, 0]}>
+                  <Bar
+                    dataKey="count"
+                    name="Tasks"
+                    radius={[0, 3, 3, 0]}
+                    maxBarSize={30}
+                    background={{ fill: "var(--chart-track)", radius: 3 }}
+                    animationDuration={640}
+                    animationEasing="ease-out"
+                  >
                     {tasksSummary.byStatus.map((row, index) => (
                       <Cell key={row.status} fill={seriesFill("home-tasks", index * 2)} />
                     ))}
@@ -274,7 +327,7 @@ function Home() {
           )}
         </article>
 
-        <article className="panel dash-col-6">
+        <article className="panel dash-col-4 dash-trio">
           <div className="panel-head">
             <h3 className="panel-title">Habits</h3>
             <Link to="/habits" className="panel-note">
@@ -303,7 +356,7 @@ function Home() {
           </div>
         </article>
 
-        <article className="panel dash-col-6">
+        <article className="panel dash-col-4 dash-trio">
           <div className="panel-head">
             <h3 className="panel-title">Friends</h3>
             <Link to="/friends" className="panel-note panel-link">
@@ -313,7 +366,7 @@ function Home() {
           <FriendStreaks limit={3} compact />
         </article>
 
-        <article className="panel dash-col-6">
+        <article className="panel dash-col-4 dash-trio">
           <div className="panel-head">
             <h3 className="panel-title">Coming up</h3>
             <span className="panel-note">
@@ -324,7 +377,7 @@ function Home() {
           <div className="line-list">
             {planner.upcoming.map((plan) => (
               <Link key={plan.id} to="/planner" className="upcoming-plan-row is-linked">
-                <span className="date-badge">{plan.date || "No date"}</span>
+                <span className="date-badge">{plan.date ? formatRelativeDay(plan.date) : "No date"}</span>
                 <strong>{plan.title}</strong>
               </Link>
             ))}
@@ -341,18 +394,50 @@ function Home() {
           <div className="panel-head">
             <h3 className="panel-title">Activity</h3>
             <span className="panel-note">
-              {activity.activeDays} active days in the last 8 weeks · {activity.total} records
+              {activity.activeDays} active days in the last year · {activity.total} records
             </span>
           </div>
 
-          <div className="activity-heat">
-            {activity.cells.map((cell) => (
-              <span
-                key={cell.date}
-                className={`activity-cell ${cell.level ? `l${cell.level}` : ""}`}
-                title={`${cell.date}: ${cell.count} record${cell.count === 1 ? "" : "s"}`}
-              />
-            ))}
+          <div className="activity-heat-wrap">
+            <div className="activity-months" style={{ "--weeks": activityWeeks.length }} aria-hidden>
+              {activityWeeks.map((week) => (
+                <span key={week.key}>{week.month}</span>
+              ))}
+            </div>
+
+            <div className="activity-heat" style={{ "--weeks": activityWeeks.length }}>
+              {activityCells.map((cell, index) =>
+                cell ? (
+                  <span
+                    key={cell.date}
+                    className={`activity-cell ${cell.level ? `l${cell.level}` : ""}`}
+                    // The cell's week. The graph sweeps in left to right off
+                    // this, so the stagger costs one custom property per cell
+                    // rather than a rule per column.
+                    style={{ "--c": Math.floor(index / 7) }}
+                    title={`${formatDayLabel(cell.date)}: ${cell.count} record${
+                      cell.count === 1 ? "" : "s"
+                    }`}
+                  />
+                ) : (
+                  <span
+                    key={`pad-${index}`}
+                    className="activity-cell is-pad"
+                    style={{ "--c": Math.floor(index / 7) }}
+                  />
+                )
+              )}
+            </div>
+
+            <div className="activity-legend">
+              <span>Less</span>
+              <i className="activity-cell" />
+              <i className="activity-cell l1" />
+              <i className="activity-cell l2" />
+              <i className="activity-cell l3" />
+              <i className="activity-cell l4" />
+              <span>More</span>
+            </div>
           </div>
         </article>
       </div>
