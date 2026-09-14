@@ -1,15 +1,18 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
 
-import Login from "./pages/Login";
-import Home from "./pages/Home";
-import Finance from "./pages/Finance";
-import Planner from "./pages/Planner";
-import Tasks from "./pages/Tasks";
-import Habits from "./pages/Habits";
-import Friends from "./pages/Friends";
-import Profile from "./pages/Profile";
-import NotFound from "./pages/NotFound";
+// Keep route-only code (especially charts) out of the first app payload.
+// Each page stays intact; Vite simply fetches it when its route is visited.
+const Login = lazy(() => import("./pages/Login"));
+const Home = lazy(() => import("./pages/Home"));
+const Finance = lazy(() => import("./pages/Finance"));
+const Planner = lazy(() => import("./pages/Planner"));
+const Tasks = lazy(() => import("./pages/Tasks"));
+const Habits = lazy(() => import("./pages/Habits"));
+const Friends = lazy(() => import("./pages/Friends"));
+const Profile = lazy(() => import("./pages/Profile"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -55,7 +58,8 @@ function AppRoutes() {
   const { user } = useAuth();
 
   return (
-    <Routes>
+    <Suspense fallback={<RouteLoading />}>
+      <Routes>
       {/* Already signed in? The login form has nothing to offer. */}
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
 
@@ -83,7 +87,19 @@ function AppRoutes() {
             dashboard and leaving the user wondering what happened. */}
         <Route path="*" element={<NotFound />} />
       </Route>
-    </Routes>
+      </Routes>
+    </Suspense>
+  );
+}
+
+function RouteLoading() {
+  return (
+    <div className="route-loading" role="status" aria-live="polite">
+      <span className="sr-only">Loading page…</span>
+      <div className="skeleton skeleton-title" />
+      <div className="skeleton skeleton-subtitle" />
+      <div className="panel skeleton-card" />
+    </div>
   );
 }
 

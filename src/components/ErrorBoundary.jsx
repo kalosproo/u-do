@@ -32,8 +32,6 @@ class ErrorBoundary extends Component {
             The rest of the app is fine. Reloading usually clears it — your data is untouched.
           </p>
 
-          <p className="page-error">{error.message || String(error)}</p>
-
           <div className="toolbar">
             <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
               Reload
