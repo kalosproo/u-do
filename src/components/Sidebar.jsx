@@ -11,6 +11,7 @@ import {
   FiChevronLeft,
   FiMenu,
   FiMoon,
+  FiPlus,
   FiSun,
   FiUsers,
   FiX,
@@ -31,13 +32,10 @@ const readCollapsed = () => {
   }
 };
 
-const links = [
-  { to: "/", label: "Home", icon: <FiGrid /> },
-  { to: "/finance", label: "Finance", icon: <FiDollarSign /> },
-  { to: "/planner", label: "Planner", icon: <FiCalendar /> },
-  { to: "/tasks", label: "Tasks", icon: <FiCheckSquare /> },
-  { to: "/habits", label: "Habits", icon: <FiActivity /> },
-  { to: "/friends", label: "Friends", icon: <FiUsers /> },
+const navigationGroups = [
+  { label: "Today", links: [{ to: "/", label: "Home", icon: <FiGrid /> }, { to: "/tasks", label: "Tasks", icon: <FiCheckSquare /> }] },
+  { label: "Plan", links: [{ to: "/planner", label: "Planner", icon: <FiCalendar /> }, { to: "/habits", label: "Habits", icon: <FiActivity /> }] },
+  { label: "Life", links: [{ to: "/finance", label: "Finance", icon: <FiDollarSign /> }, { to: "/friends", label: "Friends", icon: <FiUsers /> }] },
 ];
 
 function Sidebar({ user }) {
@@ -116,12 +114,17 @@ function Sidebar({ user }) {
             </div>
           </NavLink>
 
-          <nav className="nav-links">
-            {links.map(({ to, label, icon }) => (
-              <NavLink key={to} to={to} end={to === "/"} onClick={close} title={label}>
-                {icon}
-                <span>{label}</span>
-              </NavLink>
+          <nav className="nav-links" aria-label="Main navigation">
+            {navigationGroups.map((group) => (
+              <div className="nav-group" key={group.label}>
+                <p className="nav-group-label">{group.label}</p>
+                {group.links.map(({ to, label, icon }) => (
+                  <NavLink key={to} to={to} end={to === "/"} onClick={close} title={label}>
+                    {icon}
+                    <span>{label}</span>
+                  </NavLink>
+                ))}
+              </div>
             ))}
           </nav>
 
@@ -155,6 +158,14 @@ function Sidebar({ user }) {
           </div>
         </div>
       </aside>
+
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+        <NavLink to="/" end aria-label="Home"><FiGrid /><span>Home</span></NavLink>
+        <NavLink to="/tasks" aria-label="Tasks"><FiCheckSquare /><span>Tasks</span></NavLink>
+        <button type="button" onClick={() => window.dispatchEvent(new Event("udo:quick-capture"))} aria-label="Capture something"><FiPlus aria-hidden="true" /><span>Capture</span></button>
+        <NavLink to="/planner" aria-label="Planner"><FiCalendar /><span>Planner</span></NavLink>
+        <button type="button" onClick={() => setIsOpen(true)} aria-label="Open more navigation" aria-expanded={isOpen}><FiMenu /><span>More</span></button>
+      </nav>
     </>
   );
 }

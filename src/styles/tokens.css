@@ -34,6 +34,8 @@
   --s-6: 24px;
   --s-8: 32px;
   --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
 
   /* Radii */
   --r-sm: 8px;
@@ -44,6 +46,7 @@
   /* Motion */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --speed: 0.18s;
+  --speed-slow: 0.24s;
 
   /* Layout */
   --sidebar-w: 240px;

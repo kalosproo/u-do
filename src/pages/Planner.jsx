@@ -79,8 +79,9 @@ function PlannerTaskCard({
             }}
           />
         ) : (
-          <div
-            className="task-title-wrap"
+          <button
+            type="button"
+            className="task-title-wrap planner-task-title-button"
             onClick={(e) => {
               e.stopPropagation();
               setEditingTaskId(plan.id);
@@ -89,17 +90,21 @@ function PlannerTaskCard({
           >
             <span className="task-title">{plan.title}</span>
             {plan.time ? <small className="task-time">{plan.time}</small> : null}
-          </div>
+          </button>
         )}
       </div>
 
-      <FiTrash2
+      <button
+        type="button"
         className="delete-icon"
+        aria-label={`Delete ${plan.title}`}
         onClick={(e) => {
           e.stopPropagation();
           deletePlan(plan.id);
         }}
-      />
+      >
+        <FiTrash2 aria-hidden="true" />
+      </button>
     </div>
   );
 }
