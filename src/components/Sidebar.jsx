@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import {
@@ -18,11 +18,11 @@ import {
 } from "react-icons/fi";
 import { auth } from "../services/firebase";
 import BrandLogo from "./BrandLogo";
-import AIAssistant from "./AIAssistant";
 import { useTheme } from "../hooks/useTheme";
 import { resolveUserPhoto } from "../utils/profilePhoto";
 
 const COLLAPSE_KEY = "u_do_sidebar_collapsed";
+const AIAssistant = lazy(() => import("./AIAssistant"));
 
 const readCollapsed = () => {
   try {
@@ -126,7 +126,9 @@ function Sidebar({ user }) {
             ))}
           </nav>
 
-          <AIAssistant collapsed={isCollapsed && !isOpen} />
+          <Suspense fallback={null}>
+            <AIAssistant collapsed={isCollapsed && !isOpen} />
+          </Suspense>
         </div>
 
         <div className="sidebar-bottom">
