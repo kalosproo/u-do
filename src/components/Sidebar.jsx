@@ -11,6 +11,7 @@ import {
   FiChevronLeft,
   FiMenu,
   FiMoon,
+  FiPlus,
   FiSun,
   FiUsers,
   FiX,
@@ -33,10 +34,10 @@ const readCollapsed = () => {
 
 const links = [
   { to: "/", label: "Home", icon: <FiGrid /> },
-  { to: "/finance", label: "Finance", icon: <FiDollarSign /> },
-  { to: "/planner", label: "Planner", icon: <FiCalendar /> },
   { to: "/tasks", label: "Tasks", icon: <FiCheckSquare /> },
+  { to: "/planner", label: "Planner", icon: <FiCalendar /> },
   { to: "/habits", label: "Habits", icon: <FiActivity /> },
+  { to: "/finance", label: "Finance", icon: <FiDollarSign /> },
   { to: "/friends", label: "Friends", icon: <FiUsers /> },
 ];
 
@@ -116,7 +117,7 @@ function Sidebar({ user }) {
             </div>
           </NavLink>
 
-          <nav className="nav-links">
+          <nav className="nav-links" aria-label="Main navigation">
             {links.map(({ to, label, icon }) => (
               <NavLink key={to} to={to} end={to === "/"} onClick={close} title={label}>
                 {icon}
@@ -125,7 +126,7 @@ function Sidebar({ user }) {
             ))}
           </nav>
 
-          <AIAssistant collapsed={isCollapsed} />
+          <AIAssistant collapsed={isCollapsed && !isOpen} />
         </div>
 
         <div className="sidebar-bottom">
@@ -155,6 +156,14 @@ function Sidebar({ user }) {
           </div>
         </div>
       </aside>
+
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+        <NavLink to="/" end aria-label="Home"><FiGrid /><span>Home</span></NavLink>
+        <NavLink to="/tasks" aria-label="Tasks"><FiCheckSquare /><span>Tasks</span></NavLink>
+        <button type="button" className="mobile-capture" onClick={() => window.dispatchEvent(new Event("udo:quick-capture"))} aria-label="Capture something"><FiPlus aria-hidden="true" /><span>Capture</span></button>
+        <NavLink to="/planner" aria-label="Planner"><FiCalendar /><span>Planner</span></NavLink>
+        <button type="button" onClick={() => setIsOpen(true)} aria-label="Open more navigation" aria-expanded={isOpen}><FiMenu /><span>More</span></button>
+      </nav>
     </>
   );
 }

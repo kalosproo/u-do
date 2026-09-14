@@ -34,6 +34,8 @@
   --s-6: 24px;
   --s-8: 32px;
   --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
 
   /* Radii */
   --r-sm: 8px;
@@ -47,6 +49,7 @@
      for state changes and are already used throughout. */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --speed: 0.18s;
+  --speed-slow: 0.24s;
 
   /* Decelerating: fast to start, long to settle. Entrances and overlays. */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
