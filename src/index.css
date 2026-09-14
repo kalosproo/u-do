@@ -1563,6 +1563,323 @@ input[type="file"].upload-input { display: none; }
 .date-badge.is-undated { color: var(--text-subtle); border-style: dashed; }
 
 /* Sidebar toolbars on Tasks/Habits sit opposite the filters. */
+/* =========================================================================
+   POLISH — motion, press feedback, depth
+   Everything below refines how existing components feel. Nothing here changes
+   what anything is, where it sits, or what it does.
+   ========================================================================= */
+
+/* One transition for every interactive surface. 28 of the 42 hover states in
+   this file had no transition at all, so they snapped; this gives them all the
+   same curve without touching each rule. Only compositor-friendly properties
+   plus the paint-only ones that were already animating. */
+.btn,
+.button-primary,
+.button-secondary,
+.btn-icon,
+.chip,
+.friends-mode-pill,
+.assistant-chip,
+.quickcap-type-pill,
+.nav-links a,
+.logout-btn,
+.sidebar-profile,
+.sidebar-collapse,
+.page-menu-trigger,
+.page-menu-item,
+.command-item,
+.task-card,
+.task-check,
+.habit-check,
+.stat,
+.friend-card,
+.friend-streak-card,
+.week-nav button,
+.autoplan-trigger,
+.task-delete,
+.habit-delete,
+.delete-icon,
+.quickcap-fab,
+.assistant-launch-btn,
+.panel-link,
+.legend-item {
+  transition:
+    background-color var(--speed) var(--ease),
+    border-color var(--speed) var(--ease),
+    color var(--speed) var(--ease),
+    box-shadow var(--speed) var(--ease),
+    opacity var(--speed) var(--ease),
+    transform var(--speed) var(--ease-spring);
+}
+
+/* Press. There was no :active state anywhere in the app — every control felt
+   inert under the finger. A tiny, fast scale is all it takes; the release
+   carries a hint of overshoot from --ease-spring. */
+.btn:active:not(:disabled),
+.button-primary:active:not(:disabled),
+.button-secondary:active:not(:disabled),
+.btn-icon:active:not(:disabled),
+.chip:active,
+.friends-mode-pill:active,
+.quickcap-type-pill:active,
+.page-menu-trigger:active,
+.page-menu-item:active:not(:disabled),
+.command-item:active,
+.logout-btn:active,
+.sidebar-profile:active,
+.week-nav button:active,
+.autoplan-trigger:active,
+.assistant-launch-btn:active,
+.quickcap-fab:active {
+  transform: scale(var(--press));
+  transition-duration: var(--speed-fast);
+}
+
+/* Icon-sized targets scale from their own centre and can afford a touch more. */
+.task-delete:active,
+.habit-delete:active,
+.delete-icon:active,
+.task-check:active,
+.habit-check:active {
+  transform: scale(0.92);
+  transition-duration: var(--speed-fast);
+}
+
+/* Depth on the surfaces you can actually act on. Static panels stay flat —
+   lifting everything reads as noise rather than hierarchy. */
+.task-card:hover,
+.friend-card:hover,
+.friend-streak-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(var(--lift));
+}
+
+.task-card:active {
+  transform: translateY(0) scale(var(--press));
+  transition-duration: var(--speed-fast);
+}
+
+/* Stat tiles that link somewhere get the same treatment; the rest do not. */
+a.stat:hover,
+.stat-link:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(var(--lift));
+}
+
+/* Surfaces catch a little light along their top edge. */
+.panel,
+.glass-panel,
+.wire-card,
+.card,
+.stat {
+  box-shadow: var(--edge-top);
+}
+
+/* Raised layers get the top tier, so an overlay reads as further forward than
+   a card rather than the same distance. */
+.page-menu-panel { box-shadow: var(--shadow-lg), var(--edge-top); }
+.modal-card,
+.quickcap-popup,
+.assistant-popup,
+.autoplan-popup,
+.command-palette,
+.shortcuts-dialog { box-shadow: var(--shadow-lg), var(--edge-top); }
+
+/* The primary action is the one thing allowed to lift on hover. */
+.btn-primary:hover:not(:disabled),
+.button-primary:hover:not(:disabled) {
+  transform: translateY(var(--lift));
+  box-shadow: var(--shadow-sm);
+}
+
+/* Nav: the active row is marked by a rail rather than by weight alone, and it
+   grows from nothing so switching pages has a direction. */
+.nav-links a {
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-links a::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 2px;
+  height: 0;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
+  transform: translateY(-50%);
+  transition: height var(--speed-slow) var(--ease-out);
+}
+
+.nav-links a.active::before { height: 60%; }
+
+/* Icons lean toward the direction of travel on hover. */
+.nav-links a:hover svg,
+.page-menu-item:hover svg,
+.command-item:hover svg,
+.command-item.is-active svg { transform: translateX(1px); }
+.nav-links a svg,
+.page-menu-item svg,
+.command-item svg { transition: transform var(--speed) var(--ease-spring); }
+
+/* Inputs: the focus ring already exists; this adds the settle around it. */
+input,
+select,
+textarea,
+.input,
+.inline-input {
+  transition:
+    border-color var(--speed) var(--ease),
+    box-shadow var(--speed) var(--ease),
+    background-color var(--speed) var(--ease);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible { background: var(--surface); }
+
+/* =========================================================================
+   ENTRANCES
+   ========================================================================= */
+
+@keyframes udo-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes udo-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes udo-pop {
+  from { opacity: 0; transform: scale(0.97) translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* A page arrives as a page: the header first, then its content a beat later.
+   Two steps, not ten — a long stagger down a list reads as a loading screen. */
+.dashboard-page > *,
+.finance-page > *,
+.habits-page > *,
+.board-page > *,
+.friends-page > *,
+.profile-page > *,
+.planner-page > * {
+  animation: udo-rise var(--speed-slow) var(--ease-out) backwards;
+}
+
+.dashboard-page > :nth-child(1),
+.finance-page > :nth-child(1),
+.habits-page > :nth-child(1),
+.board-page > :nth-child(1),
+.friends-page > :nth-child(1),
+.profile-page > :nth-child(1),
+.planner-page > :nth-child(1) { animation-delay: 0ms; }
+
+.dashboard-page > :nth-child(2),
+.finance-page > :nth-child(2),
+.habits-page > :nth-child(2),
+.board-page > :nth-child(2),
+.friends-page > :nth-child(2),
+.profile-page > :nth-child(2),
+.planner-page > :nth-child(2) { animation-delay: 40ms; }
+
+.dashboard-page > :nth-child(n + 3),
+.finance-page > :nth-child(n + 3),
+.habits-page > :nth-child(n + 3),
+.board-page > :nth-child(n + 3),
+.friends-page > :nth-child(n + 3),
+.profile-page > :nth-child(n + 3),
+.planner-page > :nth-child(n + 3) { animation-delay: 80ms; }
+
+/* Overlays scale up from just behind the surface; scrims only fade. */
+.page-menu-panel { animation: udo-pop var(--speed) var(--ease-out); transform-origin: top right; }
+.modal-card,
+.quickcap-popup,
+.assistant-popup,
+.autoplan-popup,
+.command-palette,
+.shortcuts-dialog { animation: udo-pop var(--speed-slow) var(--ease-out); }
+.modal-overlay,
+.quickcap-overlay,
+.assistant-overlay,
+.autoplan-overlay,
+.command-overlay,
+.shortcut-overlay,
+.nav-scrim { animation: udo-fade var(--speed) var(--ease); }
+
+/* =========================================================================
+   TYPOGRAPHY DETAIL
+   ========================================================================= */
+
+/* Anything numeric that can change in place gets fixed-width figures, so a
+   value updating does not shift the text beside it. */
+.stat-value,
+.streak-badge,
+.friend-habit-streak,
+.friend-habit-rate,
+.friend-streak-headline strong,
+.page-menu-item-count,
+.panel-note,
+.num { font-variant-numeric: tabular-nums; }
+
+/* Headings tighten as they grow, the way type wants to. */
+h1, .page-title { letter-spacing: -0.021em; }
+h2 { letter-spacing: -0.018em; }
+h3, .panel-title { letter-spacing: -0.013em; }
+
+/* Small uppercase labels need the opposite: room to breathe. */
+.stat-label,
+.page-menu-label,
+.label,
+.field > span { letter-spacing: 0.02em; }
+
+/* =========================================================================
+   REDUCED MOTION
+   Nothing above is load-bearing, so all of it stands down.
+   ========================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-page > *,
+  .finance-page > *,
+  .habits-page > *,
+  .board-page > *,
+  .friends-page > *,
+  .profile-page > *,
+  .planner-page > *,
+  .page-menu-panel,
+  .modal-card,
+  .quickcap-popup,
+  .assistant-popup,
+  .autoplan-popup,
+  .modal-overlay,
+  .quickcap-overlay,
+  .assistant-overlay,
+  .autoplan-overlay,
+  .command-palette,
+  .shortcuts-dialog,
+  .command-overlay,
+  .shortcut-overlay,
+  .nav-scrim { animation: none; }
+
+  .btn:active:not(:disabled),
+  .button-primary:active:not(:disabled),
+  .button-secondary:active:not(:disabled),
+  .task-card:hover,
+  .friend-card:hover,
+  .friend-streak-card:hover,
+  .btn-primary:hover:not(:disabled),
+  .button-primary:hover:not(:disabled),
+  .nav-links a:hover svg,
+  .page-menu-item:hover svg,
+  .command-item:hover svg,
+  .command-item.is-active svg { transform: none; }
+}
+
 /* Ambient background ------------------------------------------------------ */
 /* Decoration only. Pinned to the viewport, inert to the pointer, and below
    every z-index the app uses (the lowest real one is the mobile nav scrim at
@@ -1577,6 +1894,32 @@ input[type="file"].upload-input { display: none; }
 }
 
 .udo-canvas { width: 100%; height: 100%; display: block; }
+
+/* Ambient light. Two soft pools in opposite corners plus a gentle vignette,
+   so the ground is not one flat value from edge to edge and content sits in a
+   slightly brighter field than the corners. Painted once — gradients cost
+   nothing to keep on screen. */
+.udo-background::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(58% 42% at 18% 8%, var(--bg-glow-1), transparent 70%),
+    radial-gradient(50% 46% at 86% 88%, var(--bg-glow-2), transparent 72%),
+    radial-gradient(120% 80% at 50% 40%, transparent 55%, var(--overlay-vignette, transparent));
+}
+
+/* Fine grain. Stops large flat areas from banding and gives the surface a
+   texture you read rather than see. One tiny tile, repeated. */
+.udo-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: var(--bg-grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Grain is luminance only: it must not tint a monochrome palette. */
+  mix-blend-mode: overlay;
+}
 
 .udo-orb { fill: var(--bg-orb); }
 
