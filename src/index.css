@@ -1564,6 +1564,158 @@ input[type="file"].upload-input { display: none; }
 
 /* Sidebar toolbars on Tasks/Habits sit opposite the filters. */
 /* =========================================================================
+   PREMIUM LAYER — type scale, surface quality, rhythm
+   Applied on top of the existing rules rather than rewriting them, so every
+   component keeps its structure and only its finish changes.
+   ========================================================================= */
+
+/* --- Type -------------------------------------------------------------- */
+/* Headings get real presence. A page title at 22px against 14px body is only
+   1.57x; at 27px it is nearly 2x, which is the difference between a dense
+   tool and a considered one. Weight and tracking move with size. */
+h1 { font-size: var(--t-xl); line-height: var(--lh-tight); font-weight: 680; }
+h2 { font-size: var(--t-lg); line-height: var(--lh-tight); font-weight: 660; }
+h3 { font-size: var(--t-md); line-height: var(--lh-snug); font-weight: 620; }
+
+.page-title {
+  font-size: var(--t-xl);
+  font-weight: 680;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.028em;
+}
+
+.page-sub {
+  font-size: var(--t-sm);
+  line-height: var(--lh-snug);
+  margin-top: 6px;
+}
+
+.panel-title { font-size: var(--t-md); font-weight: 620; letter-spacing: -0.012em; }
+
+/* The six muddy small sizes collapse onto two. Metadata reads as one voice
+   instead of four slightly different ones. */
+.panel-note,
+.stat-note,
+.friends-muted,
+.friends-subtitle,
+.page-menu-item-count,
+.empty,
+.friend-habit-rate { font-size: var(--t-sm); }
+
+.stat-label,
+.page-menu-label,
+.label,
+.field > span,
+.eyebrow { font-size: var(--t-xs); }
+
+/* Uppercase micro-labels: the tracking is what stops them reading as shouting. */
+.stat-label,
+.page-menu-label,
+.eyebrow {
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+/* The figure is the point of a stat tile. It was the same size as the page
+   title; now it is the largest thing in its card by a clear margin. */
+.stat-value {
+  font-size: var(--t-2xl);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.stat { display: flex; flex-direction: column; gap: 6px; }
+.stat-note { margin-top: 2px; }
+
+/* --- Surface quality ---------------------------------------------------- */
+/* Cards were a flat fill with a hard border. Now they carry a faint fall of
+   light from the top edge and a soft drop, so they sit on the page rather
+   than being drawn onto it. */
+.panel,
+.glass-panel,
+.wire-card,
+.card {
+  padding: var(--s-6);
+  background-color: var(--surface);
+  background-image: var(--surface-sheen);
+  box-shadow: var(--edge-top), var(--shadow-sm);
+}
+
+.stat {
+  background-image: var(--surface-sheen);
+  box-shadow: var(--edge-top), var(--shadow-sm);
+}
+
+/* Panel headers get air beneath them and a hairline, so a card reads as
+   header-then-content instead of one undifferentiated block. */
+.panel-head {
+  padding-bottom: var(--s-3);
+  margin-bottom: var(--s-4);
+  border-bottom: 1px solid var(--border);
+}
+
+/* --- Primary action ------------------------------------------------------ */
+/* A single sheen across the top half. It is what separates a filled rectangle
+   from a button you want to press. */
+.btn-primary,
+.button-primary {
+  background-image: var(--accent-sheen);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover:not(:disabled),
+.button-primary:hover:not(:disabled) { box-shadow: var(--shadow); }
+
+/* --- Empty states -------------------------------------------------------- */
+/* The dashed box was the most unfinished thing on the page. A soft inset
+   field reads as "nothing here yet" rather than "something failed to load". */
+.empty {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--text-subtle);
+  padding: var(--s-8) var(--s-5);
+}
+
+/* --- Navigation ---------------------------------------------------------- */
+.nav-links a { font-size: var(--t-base); font-weight: 520; }
+.nav-links a.active { font-weight: 620; }
+.nav-links { gap: 1px; }
+
+/* --- Rhythm -------------------------------------------------------------- */
+/* Sections breathe a little more between them than within them, which is what
+   makes a long page scan as groups rather than a list. */
+.dashboard-page,
+.finance-page,
+.habits-page,
+.friends-page,
+.board-page { gap: var(--s-6); }
+
+.page-head { margin-bottom: var(--s-1); }
+
+/* --- Mobile ------------------------------------------------------------- */
+/* The larger type and padding are a desktop luxury; phones keep their density. */
+@media (max-width: 640px) {
+  .page-title { font-size: 22px; letter-spacing: -0.022em; }
+  h1 { font-size: 23px; }
+  h2 { font-size: 18px; }
+  .stat-value { font-size: 24px; }
+  .panel,
+  .glass-panel,
+  .wire-card,
+  .card { padding: var(--s-4); }
+  .empty { padding: var(--s-6) var(--s-4); }
+  .dashboard-page,
+  .finance-page,
+  .habits-page,
+  .friends-page,
+  .board-page { gap: var(--s-4); }
+}
+
+/* =========================================================================
    POLISH — motion, press feedback, depth
    Everything below refines how existing components feel. Nothing here changes
    what anything is, where it sits, or what it does.
