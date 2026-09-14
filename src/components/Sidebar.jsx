@@ -151,8 +151,7 @@ function Sidebar({ user }) {
           </button>
 
           <div className="sidebar-credits">
-            <p>© 2026 U.Do — Crafted by Kalosproo</p>
-            <p className="sidebar-credits-sub">Designed by Haniii.</p>
+            <p>© 2026 U.Do — Crafted by Rahul Muttukuru · Designed by Haniii</p>
           </div>
         </div>
       </aside>
