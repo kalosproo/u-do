@@ -177,7 +177,7 @@ textarea:focus-visible { outline-offset: 0; }
   flex-shrink: 0;
 }
 
-.profile-avatar-image { object-fit: cover; filter: grayscale(1); }
+.profile-avatar-image { object-fit: cover; }
 .profile-name { font-size: 13px; font-weight: 600; }
 .profile-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -581,12 +581,17 @@ input[type="file"].upload-input { display: none; }
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+  /* A dot is a fixed 8px mark. Padding or a border from any other rule it
+     happens to match would inflate it into an oval, which is exactly what
+     the `.empty` page utility used to do to unfilled dots. */
+  padding: 0;
+  border: 0;
+  font-size: 0;
+  line-height: 0;
 }
 
-.dot-filled,
-.tiny-dots .filled { background: var(--success); }
-.dot-empty,
-.tiny-dots .empty { background: var(--dot-empty); }
+.dot-filled { background: var(--success); }
+.dot-empty { background: var(--dot-empty); }
 
 /* Tables ------------------------------------------------------------------ */
 .table-wrap { overflow-x: auto; }
@@ -1119,7 +1124,7 @@ input[type="file"].upload-input { display: none; }
   flex-shrink: 0;
 }
 
-.friend-avatar-image { object-fit: cover; filter: grayscale(1); }
+.friend-avatar-image { object-fit: cover; }
 .friends-list { display: flex; flex-direction: column; gap: var(--s-3); }
 .friend-card { border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-4); }
 .friend-card-header { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-2); flex-wrap: wrap; }
@@ -1145,8 +1150,6 @@ input[type="file"].upload-input { display: none; }
   object-fit: cover;
   border: 1px solid var(--border);
   flex-shrink: 0;
-  /* Account photos arrive in colour; the palette has none. */
-  filter: grayscale(1);
 }
 
 .profile-photo-fallback {

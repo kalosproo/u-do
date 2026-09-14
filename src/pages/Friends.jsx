@@ -43,7 +43,7 @@ function HabitRow({ habit }) {
 
       <div className="tiny-dots" aria-hidden>
         {(habit.dots || []).map((done, index) => (
-          <em key={`${habit.id}-${index}`} className={done ? "filled" : "empty"} />
+          <em key={`${habit.id}-${index}`} className={done ? "dot-filled" : "dot-empty"} />
         ))}
       </div>
 
