@@ -195,17 +195,6 @@ textarea:focus-visible { outline-offset: 0; }
 
 .nav-links { display: flex; flex-direction: column; gap: 2px; }
 
-.nav-group { display: flex; flex-direction: column; gap: 2px; }
-.nav-group + .nav-group { margin-top: var(--s-3); }
-.nav-group-label {
-  padding: var(--s-2) var(--s-3) var(--s-1);
-  color: var(--text-subtle);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 .nav-links a {
   display: flex;
   align-items: center;
@@ -250,7 +239,6 @@ textarea:focus-visible { outline-offset: 0; }
 
 .sidebar.is-collapsed .brand-name,
 .sidebar.is-collapsed .nav-links a span,
-.sidebar.is-collapsed .nav-group-label,
 .sidebar.is-collapsed .logout-btn span,
 .sidebar.is-collapsed .profile-text,
 .sidebar.is-collapsed .sidebar-credits { display: none; }
@@ -263,7 +251,7 @@ textarea:focus-visible { outline-offset: 0; }
 
 .sidebar.is-collapsed .brand { padding: 0 0 var(--s-2); justify-content: center; }
 .sidebar.is-collapsed .sidebar-brand-row { justify-content: center; padding-bottom: var(--s-2); }
-.sidebar.is-collapsed .assistant-launch-btn span { display: none; }
+.sidebar.is-collapsed .assistant-launch-btn.is-icon span { display: none; }
 
 /* Mobile nav trigger — hidden on desktop, shown in the responsive block. */
 .nav-toggle {
@@ -1978,17 +1966,16 @@ input[type="file"].upload-input { display: none; }
 
   .mobile-bottom-nav svg { width: 18px; height: 18px; }
   .mobile-bottom-nav a.active { color: var(--text); background: var(--accent-soft); }
-  .mobile-bottom-nav button:nth-of-type(1) { color: var(--accent-contrast); }
-  .mobile-bottom-nav button:nth-of-type(1) svg {
-    width: 24px;
-    height: 24px;
-    margin-top: -14px;
-    padding: 5px;
+  .mobile-bottom-nav .mobile-capture { color: var(--text); }
+  .mobile-bottom-nav .mobile-capture svg {
+    width: 18px;
+    height: 18px;
+    padding: 6px;
     border-radius: 50%;
     background: var(--accent);
     color: var(--accent-contrast);
     box-sizing: content-box;
-    border: 3px solid var(--bg-elevated);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--n-950) 18%, transparent);
   }
 
   .quickcap-overlay,
