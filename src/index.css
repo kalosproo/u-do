@@ -2200,6 +2200,170 @@ textarea:focus-visible { background: var(--surface); }
 .nav-scrim { animation: udo-fade var(--speed) var(--ease); }
 
 /* =========================================================================
+   MOTION — the second pass
+
+   Everything here is animation only. No colour, no size, no weight, no
+   spacing, no box geometry changes: every rule animates transform, opacity or
+   a paint-only property that leaves layout untouched, and every one settles on
+   the value the element already had.
+   ========================================================================= */
+
+/* --- The tick ------------------------------------------------------------ */
+/* Checking a habit is the thing this app is for, and it happened instantly:
+   the fill flipped and the mark appeared, with nothing to confirm the press
+   landed. A squash into a small overshoot is the whole gesture — it reads as
+   the control accepting the tap rather than as decoration. */
+@keyframes udo-tick {
+  0%   { transform: scale(1); }
+  32%  { transform: scale(0.86); }
+  68%  { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+
+.habit-checkbox.checked,
+.task-check.checked {
+  animation: udo-tick 0.32s var(--ease-out);
+}
+
+/* The mark itself was fading in on the colour transition alone, at the same
+   rate as the box behind it. Letting it arrive a beat later, and from slightly
+   under size, is what makes it read as being stamped on. */
+@keyframes udo-mark {
+  from { opacity: 0; transform: scale(0.55); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.today-check > svg {
+  transform-origin: center;
+}
+
+.today-check:not(:disabled):hover > svg {
+  animation: udo-mark 0.26s var(--ease-spring);
+}
+
+/* --- Progress ------------------------------------------------------------ */
+/* The bars transitioned on change but snapped to their value on first paint,
+   so the figure above one animated in and its bar was simply already there.
+   scaleX rather than width: it runs on the compositor and leaves the settled
+   geometry identical. */
+@keyframes udo-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.bar > span,
+.planner-progress-track > span {
+  transform-origin: left center;
+  animation: udo-fill 0.62s var(--ease-out) backwards;
+  animation-delay: 120ms;
+}
+
+/* --- Lists --------------------------------------------------------------- */
+/* Pages arrived in two steps, but every row inside a card landed at once, so a
+   card blinked into existence instead of resolving. A short stagger, capped at
+   six: past that it stops reading as arrival and starts reading as a queue. */
+.today-task-list > *,
+.today-list > *,
+.line-list > *,
+.friend-streak-list > *,
+.kanban-column .task-card {
+  animation: udo-rise 0.3s var(--ease-out) backwards;
+}
+
+.today-task-list > :nth-child(1),
+.today-list > :nth-child(1),
+.line-list > :nth-child(1),
+.friend-streak-list > :nth-child(1),
+.kanban-column .task-card:nth-child(1) { animation-delay: 60ms; }
+
+.today-task-list > :nth-child(2),
+.today-list > :nth-child(2),
+.line-list > :nth-child(2),
+.friend-streak-list > :nth-child(2),
+.kanban-column .task-card:nth-child(2) { animation-delay: 96ms; }
+
+.today-task-list > :nth-child(3),
+.today-list > :nth-child(3),
+.line-list > :nth-child(3),
+.friend-streak-list > :nth-child(3),
+.kanban-column .task-card:nth-child(3) { animation-delay: 132ms; }
+
+.today-task-list > :nth-child(4),
+.today-list > :nth-child(4),
+.line-list > :nth-child(4),
+.friend-streak-list > :nth-child(4),
+.kanban-column .task-card:nth-child(4) { animation-delay: 168ms; }
+
+.today-task-list > :nth-child(5),
+.today-list > :nth-child(5),
+.line-list > :nth-child(5),
+.friend-streak-list > :nth-child(5),
+.kanban-column .task-card:nth-child(5) { animation-delay: 204ms; }
+
+.today-task-list > :nth-child(n + 6),
+.today-list > :nth-child(n + 6),
+.line-list > :nth-child(n + 6),
+.friend-streak-list > :nth-child(n + 6),
+.kanban-column .task-card:nth-child(n + 6) { animation-delay: 240ms; }
+
+/* --- The activity graph --------------------------------------------------- */
+/* A year of cells appeared in one frame. They sweep in by week instead: --c is
+   the cell's column, set where the grid is built, so the delay is a multiple of
+   it and the graph fills left to right the way it was recorded. Opacity only —
+   371 elements is not the place to hand the compositor a transform each. */
+@keyframes udo-cell {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.activity-cell {
+  animation: udo-cell 0.24s var(--ease) backwards;
+  animation-delay: calc(var(--c, 0) * 7ms);
+}
+
+.activity-months > span {
+  animation: udo-fade 0.3s var(--ease) backwards;
+  animation-delay: 200ms;
+}
+
+.activity-legend {
+  animation: udo-fade 0.3s var(--ease) backwards;
+  animation-delay: 440ms;
+}
+
+/* --- Day columns ---------------------------------------------------------- */
+/* A week reads left to right, so it should arrive that way rather than as one
+   block of seven. */
+.week-grid > .day-column { animation: udo-rise 0.3s var(--ease-out) backwards; }
+.week-grid > .day-column:nth-child(1) { animation-delay: 40ms; }
+.week-grid > .day-column:nth-child(2) { animation-delay: 74ms; }
+.week-grid > .day-column:nth-child(3) { animation-delay: 108ms; }
+.week-grid > .day-column:nth-child(4) { animation-delay: 142ms; }
+.week-grid > .day-column:nth-child(5) { animation-delay: 176ms; }
+.week-grid > .day-column:nth-child(6) { animation-delay: 210ms; }
+.week-grid > .day-column:nth-child(7) { animation-delay: 244ms; }
+
+/* --- Stat tiles ----------------------------------------------------------- */
+/* The figure is the point of the tile, so it arrives fractionally after the
+   card it sits in rather than with it. */
+.stat-value { animation: udo-rise 0.34s var(--ease-out) backwards; animation-delay: 90ms; }
+
+/* --- Hover intent --------------------------------------------------------- */
+/* A link that leads somewhere nudges toward its destination. Transform only,
+   so nothing around it moves — and no display change to make it apply: these
+   sit in a flex panel head, so they are already blockified. */
+.panel-link:hover { transform: translateX(2px); }
+
+/* The collapse chevron turns with the rail it controls. */
+.sidebar-collapse > svg { transition: transform var(--speed-slow) var(--ease-out); }
+:root[data-sidebar="collapsed"] .sidebar-collapse > svg { transform: rotate(180deg); }
+
+/* --- Overlay exits -------------------------------------------------------- */
+/* Menus animated in and vanished on a frame. Matching the entrance on the way
+   out is what stops a panel feeling like it was cut rather than closed. */
+.page-menu-panel { will-change: transform, opacity; }
+
+/* =========================================================================
    TYPOGRAPHY DETAIL
    ========================================================================= */
 
@@ -2252,6 +2416,30 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .command-overlay,
   .shortcut-overlay,
   .nav-scrim { animation: none; }
+
+  /* The motion pass stands down with the rest of it. Every one of these
+     settles on the value it already had, so removing the animation removes
+     only the arrival — never the result. */
+  .habit-checkbox.checked,
+  .task-check.checked,
+  .today-check:not(:disabled):hover > svg,
+  .bar > span,
+  .planner-progress-track > span,
+  .today-task-list > *,
+  .today-list > *,
+  .line-list > *,
+  .friend-streak-list > *,
+  .kanban-column .task-card,
+  .activity-cell,
+  .activity-months > span,
+  .activity-legend,
+  .week-grid > .day-column,
+  .stat-value {
+    animation: none;
+  }
+
+  .panel-link:hover { transform: none; }
+  .sidebar-collapse > svg { transition: none; }
 
   .btn:active:not(:disabled),
   .button-primary:active:not(:disabled),

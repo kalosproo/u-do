@@ -258,6 +258,8 @@ function Home() {
                     fill="var(--chart-1)"
                     radius={[3, 3, 0, 0]}
                     maxBarSize={26}
+                    animationDuration={640}
+                    animationEasing="ease-out"
                   />
                   <Bar
                     dataKey="spend"
@@ -265,6 +267,9 @@ function Home() {
                     fill="var(--chart-4)"
                     radius={[3, 3, 0, 0]}
                     maxBarSize={26}
+                    animationDuration={640}
+                    animationEasing="ease-out"
+                    animationBegin={90}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -305,6 +310,8 @@ function Home() {
                     radius={[0, 3, 3, 0]}
                     maxBarSize={30}
                     background={{ fill: "var(--chart-track)", radius: 3 }}
+                    animationDuration={640}
+                    animationEasing="ease-out"
                   >
                     {tasksSummary.byStatus.map((row, index) => (
                       <Cell key={row.status} fill={seriesFill("home-tasks", index * 2)} />
@@ -404,12 +411,20 @@ function Home() {
                   <span
                     key={cell.date}
                     className={`activity-cell ${cell.level ? `l${cell.level}` : ""}`}
+                    // The cell's week. The graph sweeps in left to right off
+                    // this, so the stagger costs one custom property per cell
+                    // rather than a rule per column.
+                    style={{ "--c": Math.floor(index / 7) }}
                     title={`${formatDayLabel(cell.date)}: ${cell.count} record${
                       cell.count === 1 ? "" : "s"
                     }`}
                   />
                 ) : (
-                  <span key={`pad-${index}`} className="activity-cell is-pad" />
+                  <span
+                    key={`pad-${index}`}
+                    className="activity-cell is-pad"
+                    style={{ "--c": Math.floor(index / 7) }}
+                  />
                 )
               )}
             </div>

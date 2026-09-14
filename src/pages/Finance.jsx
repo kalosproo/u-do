@@ -443,6 +443,8 @@ function Finance() {
                         paddingAngle={1.5}
                         stroke="var(--surface)"
                         strokeWidth={2}
+                        animationDuration={700}
+                        animationEasing="ease-out"
                       >
                         {pieData.map((entry, index) => (
                           <Cell key={entry.name} fill={seriesFill("finance-pie", index)} />
@@ -487,6 +489,8 @@ function Finance() {
                       fill={seriesFill("finance-bars", 0)}
                       radius={[3, 3, 0, 0]}
                       maxBarSize={30}
+                      animationDuration={640}
+                      animationEasing="ease-out"
                     />
                     <Bar
                       dataKey="spend"
@@ -494,6 +498,9 @@ function Finance() {
                       fill={seriesFill("finance-bars", 3)}
                       radius={[3, 3, 0, 0]}
                       maxBarSize={30}
+                      animationDuration={640}
+                      animationEasing="ease-out"
+                      animationBegin={90}
                     />
                   </BarChart>
                 </ResponsiveContainer>
