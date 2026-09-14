@@ -12,10 +12,10 @@
                  use the SAME expression in both themes; only the surface
                  stack differs, because elevation moves toward paper in
                  light and away from it in dark.
-     3. ACCENT   --success/--danger/--warning/--info and the chart hues.
-                 Muted on purpose: saturation sits near 34% instead of the
-                 ~85% these were before, while measured contrast against
-                 their own surface went up, not down.
+     3. STATUS   --success/--danger/--warning/--info and the chart tones.
+                 There is no hue anywhere in this palette — every one of
+                 these is a step on the ramp above. Status is carried by
+                 tone, weight and icon instead of colour.
 
    Components never name a colour. They name a role.
    ========================================================================= */
@@ -135,22 +135,28 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.36);
   --overlay: rgba(0, 0, 0, 0.72);
 
-  /* Muted accents. Every one clears AA on --surface; see the contrast audit. */
-  --success: #8fb89a;
-  --danger: #d69292;
-  --warning: #d4b483;
-  --info: #9db4ce;
+  /* Status, in tone only. There is no hue in this palette, so emphasis and
+     iconography carry the meaning: danger takes the brightest ink, then
+     success, then warning and info, which sit at reading weight. */
+  --danger: var(--n-950);
+  --success: var(--n-800);
+  --warning: var(--n-700);
+  --info: var(--n-700);
 
-  --success-soft: rgba(143, 184, 154, 0.13);
-  --danger-soft: rgba(214, 146, 146, 0.13);
-  --warning-soft: rgba(212, 180, 131, 0.13);
+  --success-soft: rgba(250, 250, 250, 0.08);
+  --danger-soft: rgba(250, 250, 250, 0.14);
+  --warning-soft: rgba(250, 250, 250, 0.08);
 
-  --chart-1: #8ba1c6;
-  --chart-2: #84c29e;
-  --chart-3: #cd9f98;
-  --chart-4: #bca276;
-  --chart-5: #b792c9;
-  --chart-6: #84b8c2;
+  /* Six ramp steps, chosen to maximise the minimum separation between any
+     two. Six greys cannot be as distinct as six hues — about 1.37:1 is the
+     ceiling here — so slices also carry a --surface stroke and a legend,
+     which is how monochrome charts have always been read. */
+  --chart-1: var(--n-950);
+  --chart-2: var(--n-700);
+  --chart-3: var(--n-600);
+  --chart-4: var(--n-500);
+  --chart-5: var(--n-400);
+  --chart-6: var(--n-300);
 }
 
 :root[data-theme="light"] {
@@ -166,19 +172,19 @@
   --shadow: 0 1px 2px rgba(10, 10, 10, 0.05), 0 8px 24px rgba(10, 10, 10, 0.07);
   --overlay: rgba(10, 10, 10, 0.42);
 
-  --success: #456349;
-  --danger: #7f4242;
-  --warning: #6f552c;
-  --info: #3a5270;
+  --danger: var(--n-950);
+  --success: var(--n-800);
+  --warning: var(--n-700);
+  --info: var(--n-700);
 
-  --success-soft: rgba(69, 99, 73, 0.09);
-  --danger-soft: rgba(127, 66, 66, 0.09);
-  --warning-soft: rgba(111, 85, 44, 0.09);
+  --success-soft: rgba(10, 10, 10, 0.06);
+  --danger-soft: rgba(10, 10, 10, 0.10);
+  --warning-soft: rgba(10, 10, 10, 0.06);
 
-  --chart-1: #3d557b;
-  --chart-2: #397452;
-  --chart-3: #894d43;
-  --chart-4: #675332;
-  --chart-5: #6c4082;
-  --chart-6: #396a74;
+  --chart-1: var(--n-800);
+  --chart-2: var(--n-700);
+  --chart-3: var(--n-600);
+  --chart-4: var(--n-500);
+  --chart-5: var(--n-400);
+  --chart-6: var(--n-200);
 }
