@@ -15,6 +15,7 @@ import BrandLogo from "./components/BrandLogo";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import QuickCapture from "./components/QuickCapture";
+import UdoBackground from "./components/UdoBackground";
 
 /** The signed-in chrome. Login sits outside it, on its own full-page canvas. */
 function AppLayout() {
@@ -99,7 +100,18 @@ function App() {
 
   return (
     <BrowserRouter>
-      <AppRoutes />
+      {/* Mounted once, outside the routes, so a navigation never restarts the
+          animation or leaves a second instance behind. */}
+      <UdoBackground />
+
+      {/* One stacking context for everything the app draws. The background is
+          position: fixed, so without this it paints over any page whose own
+          content is not positioned — Login and the 404 among them. Portalled
+          overlays mount to document.body, outside this wrapper, so they still
+          sit above it. */}
+      <div className="app-layer">
+        <AppRoutes />
+      </div>
     </BrowserRouter>
   );
 }
