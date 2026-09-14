@@ -1587,6 +1587,7 @@ input[type="file"].upload-input { display: none; }
 .sidebar-collapse,
 .page-menu-trigger,
 .page-menu-item,
+.command-item,
 .task-card,
 .task-check,
 .habit-check,
@@ -1623,6 +1624,7 @@ input[type="file"].upload-input { display: none; }
 .quickcap-type-pill:active,
 .page-menu-trigger:active,
 .page-menu-item:active:not(:disabled),
+.command-item:active,
 .logout-btn:active,
 .sidebar-profile:active,
 .week-nav button:active,
@@ -1681,7 +1683,9 @@ a.stat:hover,
 .modal-card,
 .quickcap-popup,
 .assistant-popup,
-.autoplan-popup { box-shadow: var(--shadow-lg), var(--edge-top); }
+.autoplan-popup,
+.command-palette,
+.shortcuts-dialog { box-shadow: var(--shadow-lg), var(--edge-top); }
 
 /* The primary action is the one thing allowed to lift on hover. */
 .btn-primary:hover:not(:disabled),
@@ -1714,9 +1718,12 @@ a.stat:hover,
 
 /* Icons lean toward the direction of travel on hover. */
 .nav-links a:hover svg,
-.page-menu-item:hover svg { transform: translateX(1px); }
+.page-menu-item:hover svg,
+.command-item:hover svg,
+.command-item.is-active svg { transform: translateX(1px); }
 .nav-links a svg,
-.page-menu-item svg { transition: transform var(--speed) var(--ease-spring); }
+.page-menu-item svg,
+.command-item svg { transition: transform var(--speed) var(--ease-spring); }
 
 /* Inputs: the focus ring already exists; this adds the settle around it. */
 input,
@@ -1794,11 +1801,15 @@ textarea:focus-visible { background: var(--surface); }
 .modal-card,
 .quickcap-popup,
 .assistant-popup,
-.autoplan-popup { animation: udo-pop var(--speed-slow) var(--ease-out); }
+.autoplan-popup,
+.command-palette,
+.shortcuts-dialog { animation: udo-pop var(--speed-slow) var(--ease-out); }
 .modal-overlay,
 .quickcap-overlay,
 .assistant-overlay,
 .autoplan-overlay,
+.command-overlay,
+.shortcut-overlay,
 .nav-scrim { animation: udo-fade var(--speed) var(--ease); }
 
 /* =========================================================================
@@ -1849,6 +1860,10 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .quickcap-overlay,
   .assistant-overlay,
   .autoplan-overlay,
+  .command-palette,
+  .shortcuts-dialog,
+  .command-overlay,
+  .shortcut-overlay,
   .nav-scrim { animation: none; }
 
   .btn:active:not(:disabled),
@@ -1860,7 +1875,9 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .btn-primary:hover:not(:disabled),
   .button-primary:hover:not(:disabled),
   .nav-links a:hover svg,
-  .page-menu-item:hover svg { transform: none; }
+  .page-menu-item:hover svg,
+  .command-item:hover svg,
+  .command-item.is-active svg { transform: none; }
 }
 
 /* Ambient background ------------------------------------------------------ */
