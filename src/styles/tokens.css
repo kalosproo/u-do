@@ -22,7 +22,7 @@
 
 :root {
   /* Type */
-  --font-sans: "Inter", "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, monospace;
 
   /* Spacing scale */

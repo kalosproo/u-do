@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "./styles/tokens.css";
 
 /* =========================================================================
@@ -1731,6 +1731,16 @@ input[type="file"].upload-input { display: none; }
 
   .nav-toggle { display: inline-flex; }
 
+  /* No inner scrollboxes at touch widths. A capped list inside a page that
+     also scrolls traps the gesture: the finger sits over the list, the list
+     consumes the swipe, and the page appears stuck. The cap is a desktop
+     affordance where a mouse can reach a scrollbar. */
+  .column-list.is-scrollable,
+  .today-list.is-scrollable,
+  .friends-list.is-scrollable,
+  .friends-request-list.is-scrollable,
+  .analytics-list.is-scrollable { max-height: none; overflow: visible; }
+
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.22s var(--ease);
@@ -1861,12 +1871,67 @@ input[type="file"].upload-input { display: none; }
   .autoplan-cta-row > *,
   .modal-actions > * { width: 100%; }
 
-  .friend-card-header { gap: var(--s-2); }
-  .friend-headline { align-items: flex-start; }
+  /* Header: avatar and name on one line, the streak headline beside them,
+     Remove on its own line at the end. Four ragged lines became two. */
+  .friend-card-header {
+    display: grid;
+    /* The avatar column is pinned. Left as `auto` it sized to the streak
+       headline sharing that column, which pushed the name ~130px right. */
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "avatar   meta     meta"
+      "headline headline remove";
+    gap: var(--s-2);
+    align-items: center;
+  }
 
-  .column-list.is-scrollable,
-  .today-list.is-scrollable,
-  .friends-list.is-scrollable { max-height: none; }
+  .friend-card-header > .friend-avatar { grid-area: avatar; }
+
+  /* The name gets the whole line. Sharing it with the streak headline left
+     about 110px, which wrapped anything longer than one short word. */
+  .friend-card-header > .friends-result-meta { grid-area: meta; min-width: 0; }
+  .friend-card-header > .friends-result-meta > * {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .friend-card-header > .friend-headline {
+    grid-area: headline;
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--s-1);
+    white-space: nowrap;
+  }
+
+  .friend-card-header > button { grid-area: remove; justify-self: end; min-height: 34px; }
+  .friend-card-header > .friend-headline { justify-self: start; }
+
+  /* Habit row: title and rate on one line, dots and streak under them.
+     Previously title, dots, rate and streak each wrapped to their own line,
+     making a 73px row out of four habits' worth of nothing. */
+  .friend-habit-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title rate"
+      "dots  streak";
+    gap: var(--s-1) var(--s-2);
+    align-items: center;
+  }
+
+  .friend-habit-title {
+    grid-area: title;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .friend-habit-row .tiny-dots { grid-area: dots; }
+  .friend-habit-rate { grid-area: rate; min-width: 0; }
+  .friend-habit-streak { grid-area: streak; min-width: 0; }
 
   .day-body.is-scrollable { max-height: 60vh; }
 
