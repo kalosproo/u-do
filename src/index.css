@@ -1749,6 +1749,28 @@ input[type="file"].upload-input { display: none; }
 
   .sidebar.is-open { transform: translateX(0); }
 
+  /* The drawer flows from the top. Pinned to the bottom, the nav block and
+     the Light/Logout pair sat 286px apart on a 412x915 phone — a void in the
+     middle of the panel. Any leftover room now falls below the last control,
+     where it reads as breathing room rather than a gap. Nav rows keep their
+     44px touch target; the space comes out of the padding around them. */
+  .sidebar {
+    justify-content: flex-start;
+    padding: var(--s-3) var(--s-3) var(--s-4);
+    gap: var(--s-3);
+  }
+
+  /* The close button is fixed at the top-left and sits over the drawer, so
+     the wordmark has to start clear of it — otherwise "U.Do" reads "J.Do". */
+  .sidebar .brand {
+    padding-bottom: var(--s-2);
+    padding-left: calc(var(--tap-target) + var(--s-2));
+  }
+  .sidebar .sidebar-profile { margin-bottom: var(--s-1); }
+  .sidebar-top { gap: var(--s-1); }
+  .sidebar-bottom { gap: var(--s-2); margin-top: var(--s-2); }
+  .sidebar .assistant-launch-btn { margin-top: var(--s-1); }
+
   /* The drawer always shows labels; the rail is a desktop affordance. */
   :root[data-sidebar="collapsed"] .sidebar { width: var(--sidebar-w); padding-inline: var(--s-3); }
   :root[data-sidebar="collapsed"] .main-content.with-sidebar { margin-left: 0; }
