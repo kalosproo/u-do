@@ -151,18 +151,26 @@
 
 /* =========================================================================
    2b. PAPER + ACCENTS — the only per-theme groups
-   Just three tokens differ in expression: the page ground, the chrome and
-   the card. Elevation moves toward paper in light and away from it in dark,
-   so those cannot be shared. Everything else above already resolved.
+   Theme-dependent tokens are set here so dark can use its supplied palette
+   without altering the mirrored light-theme values above.
    ========================================================================= */
 
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: var(--n-50);           /* #0a0a0a page ground */
+  --text: var(--n-950);
+  --text-muted: var(--n-700);
+  --text-subtle: var(--n-600);
+  --border: var(--n-200);
+  --border-strong: var(--n-300);
+  --surface-2: var(--n-100);
+  --surface-hover: var(--n-100);
+  --accent-contrast: var(--n-0);
+
+  --bg: var(--n-0);            /* #000000 page ground */
   --bg-elevated: var(--n-100); /* #171717 sidebar / chrome */
-  --surface: var(--n-100);     /* #171717 cards */
+  --surface: var(--n-50);      /* #0a0a0a cards */
 
   --accent-soft: rgba(250, 250, 250, 0.08);
 
@@ -203,33 +211,21 @@
   --danger-soft: rgba(250, 250, 250, 0.14);
   --warning-soft: rgba(250, 250, 250, 0.08);
 
-  /* Painted areas — pie slices, bars, heat cells — are their own ramp, not
-     ramp steps borrowed from type.
-
-     Two bounds set it. The floor is the 3:1 non-text contrast bar against the
-     card: measured against #171717 that is #646464, so nothing may sit below
-     it. The ceiling is a judgement: the ramp used to start at --n-950, and a
-     near-white slab the size of a donut chart on a near-black page is harsh to
-     look at — it reads as a blown highlight rather than as data. Ink that
-     bright belongs to type and to small accents, where the area is tiny.
-
-     So these run #d6d6d6 down to #6b6b6b: the whole set clears the bar (12.3:1
-     to 3.4:1) while the largest slice on the page stays something the eye can
-     rest on. Texture, not tone, is what separates one series from the next. */
-  --chart-1: #d6d6d6;
-  --chart-2: #c0c0c0;
-  --chart-3: #aaaaaa;
-  --chart-4: #949494;
-  --chart-5: #7f7f7f;
-  --chart-6: #6b6b6b;
+  /* Painted areas use the same supplied neutral ramp as the rest of dark mode. */
+  --chart-1: var(--n-800);
+  --chart-2: var(--n-700);
+  --chart-3: var(--n-600);
+  --chart-4: var(--n-500);
+  --chart-5: var(--n-400);
+  --chart-6: var(--n-300);
 
   /* Heat levels, same band and same reasoning. --heat-4 is the top of a
      calendar or activity grid, which used --success (#e5e5e5) and turned a
      logged week into a row of white tiles. */
-  --heat-1: #6b6b6b;
-  --heat-2: #8e8e8e;
-  --heat-3: #b2b2b2;
-  --heat-4: #d6d6d6;
+  --heat-1: var(--n-300);
+  --heat-2: var(--n-500);
+  --heat-3: var(--n-700);
+  --heat-4: var(--n-800);
 
   /* The rail a bar is drawn in. A category with a count of zero has no bar,
      which read as a row that had failed to render; the track gives it an
