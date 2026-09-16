@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
-import { auth, googleProvider } from "../services/firebase.js";
+import { auth } from "../services/firebase.js";
 import { useAdminAuth } from "../hooks/useAdminAuth.js";
 
+const ADMIN_EMAILS = new Set([
+  "muttukururahul@gmail.com",
+  "haneeshvarma2006@gmail.com",
+]);
+
 /**
- * Sign-in is deliberately plain. It grants nothing on its own: the account
- * still has to carry the admin claim, which is checked on the next screen and
- * again by every rule and callable behind it.
+ * Admin sign-in uses Firebase email/password only.
+ * The allowlist is a UX gate; actual admin authorization remains the
+ * Firebase custom admin claim and server-side rules/callables.
  */
 export default function SignIn() {
   const { status } = useAdminAuth();
@@ -33,14 +38,21 @@ export default function SignIn() {
 
   const submit = (event) => {
     event.preventDefault();
-    attempt(() => signInWithEmailAndPassword(auth, email.trim(), password));
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!ADMIN_EMAILS.has(normalizedEmail)) {
+      setError("This email is not authorized for U.Do admin access.");
+      return;
+    }
+
+    attempt(() => signInWithEmailAndPassword(auth, normalizedEmail, password));
   };
 
   return (
     <div className="gate">
       <form className="gate-card" onSubmit={submit}>
         <h1>U.Do operations</h1>
-        <p>Admin accounts only. Everyone else should use the app.</p>
+        <p>Authorized admin accounts only.</p>
 
         {error ? <p className="notice">{error}</p> : null}
 
@@ -71,16 +83,6 @@ export default function SignIn() {
         <button type="submit" className="button" disabled={busy}>
           {busy ? "Signing in…" : "Sign in"}
         </button>
-
-        <button
-          type="button"
-          className="button"
-          data-variant="quiet"
-          disabled={busy}
-          onClick={() => attempt(() => signInWithPopup(auth, googleProvider))}
-        >
-          Continue with Google
-        </button>
       </form>
     </div>
   );
@@ -95,8 +97,6 @@ function readableError(cause) {
       return "That email and password do not match an account.";
     case "auth/too-many-requests":
       return "Too many attempts. Wait a few minutes and try again.";
-    case "auth/popup-closed-by-user":
-      return "The Google window closed before sign-in finished.";
     default:
       return cause?.message || "Sign-in failed.";
   }
