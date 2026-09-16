@@ -1,11 +1,8 @@
-import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { EMAIL_POLICY, extractDomain, normalizeEmail } from "./emailPolicy.js";
+import { db } from "./firebaseAdmin.js";
 
-initializeApp();
-
-const db = getFirestore();
 const RATE_LIMIT_COLLECTION = "authRateLimits";
 
 const buildRateKeys = ({ ip = "unknown-ip", email = "", deviceId = "unknown-device" }) => {
@@ -103,3 +100,11 @@ export const authorizeAuthAttempt = onCall(async (request) => {
     normalizedEmail,
   };
 });
+
+// Admin console. Every callable below is gated on the `admin` custom claim and
+// reads through the Admin SDK, so nothing here widens what a normal account can
+// see. firebaseAdmin.js is the shared init both sides depend on.
+export { getAdminIdentity, setAdminClaim } from "./admin/claims.js";
+export { getAdminOverview } from "./admin/overview.js";
+export { listAdminUsers, findAdminUser, getAdminUserDetail } from "./admin/users.js";
+export { seedPlanLimits, backfillBilling } from "./admin/billing.js";

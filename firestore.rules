@@ -5,6 +5,17 @@ rules_version = '2';
 // Workspace data (tasks, planner, expenses, habits) stays private to its owner.
 // The friends feature never opens that up: it reads a separate, deliberately
 // small summary document that the owner publishes for themselves.
+//
+// The admin console adds a second axis. Operational records — billing,
+// subscriptions, payments, usage counters, activity, errors, webhooks, audit —
+// are readable by an account holding the `admin` custom claim, because the
+// dashboard streams them live and onSnapshot cannot run through a Function.
+// Private workspace content is deliberately NOT part of that: an admin reading
+// a person's account goes through a Cloud Function that returns counts and
+// status, never their tasks, expenses, friend messages or AI prompts.
+//
+// Every collection below is written only by the Admin SDK, which bypasses these
+// rules entirely. Client writes are refused across the board.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,6 +26,15 @@ service cloud.firestore {
 
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
+    }
+
+    /**
+     * Admin status lives in the ID token as a custom claim, which only the
+     * Admin SDK can set. There is no email allowlist and no Firestore flag a
+     * client could write to itself.
+     */
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
     }
 
     // The canonical username form, mirrored from services/friends.js. Any
@@ -54,7 +74,9 @@ service cloud.firestore {
     }
 
     // Private workspace: tasks, planner, expenses, habits and their logs.
-    // Nothing here is ever readable by another account, friend or not.
+    // Nothing here is ever readable by another account, friend or not — and
+    // that includes admins. Admin access to an account is mediated by
+    // getAdminUserDetail, which returns counts rather than content.
     match /users/{uid}/{document=**} {
       allow read, write: if isOwner(uid);
     }
@@ -165,6 +187,89 @@ service cloud.firestore {
     // these rules entirely. No client should ever reach it.
     match /authRateLimits/{document} {
       allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------------- billing
+
+    /**
+     * One record per account: which plan they are on and what their
+     * subscription is doing. The owner may read their own so the app can show
+     * a plan badge; only the server writes, so nobody can promote themselves
+     * to Pro from the console.
+     */
+    match /billing/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    /**
+     * Server-authoritative quota counters. Read by the owner so the app can
+     * show "12 of 30 used"; never client-writable, because a counter a user
+     * can reset is not a limit.
+     */
+    match /usageCounters/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    /**
+     * The published plan table. Any signed-in account may read it so the app
+     * can show what Free includes and what Pro adds. Written only by
+     * seedPlanLimits.
+     */
+    match /planLimits/{planId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Razorpay subscription and payment mirrors. Safe metadata only — no keys,
+    // no signatures, no raw webhook bodies are ever written into these.
+    match /subscriptions/{subscriptionId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // ------------------------------------------------------------ operational
+
+    // Pre-aggregated counters the Overview reads without scanning anything.
+    match /stats/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // The live feed on the Overview. Event type and target only, never the
+    // content of what a person wrote.
+    match /activityEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Function failures and critical errors. Stack traces are admin-only.
+    match /errorLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Razorpay webhook receipts: event id, type, status, retry count and
+    // timing. The signed payload itself is never mirrored here.
+    match /webhookEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    /**
+     * Append-only. Nothing in the codebase updates or deletes an entry, and
+     * rules refuse every client write, so the only way in is the Admin SDK
+     * writing a new document.
+     */
+    match /adminAuditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // Anything not matched above is closed.
