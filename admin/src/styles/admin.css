@@ -1,0 +1,484 @@
+/*
+ * U.Do operations console.
+ *
+ * The consumer app's calm black-and-white system, retuned for density: this is
+ * a surface someone reads numbers off, so figures get a mono face with tabular
+ * digits and the page carries hairline rules instead of card shadows. Status
+ * colour is desaturated to the point where it reads as weight rather than
+ * decoration — the only saturated thing on the page is the live dot.
+ */
+
+:root {
+  --ink: #101010;
+  --ink-soft: #3a3a38;
+  --mute: #75736e;
+  --paper: #ffffff;
+  --surface: #faf9f7;
+  --rule: #e6e5e2;
+  --rule-strong: #cfcdc8;
+
+  --brass: #8a6f3c;
+  --oxblood: #8c3b34;
+  --moss: #4a6150;
+
+  --sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --rail: 232px;
+  --gutter: 32px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+h1 {
+  font-size: 26px;
+}
+
+h2 {
+  font-size: 17px;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- shell */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  min-height: 100%;
+}
+
+.rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  padding: 28px 0 20px;
+  border-right: 1px solid var(--rule);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  overflow-y: auto;
+}
+
+.rail-head {
+  padding: 0 22px;
+}
+
+.rail-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.rail-sub {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--mute);
+}
+
+.rail-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.rail-link {
+  padding: 7px 22px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+}
+
+.rail-link:hover {
+  color: var(--ink);
+  background: rgba(16, 16, 16, 0.035);
+}
+
+.rail-link[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 500;
+  border-left-color: var(--ink);
+  background: rgba(16, 16, 16, 0.05);
+}
+
+.rail-link[data-pending="true"]::after {
+  content: "not built";
+  float: right;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--mute);
+  letter-spacing: 0.01em;
+}
+
+.rail-foot {
+  margin-top: auto;
+  padding: 0 22px;
+  font-size: 12.5px;
+  color: var(--mute);
+}
+
+.rail-foot code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  word-break: break-all;
+}
+
+.content {
+  padding: 34px var(--gutter) 64px;
+  max-width: 1080px;
+}
+
+.page-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+
+.page-note {
+  margin: 4px 0 0;
+  color: var(--mute);
+  max-width: 62ch;
+}
+
+/* ------------------------------------------------------------- figures */
+
+/*
+ * One bordered grid rather than a row of separate shadowed cards: the figures
+ * are a single reading, and the shared rules make them scan as a table.
+ */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.figure {
+  padding: 16px 18px 18px;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  min-width: 0;
+}
+
+.figure-label {
+  font-size: 12.5px;
+  color: var(--mute);
+}
+
+.figure-value {
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 27px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.figure-value[data-tone="warn"] {
+  color: var(--brass);
+}
+
+.figure-value[data-tone="bad"] {
+  color: var(--oxblood);
+}
+
+.figure-unsupported {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--mute);
+  max-width: 28ch;
+}
+
+.figure-meta {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--mute);
+}
+
+/* --------------------------------------------------------------- panels */
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 22px;
+  margin-top: 30px;
+  align-items: start;
+}
+
+.panel {
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--paper);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.panel-body {
+  padding: 4px 0;
+}
+
+.panel-pad {
+  padding: 16px;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 16px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--rule);
+}
+
+.row-main {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-id {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.row-time {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--mute);
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 22px 16px;
+  color: var(--mute);
+  font-size: 13.5px;
+}
+
+.empty strong {
+  display: block;
+  color: var(--ink-soft);
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+
+/* --------------------------------------------------------------- status */
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--mute);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--moss);
+}
+
+.live[data-state="live"] .live-dot {
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+.live[data-state="reconnecting"] .live-dot {
+  background: var(--brass);
+}
+
+.live[data-state="offline"] .live-dot {
+  background: var(--oxblood);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live[data-state="live"] .live-dot {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------- forms */
+
+.button {
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 16px;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--ink-soft);
+  border-color: var(--ink-soft);
+}
+
+.button[data-variant="quiet"] {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--rule-strong);
+}
+
+.button[data-variant="quiet"]:hover {
+  background: var(--surface);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.field {
+  display: block;
+  width: 100%;
+  font: inherit;
+  padding: 9px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.notice {
+  padding: 11px 14px;
+  border-left: 2px solid var(--oxblood);
+  background: var(--surface);
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  border-radius: 0 3px 3px 0;
+}
+
+/* ---------------------------------------------------------------- login */
+
+.gate {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.gate-card {
+  width: 100%;
+  max-width: 372px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gate-card h1 {
+  font-size: 22px;
+}
+
+.gate-card p {
+  margin: 0;
+  color: var(--mute);
+  font-size: 13.5px;
+}
+
+/* ------------------------------------------------------------ responsive */
+
+@media (max-width: 880px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .rail {
+    position: static;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .rail-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 0 14px;
+  }
+
+  .rail-link {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    padding: 6px 8px;
+  }
+
+  .rail-link[aria-current="page"] {
+    border-left-color: transparent;
+    border-bottom-color: var(--ink);
+  }
+
+  .rail-link[data-pending="true"]::after {
+    content: none;
+  }
+
+  .columns {
+    grid-template-columns: 1fr;
+  }
+
+  .content {
+    padding: 22px 18px 48px;
+  }
+}
