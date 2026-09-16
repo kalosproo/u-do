@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { signInWithPopup, signOut } from "firebase/auth";
+import { getRedirectResult, signInWithRedirect, signOut } from "firebase/auth";
 
 import { auth, googleProvider } from "../services/firebase.js";
 import { useAdminAuth } from "../hooks/useAdminAuth.js";
@@ -11,14 +11,40 @@ const ADMIN_EMAILS = new Set([
 ]);
 
 /**
- * Admin sign-in uses Google only. The email allowlist is an entry-point gate;
- * actual authorization remains the Firebase custom admin claim and the
- * server-side rules/callables.
+ * Admin sign-in uses Google redirect only. The email allowlist is an
+ * entry-point gate; actual authorization remains the Firebase custom admin
+ * claim and the server-side rules/callables.
  */
 export default function SignIn() {
   const { status } = useAdminAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const finishRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (!result?.user || cancelled) return;
+
+        const email = result.user.email?.trim().toLowerCase();
+        if (!email || !ADMIN_EMAILS.has(email)) {
+          await signOut(auth);
+          if (!cancelled) {
+            setError("This Google account is not authorized for U.Do admin access.");
+          }
+        }
+      } catch (cause) {
+        if (!cancelled) setError(readableError(cause));
+      }
+    };
+
+    finishRedirect();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (status === "ready") return <Navigate to="/" replace />;
 
@@ -27,17 +53,10 @@ export default function SignIn() {
     setError(null);
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const email = result.user.email?.trim().toLowerCase();
-
-      if (!email || !ADMIN_EMAILS.has(email)) {
-        await signOut(auth);
-        setError("This Google account is not authorized for U.Do admin access.");
-      }
+      await signInWithRedirect(auth, googleProvider);
     } catch (cause) {
-      setError(readableError(cause));
-    } finally {
       setBusy(false);
+      setError(readableError(cause));
     }
   };
 
@@ -55,7 +74,7 @@ export default function SignIn() {
           disabled={busy}
           onClick={signIn}
         >
-          {busy ? "Signing in…" : "Continue with Google"}
+          {busy ? "Redirecting to Google…" : "Continue with Google"}
         </button>
       </div>
     </div>
@@ -64,10 +83,8 @@ export default function SignIn() {
 
 function readableError(cause) {
   switch (cause?.code) {
-    case "auth/popup-closed-by-user":
-      return "The Google sign-in window was closed before sign-in finished.";
-    case "auth/popup-blocked":
-      return "Your browser blocked the Google sign-in popup. Allow popups and try again.";
+    case "auth/unauthorized-domain":
+      return "This admin domain is not authorized in Firebase Authentication. Add the deployed admin domain to Authorized domains in Firebase Console.";
     case "auth/too-many-requests":
       return "Too many attempts. Wait a few minutes and try again.";
     default:
