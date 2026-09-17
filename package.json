@@ -13,7 +13,6 @@
     "animejs": "^4.5.0",
     "axios": "^1.13.6",
     "firebase": "^12.7.0",
-    "firebase-admin": "^14.4.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0",
