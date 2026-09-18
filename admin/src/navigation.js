@@ -8,8 +8,8 @@
  */
 export const SECTIONS = [
   { path: "/", label: "Overview", built: true, end: true },
-  { path: "/users", label: "Users", phase: 2 },
-  { path: "/activity", label: "Activity", phase: 2 },
+  { path: "/users", label: "Users", built: true },
+  { path: "/activity", label: "Activity", built: true },
   { path: "/subscriptions", label: "Subscriptions", phase: 3 },
   { path: "/payments", label: "Payments", phase: 3 },
   { path: "/revenue", label: "Revenue", phase: 3 },
