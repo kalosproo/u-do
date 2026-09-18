@@ -108,3 +108,9 @@ export { getAdminIdentity, setAdminClaim } from "./admin/claims.js";
 export { getAdminOverview } from "./admin/overview.js";
 export { listAdminUsers, findAdminUser, getAdminUserDetail } from "./admin/users.js";
 export { seedPlanLimits, backfillBilling } from "./admin/billing.js";
+
+// Reminders. The scheduled one derives each person's local time from the IANA
+// zone they stored, so it cannot drift across a DST change; the two triggers
+// fire on the event itself and ignore the clock.
+export { sendScheduledReminders } from "./notifications/digest.js";
+export { onFriendRequest, onFriendAdded } from "./notifications/friends.js";

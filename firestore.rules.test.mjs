@@ -174,6 +174,19 @@ await t("nobody can promote themselves in billing", () =>
 await t("nobody can reset their own usage counters", () =>
   assertFails(setDoc(doc(alice,"usageCounters",ALICE),{uid:ALICE,counters:{}})));
 
+console.log("\n=== push tokens are owner-only, admins included ===");
+await seed();
+await t("alice stores her own push subscription", () =>
+  assertSucceeds(setDoc(doc(alice,"pushSubscriptions",ALICE),{uid:ALICE,enabled:true,tokens:{tok1:true}})));
+await t("alice reads her own subscription", () => assertSucceeds(getDoc(doc(alice,"pushSubscriptions",ALICE))));
+await t("mallory CANNOT read alice's push tokens", () => assertFails(getDoc(doc(mallory,"pushSubscriptions",ALICE))));
+await t("an admin CANNOT read push tokens either", () => assertFails(getDoc(doc(admin,"pushSubscriptions",ALICE))));
+await t("mallory CANNOT write alice's subscription", () =>
+  assertFails(setDoc(doc(mallory,"pushSubscriptions",ALICE),{uid:ALICE,enabled:true})));
+await t("a record whose uid lies is refused", () =>
+  assertFails(setDoc(doc(alice,"pushSubscriptions",ALICE),{uid:BOB,enabled:true})));
+await t("alice can delete her own subscription", () => assertSucceeds(deleteDoc(doc(alice,"pushSubscriptions",ALICE))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

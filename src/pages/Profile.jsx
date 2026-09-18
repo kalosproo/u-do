@@ -10,6 +10,7 @@ import {
   importWorkspace,
   inspectBackup,
 } from "../services/workspace";
+import NotificationSettings from "../components/NotificationSettings";
 
 const IMPORT_MODE_OPTIONS = [
   ["merge", "Keep newer", "Existing entries stay if they were changed more recently than the backup."],
@@ -165,6 +166,8 @@ function Profile() {
           </div>
         </div>
       </article>
+
+      <NotificationSettings />
 
       <article className="panel profile-card">
         <div className="panel-head">

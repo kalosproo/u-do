@@ -3191,3 +3191,75 @@ h3, .panel-title { letter-spacing: -0.013em; }
     padding: var(--s-4);
   }
 }
+
+/* ------------------------------------------------------------- reminders */
+
+.push-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+}
+
+.push-time {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
+
+.push-time input[type="time"] {
+  font: inherit;
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  padding: 8px var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.push-types {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+/* The box aligns to the first line, not the middle of a wrapped two-line
+   label — the same reason .consent-check nudges its own. */
+.push-type {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  cursor: pointer;
+}
+
+.push-type input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.push-type > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.push-type strong {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.push-type .panel-note {
+  margin: 0;
+  font-size: var(--t-xs);
+}

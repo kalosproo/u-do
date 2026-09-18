@@ -211,6 +211,26 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    /**
+     * Push tokens and reminder preferences.
+     *
+     * Owner-only, and deliberately not readable by admins: a push token is a
+     * device identifier, the console has no use for one, and the privacy
+     * policy says the token is used for nothing but the reminders the person
+     * asked for. Keeping it out of every other reader is how that stays true.
+     *
+     * The server prunes dead tokens through the Admin SDK, which bypasses
+     * these rules.
+     */
+    match /pushSubscriptions/{uid} {
+      allow read: if isOwner(uid);
+
+      allow create, update: if isOwner(uid) && request.resource.data.uid == uid;
+
+      // Turning reminders off clears the record entirely if the client wants.
+      allow delete: if isOwner(uid);
+    }
+
     // ---------------------------------------------------------------- billing
 
     /**
