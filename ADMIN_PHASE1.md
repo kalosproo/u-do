@@ -121,16 +121,20 @@ initialisation-order bug above, a `setState`-inside-effect cascade in
 `useLiveCollection`, and two fast-refresh boundary violations (`SECTIONS` and the
 auth context now live in their own modules).
 
-Firestore rules were **not** executed against the emulator here. Before relying
-on them, run the existing suite plus new admin cases:
+Firestore rules **have** now been executed against the emulator — 69 cases, all
+passing, including the admin ones this section previously listed as outstanding:
 
 ```bash
-firebase emulators:exec --only firestore "node --test firestore.rules.test.mjs"
+npm i --no-save @firebase/rules-unit-testing firebase-tools
+npx firebase emulators:exec --only firestore --project u-do-rules-test \
+  "node firestore.rules.test.mjs"
 ```
 
-The cases worth adding: a non-admin reading `billing/{someoneElse}` is denied; an
-admin reading `users/{uid}/tasks` is denied; any client write to `adminAuditLogs`
-is denied.
+What the admin cases establish: a non-admin cannot read someone else's
+`billing`; an admin **cannot** read `users/{uid}/habits` or a person's shared
+summary; no client, admin included, can write `adminAuditLogs`; and nobody can
+promote themselves in `billing` or reset their own `usageCounters`. The split
+described above is therefore enforced, not merely intended.
 
 ## The fix pass
 

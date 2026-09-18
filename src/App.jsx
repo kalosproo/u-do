@@ -12,6 +12,7 @@ const Tasks = lazy(() => import("./pages/Tasks"));
 const Habits = lazy(() => import("./pages/Habits"));
 const Friends = lazy(() => import("./pages/Friends"));
 const Profile = lazy(() => import("./pages/Profile"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
@@ -20,6 +21,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import QuickCapture from "./components/QuickCapture";
 import UdoBackground from "./components/UdoBackground";
 import CommandPalette from "./components/CommandPalette";
+import ConsentGate from "./components/ConsentGate";
 import KeyboardShortcuts from "./components/KeyboardShortcuts";
 
 /** The signed-in chrome. Login sits outside it, on its own full-page canvas. */
@@ -72,6 +74,10 @@ function AppRoutes() {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/habits" element={<Habits />} />
         <Route path="/friends" element={<Friends />} />
+
+        {/* Readable signed out, and readable while the consent prompt is up:
+            someone deciding whether to accept has to be able to read it. */}
+        <Route path="/privacy" element={<Privacy />} />
 
         {/* Nothing to show a guest: every control on it needs an account. */}
         <Route
@@ -132,6 +138,10 @@ function App() {
       <div className="app-layer">
         <AppRoutes />
       </div>
+
+      {/* Outside the routes so it covers every page, and portalled to the body
+          so it sits above the background layer. */}
+      <ConsentGate />
     </BrowserRouter>
   );
 }

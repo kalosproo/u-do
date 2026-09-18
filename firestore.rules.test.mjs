@@ -23,6 +23,10 @@ const alice = env.authenticatedContext(ALICE).firestore();
 const bob = env.authenticatedContext(BOB).firestore();
 const mallory = env.authenticatedContext(MALLORY).firestore();
 const anon = env.unauthenticatedContext().firestore();
+// The admin console's identity is a custom claim, so the rules can only be
+// tested with one attached. ADMIN_PHASE1.md flagged these cases as worth
+// adding and never ran them.
+const admin = env.authenticatedContext("admin_uid", { admin: true, adminRole: "owner" }).firestore();
 
 let pass = 0, fail = 0;
 const t = async (name, fn) => {
@@ -128,6 +132,47 @@ console.log("\n=== rate limit collection is closed to clients ===");
 await t("client CANNOT read authRateLimits", () => assertFails(getDoc(doc(alice,"authRateLimits","ip:1.2.3.4"))));
 await t("client CANNOT write authRateLimits", () => assertFails(setDoc(doc(alice,"authRateLimits","ip:1.2.3.4"),{count:0})));
 await t("unknown collections are closed", () => assertFails(setDoc(doc(alice,"randomStuff","x"),{a:1})));
+
+console.log("\n=== consent records are per-account and permanent ===");
+await seed();
+await t("alice records her own consent", () =>
+  assertSucceeds(setDoc(doc(alice,"consents",ALICE),{uid:ALICE,privacyVersion:1,acceptedAt:new Date()})));
+await t("alice reads her own consent", () => assertSucceeds(getDoc(doc(alice,"consents",ALICE))));
+await t("mallory CANNOT record consent as alice", () =>
+  assertFails(setDoc(doc(mallory,"consents",ALICE),{uid:ALICE,privacyVersion:1})));
+await t("alice CANNOT write a record whose uid lies", () =>
+  assertFails(setDoc(doc(alice,"consents",ALICE),{uid:BOB,privacyVersion:1})));
+await t("a non-integer version is refused", () =>
+  assertFails(setDoc(doc(alice,"consents",ALICE),{uid:ALICE,privacyVersion:"one"})));
+await t("mallory CANNOT read alice's consent", () => assertFails(getDoc(doc(mallory,"consents",ALICE))));
+await t("an admin CAN read a consent record", () => assertSucceeds(getDoc(doc(admin,"consents",ALICE))));
+await t("nobody can delete a consent record", () => assertFails(deleteDoc(doc(alice,"consents",ALICE))));
+await t("an anonymous visitor CANNOT write one", () =>
+  assertFails(setDoc(doc(anon,"consents",ALICE),{uid:ALICE,privacyVersion:1})));
+
+console.log("\n=== the admin claim opens operations, never content ===");
+await seed();
+await env.withSecurityRulesDisabled(async (ctx) => {
+  const d = ctx.firestore();
+  await setDoc(doc(d,"billing",ALICE), { uid:ALICE, planId:"free" });
+  await setDoc(doc(d,"adminAuditLogs","log1"), { action:"admin.grant" });
+  await setDoc(doc(d,"activityEvents","ev1"), { type:"task.completed", uid:ALICE });
+  await setDoc(doc(d,"usageCounters",ALICE), { uid:ALICE, counters:{} });
+});
+await t("an admin reads billing", () => assertSucceeds(getDoc(doc(admin,"billing",ALICE))));
+await t("a non-admin CANNOT read someone else's billing", () => assertFails(getDoc(doc(mallory,"billing",ALICE))));
+await t("the owner reads their own billing", () => assertSucceeds(getDoc(doc(alice,"billing",ALICE))));
+await t("an admin CANNOT read a person's habits", () => assertFails(getDoc(doc(admin,"users",ALICE,"habits","h1"))));
+await t("an admin CANNOT read a person's shared summary", () => assertFails(getDoc(doc(admin,"profiles",ALICE,"shared","summary"))));
+await t("an admin reads activityEvents", () => assertSucceeds(getDoc(doc(admin,"activityEvents","ev1"))));
+await t("a non-admin CANNOT read activityEvents", () => assertFails(getDoc(doc(mallory,"activityEvents","ev1"))));
+await t("an admin reads the audit log", () => assertSucceeds(getDoc(doc(admin,"adminAuditLogs","log1"))));
+await t("even an admin CANNOT write the audit log", () =>
+  assertFails(setDoc(doc(admin,"adminAuditLogs","log2"),{action:"forged"})));
+await t("nobody can promote themselves in billing", () =>
+  assertFails(setDoc(doc(alice,"billing",ALICE),{uid:ALICE,planId:"pro"})));
+await t("nobody can reset their own usage counters", () =>
+  assertFails(setDoc(doc(alice,"usageCounters",ALICE),{uid:ALICE,counters:{}})));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
