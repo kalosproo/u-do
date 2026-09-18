@@ -7,6 +7,8 @@ import RequireAdmin from "./components/RequireAdmin.jsx";
 
 const SignIn = lazy(() => import("./pages/SignIn.jsx"));
 const Overview = lazy(() => import("./pages/Overview.jsx"));
+const Users = lazy(() => import("./pages/Users.jsx"));
+const Activity = lazy(() => import("./pages/Activity.jsx"));
 const NotInstrumented = lazy(() => import("./pages/NotInstrumented.jsx"));
 
 const pending = SECTIONS.filter((section) => !section.built);
@@ -26,6 +28,8 @@ export default function App() {
             }
           >
             <Route index element={<Overview />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/activity" element={<Activity />} />
 
             {/* Every section is routable from the start. The ones without a
                 screen say so plainly rather than 404ing. */}

@@ -4,9 +4,10 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
 } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
 import { auth, googleProvider } from "../services/firebase";
+import { recordConsent } from "../services/consent";
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -57,12 +58,18 @@ function Login() {
   const [error, setError] = useState("");
   const [isSignup, setIsSignup] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   const submit = async () => {
     const validationError = validate(email, password);
 
     if (validationError) {
       setError(validationError);
+      return;
+    }
+
+    if (isSignup && !agreed) {
+      setError("Please read and accept the Privacy Policy to create an account.");
       return;
     }
 
@@ -73,7 +80,10 @@ function Login() {
       const formattedEmail = normalizeEmail(email);
 
       if (isSignup) {
-        await createUserWithEmailAndPassword(auth, formattedEmail, password);
+        const created = await createUserWithEmailAndPassword(auth, formattedEmail, password);
+        // Recorded after the account exists, because the record is keyed by uid
+        // and the rules only accept it from the account it describes.
+        await recordConsent(created.user.uid, "signup");
       } else {
         await signInWithEmailAndPassword(auth, formattedEmail, password);
       }
@@ -87,11 +97,23 @@ function Login() {
   };
 
   const googleLogin = async () => {
+    if (isSignup && !agreed) {
+      setError("Please read and accept the Privacy Policy to create an account.");
+      return;
+    }
+
     setBusy(true);
     setError("");
 
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+
+      // Google is a signup path as much as a login one, and there is no flag on
+      // the result that reliably separates the two across providers. Recording
+      // on the signup tab only is enough: an existing account that skips this
+      // is caught by the consent gate on its next load.
+      if (isSignup) await recordConsent(result.user.uid, "signup-google");
+
       navigate("/", { replace: true });
     } catch (authError) {
       setError(describeAuthError(authError));
@@ -103,6 +125,7 @@ function Login() {
   const switchMode = (signup) => {
     setIsSignup(signup);
     setError("");
+    setAgreed(false);
   };
 
   return (
@@ -163,9 +186,31 @@ function Login() {
           />
         </label>
 
+        {isSignup ? (
+          <label className="consent-check">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+            />
+            <span>
+              I have read and accept the{" "}
+              <Link to="/privacy" target="_blank" rel="noreferrer">
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+        ) : null}
+
         {error ? <p className="login-error">{error}</p> : null}
 
-        <button type="button" className="btn btn-primary login-primary" onClick={submit} disabled={busy}>
+        <button
+          type="button"
+          className="btn btn-primary login-primary"
+          onClick={submit}
+          disabled={busy || (isSignup && !agreed)}
+        >
           {busy ? "Please wait…" : isSignup ? "Create Account" : "Login"}
         </button>
       </div>

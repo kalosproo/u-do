@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/udo-logo.svg" />
-    <link rel="apple-touch-icon" href="/udo-logo.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- iOS ignores the manifest. Installing to the Home Screen is also the
+         only way Safari will deliver a web push notification at all, which is
+         why the app asks for it rather than leaving a dead toggle. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="U.Do" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google-site-verification" content="7QrmzGvyityC0O4C0i2HuEnluq0wXCAYbFUgBh70S1ys" />
     <meta name="description" content="U.Do is a calm personal command center for tasks, habits, planning, finance, and friends." />

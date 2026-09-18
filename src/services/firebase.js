@@ -12,7 +12,9 @@ const firebaseConfig = {
   appId: "1:368334460810:web:7e7f32bb47c1f6a2d81a73",
 };
 
-const app = initializeApp(firebaseConfig);
+// Exported so services/push.js can hand it to getMessaging without
+// initialising a second app.
+export const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();

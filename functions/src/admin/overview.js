@@ -39,6 +39,48 @@ const supported = (value) => ({ supported: true, value });
 const unsupported = (reason) => ({ supported: false, value: null, reason });
 
 /**
+ * Turns a thrown query into something an operator can act on.
+ *
+ * A missing composite index is by far the most common of these and the only
+ * one with a one-line fix, so it says the command rather than the error.
+ */
+const reasonFor = (error, label) => {
+  const code = error?.code;
+  const message = String(error?.message || "");
+
+  if (code === 9 || code === "failed-precondition") {
+    if (/index/i.test(message)) {
+      return "Needs a Firestore index. Run: firebase deploy --only firestore:indexes";
+    }
+    return `Could not compute ${label}: ${message}`;
+  }
+
+  if (code === 7 || code === "permission-denied") {
+    return `The server was refused access while computing ${label}.`;
+  }
+
+  return `Could not compute ${label}.`;
+};
+
+/**
+ * Runs one figure's query in isolation.
+ *
+ * Every figure used to share a single Promise.all, which meant one rejected
+ * query — a collection with no index, a collection that does not exist yet —
+ * took down all nine and left the console reading "Not loaded" across the
+ * board. The supported/unsupported shape was built to carry exactly this, so
+ * each figure now fails on its own and the rest of the page still reports.
+ */
+const attempt = async (label, run) => {
+  try {
+    return supported(await run());
+  } catch (error) {
+    console.error(`getAdminOverview: ${label} failed`, error);
+    return unsupported(reasonFor(error, label));
+  }
+};
+
+/**
  * Overview figures.
  *
  * Every number here is a Firestore count() aggregation, which is billed and
@@ -73,75 +115,104 @@ export const getAdminOverview = onCall(async (request) => {
     pendingSubscriptions,
     haltedSubscriptions,
     failedPayments,
-    proPlanDoc,
-    growthCounts,
+    proPlan,
+    growth,
   ] = await Promise.all([
-    countOf(billing),
-    countOf(billing.where("createdAt", ">=", todayStart)),
-    countOf(billing.where("planId", "==", PLAN_IDS.FREE)),
-    countOf(billing.where("planId", "==", PLAN_IDS.PRO)),
-    countOf(db.collection("usageCounters").where("lastActiveAt", ">=", activeSince)),
-    countOf(db.collection("subscriptions").where("status", "==", "active")),
-    countOf(db.collection("subscriptions").where("status", "==", "pending")),
-    countOf(db.collection("subscriptions").where("status", "==", "halted")),
-    countOf(
-      db.collection("payments")
-        .where("status", "==", "failed")
-        .where("createdAt", ">=", failedSince),
+    attempt("total users", () => countOf(billing)),
+    attempt("new users today", () => countOf(billing.where("createdAt", ">=", todayStart))),
+    attempt("Free users", () => countOf(billing.where("planId", "==", PLAN_IDS.FREE))),
+    attempt("Pro users", () => countOf(billing.where("planId", "==", PLAN_IDS.PRO))),
+    attempt("active users", () =>
+      countOf(db.collection("usageCounters").where("lastActiveAt", ">=", activeSince)),
     ),
-    db.collection("planLimits").doc(PLAN_IDS.PRO).get(),
-    Promise.all(
-      growthWindows.map((window) =>
-        countOf(
-          billing
-            .where("createdAt", ">=", window.from)
-            .where("createdAt", "<", window.to),
-        ),
+    attempt("active subscriptions", () =>
+      countOf(db.collection("subscriptions").where("status", "==", "active")),
+    ),
+    attempt("pending subscriptions", () =>
+      countOf(db.collection("subscriptions").where("status", "==", "pending")),
+    ),
+    attempt("halted subscriptions", () =>
+      countOf(db.collection("subscriptions").where("status", "==", "halted")),
+    ),
+    attempt("failed payments", () =>
+      countOf(
+        db.collection("payments")
+          .where("status", "==", "failed")
+          .where("createdAt", ">=", failedSince),
       ),
     ),
+    attempt("the Pro plan", async () => {
+      const doc = await db.collection("planLimits").doc(PLAN_IDS.PRO).get();
+      return doc.exists ? doc.data() : null;
+    }),
+    attempt("signup growth", async () => {
+      const counts = await Promise.all(
+        growthWindows.map((window) =>
+          countOf(
+            billing
+              .where("createdAt", ">=", window.from)
+              .where("createdAt", "<", window.to),
+          ),
+        ),
+      );
+      return growthWindows.map((window, index) => ({
+        date: window.date,
+        signups: counts[index],
+      }));
+    }),
   ]);
-
-  const proPrice = proPlanDoc.exists ? proPlanDoc.data().priceMinor : null;
-
-  // MRR is only honest once Pro has a price. Until then it stays unsupported
-  // rather than silently reporting zero revenue.
-  const mrr =
-    typeof proPrice === "number"
-      ? supported({
-          amountMinor: activeSubscriptions * proPrice,
-          currency: proPlanDoc.data().currency || "INR",
-        })
-      : unsupported("Pro has no price set. Add one at planLimits/pro.priceMinor.");
-
-  const conversion =
-    totalUsers > 0
-      ? supported(Number(((proUsers / totalUsers) * 100).toFixed(2)))
-      : supported(0);
 
   return {
     generatedAt: Date.now(),
     users: {
-      total: supported(totalUsers),
-      activeLast7Days: supported(activeUsers),
-      newToday: supported(newUsersToday),
-      free: supported(freeUsers),
-      pro: supported(proUsers),
+      total: totalUsers,
+      activeLast7Days: activeUsers,
+      newToday: newUsersToday,
+      free: freeUsers,
+      pro: proUsers,
     },
     subscriptions: {
-      active: supported(activeSubscriptions),
-      pending: supported(pendingSubscriptions),
-      halted: supported(haltedSubscriptions),
+      active: activeSubscriptions,
+      pending: pendingSubscriptions,
+      halted: haltedSubscriptions,
     },
     payments: {
-      failedLast24h: supported(failedPayments),
+      failedLast24h: failedPayments,
     },
-    revenue: { mrr },
-    conversionPercent: conversion,
-    growth: supported(
-      growthWindows.map((window, index) => ({
-        date: window.date,
-        signups: growthCounts[index],
-      })),
-    ),
+    revenue: { mrr: deriveMrr(activeSubscriptions, proPlan) },
+    conversionPercent: deriveConversion(proUsers, totalUsers),
+    growth,
   };
 });
+
+/**
+ * MRR is only honest once Pro has a price and the subscription count is real.
+ * Either one missing leaves it unsupported rather than reporting zero revenue,
+ * which reads as "we earned nothing" instead of "we cannot tell yet".
+ */
+function deriveMrr(activeSubscriptions, proPlan) {
+  if (!activeSubscriptions.supported) {
+    return unsupported("Active subscriptions could not be counted, so MRR cannot be derived.");
+  }
+  if (!proPlan.supported) return unsupported(proPlan.reason);
+
+  const price = proPlan.value?.priceMinor;
+
+  if (typeof price !== "number") {
+    return unsupported("Pro has no price set. Add one at planLimits/pro.priceMinor.");
+  }
+
+  return supported({
+    amountMinor: activeSubscriptions.value * price,
+    currency: proPlan.value.currency || "INR",
+  });
+}
+
+function deriveConversion(proUsers, totalUsers) {
+  if (!proUsers.supported || !totalUsers.supported) {
+    return unsupported("Needs both the Pro and total user counts.");
+  }
+  if (totalUsers.value === 0) return supported(0);
+
+  return supported(Number(((proUsers.value / totalUsers.value) * 100).toFixed(2)));
+}

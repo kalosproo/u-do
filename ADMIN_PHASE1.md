@@ -33,11 +33,16 @@ unmounted until you choose to place it.
 
 ## Setup, in order
 
-**1. Deploy rules and Functions**
+**1. Deploy rules, indexes and Functions**
 
 ```bash
-firebase deploy --only firestore:rules,functions
+firebase deploy --only firestore:rules,firestore:indexes,functions
 ```
+
+The indexes are not optional. Three queries pair an equality filter with a
+range or an order on a different field, which Firestore will not serve without
+a composite index: failed payments in the last 24h, and a user's subscriptions
+and payments by date. `firestore.indexes.json` defines them.
 
 **2. Make yourself owner** (once, from your machine)
 
@@ -116,20 +121,87 @@ initialisation-order bug above, a `setState`-inside-effect cascade in
 `useLiveCollection`, and two fast-refresh boundary violations (`SECTIONS` and the
 auth context now live in their own modules).
 
-Firestore rules were **not** executed against the emulator here. Before relying
-on them, run the existing suite plus new admin cases:
+Firestore rules **have** now been executed against the emulator — 69 cases, all
+passing, including the admin ones this section previously listed as outstanding:
 
 ```bash
-firebase emulators:exec --only firestore "node --test firestore.rules.test.mjs"
+npm i --no-save @firebase/rules-unit-testing firebase-tools
+npx firebase emulators:exec --only firestore --project u-do-rules-test \
+  "node firestore.rules.test.mjs"
 ```
 
-The cases worth adding: a non-admin reading `billing/{someoneElse}` is denied; an
-admin reading `users/{uid}/tasks` is denied; any client write to `adminAuditLogs`
-is denied.
+What the admin cases establish: a non-admin cannot read someone else's
+`billing`; an admin **cannot** read `users/{uid}/habits` or a person's shared
+summary; no client, admin included, can write `adminAuditLogs`; and nobody can
+promote themselves in `billing` or reset their own `usageCounters`. The split
+described above is therefore enforced, not merely intended.
+
+## The fix pass
+
+Five things were wrong with Phase 1 as merged. Each is described by what broke
+rather than by what changed, because the reasoning is the part worth keeping.
+
+**Sign-in could not complete.** `signInWithRedirect` returns the credential
+through the Firebase `authDomain` — `u-do-0.firebaseapp.com` — which is a
+different site from wherever this console is deployed. Browsers that partition
+third-party storage drop that handoff, so `getRedirectResult` resolved to null
+and the app returned to the sign-in screen with nothing to show for the round
+trip, and no error. It is now `signInWithPopup`, which keeps the credential in a
+window this origin opened — the same call the consumer app has always used
+against the same project. Redirect is kept as a fallback for the one case a
+popup cannot serve: `auth/popup-blocked` or a webview with no popup support.
+Closing the popup is treated as a decision, not a failure, so it raises no
+error. `auth/unauthorized-domain` now names the host and the Console page that
+fixes it, because that is the error a fresh deployment actually hits.
+
+**One failed query took down all nine figures.** `getAdminOverview` computed
+every figure inside a single `Promise.all`, so a collection without an index —
+or one that does not exist yet — rejected the whole call and the console read
+"Not loaded" across the board. Each figure is now attempted on its own and
+carries its own `supported`/`unsupported` verdict, which is what that shape was
+built for. A missing index reports the deploy command rather than the raw
+error.
+
+**Three queries had no index.** There was no `firestore.indexes.json` at all,
+and `firebase.json` did not reference one, so `firebase deploy --only firestore`
+shipped rules and nothing else. Four composite indexes are now defined — the
+three above plus the Activity screen's type filter.
+
+**A missing env var rendered a white page.** This is a separate Vercel project
+from the consumer app, so it needs its own copy of all six `VITE_FIREBASE_*`
+values, and `initializeApp` with an undefined `apiKey` throws while the module
+is still evaluating — before React mounts. The config is now checked first, the
+app is left uninitialised when it is incomplete, and the screen names the
+variables that are missing and where to set them.
+
+**The console looked like a different product.** It was light-only and carried
+three actual colours — brass, oxblood, moss — against a consumer app that is
+strictly monochrome with a dark default. `admin/src/styles/tokens.css` now
+mirrors the consumer ramp exactly, dark is the default with a remembered light
+toggle, and status is carried by tone and shape: the connection dot goes from
+filled to hollow rather than from green to red, which also survives a reader who
+cannot tell those two apart. The ramp is a deliberate copy rather than an
+import, because `admin/` has to build from `admin/` alone for Vercel's Root
+Directory to work — if the consumer ramp changes, change this one with it.
+
+**Also landed:** Users (paged list, search by email or UID, detail) and Activity
+(live feed, grouped by day, filterable by type) — the callables already existed,
+so these were front-end only. `VITE_USE_EMULATORS` now does something; it was
+documented in `.env.example` and honoured nowhere.
+
+## Checks run on the fix pass
+
+43 assertions against the real components in Chromium, with only the Firebase
+SDK stubbed, covering: popup is used and redirect is not; a blocked popup falls
+back; a dismissed popup raises nothing; an off-list account is signed out; a
+missing claim hits the denied gate; nine figures render; a partly-failed
+overview shows seven numbers and two reasons; the user list, search and detail;
+the activity feed and its filter; the theme toggle persisting across a reload;
+zero hue in either theme across three screens; and no horizontal overflow at
+390px.
 
 ## Not done, by phase
 
-- **2** — Users list and detail screens, Activity feed. Callables already exist.
 - **3** — Subscriptions, Payments, Revenue, Usage screens; Razorpay webhook
   handler writing `subscriptions`, `payments`, `webhookEvents`.
 - **4** — Errors, Webhooks, Limits, Audit screens.

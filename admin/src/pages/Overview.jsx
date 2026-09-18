@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { collection, limit, orderBy, query } from "firebase/firestore";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
@@ -7,6 +7,13 @@ import { db } from "../services/firebase.js";
 import { getAdminOverview } from "../services/adminApi.js";
 import { useConnectionState } from "../hooks/useConnectionState.js";
 import { useLiveCollection } from "../hooks/useLiveCollection.js";
+import {
+  formatCount,
+  formatMoney,
+  readableError,
+  shortId,
+  timeAgo,
+} from "../utils/format.js";
 
 /**
  * Two kinds of data meet here.
@@ -17,6 +24,9 @@ import { useLiveCollection } from "../hooks/useLiveCollection.js";
  *
  * The three streams below them are live Firestore listeners, which is what
  * makes this a console rather than a report.
+ *
+ * Each figure carries its own supported/unsupported verdict, so a query the
+ * server could not run costs one tile rather than the page.
  */
 export default function Overview() {
   const [metrics, setMetrics] = useState(null);
@@ -42,16 +52,24 @@ export default function Overview() {
   const activity = useLiveCollection(activityQuery);
   const alerts = useLiveCollection(alertsQuery);
 
-  const load = async () => {
+  const settle = useCallback(
+    (promise) =>
+      promise
+        .then((data) => {
+          setMetrics(data);
+          setLoadError(null);
+        })
+        .catch((error) => {
+          setLoadError(readableError(error, "Could not load overview figures."));
+        })
+        .finally(() => setRefreshing(false)),
+    [],
+  );
+
+  // Click handler, so setting state up front is fine here.
+  const refresh = () => {
     setRefreshing(true);
-    try {
-      setMetrics(await getAdminOverview());
-      setLoadError(null);
-    } catch (error) {
-      setLoadError(error?.message || "Could not load overview figures.");
-    } finally {
-      setRefreshing(false);
-    }
+    settle(getAdminOverview());
   };
 
   useEffect(() => {
@@ -59,10 +77,13 @@ export default function Overview() {
 
     getAdminOverview()
       .then((data) => {
-        if (!cancelled) setMetrics(data);
+        if (!cancelled) {
+          setMetrics(data);
+          setLoadError(null);
+        }
       })
       .catch((error) => {
-        if (!cancelled) setLoadError(error?.message || "Could not load overview figures.");
+        if (!cancelled) setLoadError(readableError(error, "Could not load overview figures."));
       })
       .finally(() => {
         if (!cancelled) setRefreshing(false);
@@ -85,13 +106,14 @@ export default function Overview() {
             listeners, not polling.
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+
+        <div className="head-tools">
           <ConnectionBadge state={connection} />
           <button
             type="button"
             className="button"
             data-variant="quiet"
-            onClick={load}
+            onClick={refresh}
             disabled={refreshing}
           >
             {refreshing ? "Refreshing…" : "Refresh figures"}
@@ -143,7 +165,7 @@ export default function Overview() {
             <h2>Signups, last 14 days</h2>
           </header>
           <div className="panel-pad">
-            <GrowthChart points={metrics?.growth?.value} loading={refreshing} />
+            <GrowthChart metric={metrics?.growth} loading={refreshing} />
           </div>
         </section>
 
@@ -231,13 +253,13 @@ export default function Overview() {
  * Renders a metric, an "in progress" state, or the reason it cannot be
  * computed. There is no fourth branch that guesses a number.
  */
-function Figure({ label, metric, loading, tone, meta, format = (value) => formatCount(value) }) {
+function Figure({ label, metric, loading, tone, meta, format = formatCount }) {
   return (
     <div className="figure">
       <div className="figure-label">{label}</div>
 
       {loading && !metric ? (
-        <div className="figure-value" style={{ color: "var(--rule-strong)" }}>
+        <div className="figure-value" data-placeholder="true">
           —
         </div>
       ) : !metric ? (
@@ -256,9 +278,13 @@ function Figure({ label, metric, loading, tone, meta, format = (value) => format
   );
 }
 
-function GrowthChart({ points, loading }) {
-  if (loading && !points) return <p className="page-note">Loading…</p>;
-  if (!points || points.length === 0) return <p className="page-note">No data yet.</p>;
+function GrowthChart({ metric, loading }) {
+  if (loading && !metric) return <p className="page-note">Loading…</p>;
+  if (!metric) return <p className="page-note">Not loaded.</p>;
+  if (!metric.supported) return <p className="page-note">{metric.reason}</p>;
+
+  const points = metric.value || [];
+  if (points.length === 0) return <p className="page-note">No data yet.</p>;
 
   const total = points.reduce((sum, point) => sum + point.signups, 0);
 
@@ -275,64 +301,26 @@ function GrowthChart({ points, loading }) {
     <div style={{ height: 168 }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={points} margin={{ top: 6, right: 4, bottom: 0, left: 4 }}>
+          {/* Axis and grid colours come from CSS so they follow the theme; only
+              the series itself is set here, because recharts needs the value. */}
           <XAxis
             dataKey="date"
             tickFormatter={(value) => value.slice(5)}
-            tick={{ fontSize: 11, fill: "#75736e" }}
-            axisLine={{ stroke: "#e6e5e2" }}
+            axisLine={{ stroke: "var(--border)" }}
             tickLine={false}
             interval="preserveStartEnd"
           />
-          <Tooltip
-            cursor={{ stroke: "#cfcdc8" }}
-            contentStyle={{
-              border: "1px solid #e6e5e2",
-              borderRadius: 3,
-              fontSize: 12,
-              fontFamily: "JetBrains Mono, monospace",
-            }}
-          />
+          <Tooltip cursor={{ stroke: "var(--border-strong)" }} />
           <Area
             type="monotone"
             dataKey="signups"
-            stroke="#101010"
+            stroke="var(--chart-1)"
             strokeWidth={1.5}
-            fill="#101010"
-            fillOpacity={0.06}
+            fill="var(--chart-1)"
+            fillOpacity={0.12}
           />
         </AreaChart>
       </ResponsiveContainer>
     </div>
   );
 }
-
-const formatCount = (value) =>
-  typeof value === "number" ? value.toLocaleString("en-IN") : String(value ?? "—");
-
-const formatMoney = (value) => {
-  if (!value || typeof value.amountMinor !== "number") return "—";
-  const major = value.amountMinor / 100;
-  return `${value.currency === "INR" ? "₹" : ""}${major.toLocaleString("en-IN")}`;
-};
-
-const shortId = (uid) => (uid ? `${uid.slice(0, 6)}…` : "unknown");
-
-const timeAgo = (value) => {
-  const millis = toMillis(value);
-  if (!millis) return "—";
-
-  const seconds = Math.round((Date.now() - millis) / 1000);
-  if (seconds < 60) return "just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-  return `${Math.floor(seconds / 86400)}d`;
-};
-
-/** Firestore timestamps arrive as objects from listeners and numbers from callables. */
-const toMillis = (value) => {
-  if (!value) return null;
-  if (typeof value === "number") return value;
-  if (typeof value.toMillis === "function") return value.toMillis();
-  if (typeof value.seconds === "number") return value.seconds * 1000;
-  return null;
-};

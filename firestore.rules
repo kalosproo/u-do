@@ -189,6 +189,48 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    /**
+     * Consent records: which version of the privacy policy an account accepted,
+     * and when.
+     *
+     * Written by the client, because accepting a policy is something a person
+     * does in a browser and there is no server round trip at signup to carry
+     * it. The rules pin each record to the account writing it, so the only
+     * thing anyone can misstate here is their own agreement.
+     *
+     * There is no delete path, from any caller. A consent record that the
+     * consenting party can erase is not a record.
+     */
+    match /consents/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+
+      allow create, update: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.privacyVersion is int;
+
+      allow delete: if false;
+    }
+
+    /**
+     * Push tokens and reminder preferences.
+     *
+     * Owner-only, and deliberately not readable by admins: a push token is a
+     * device identifier, the console has no use for one, and the privacy
+     * policy says the token is used for nothing but the reminders the person
+     * asked for. Keeping it out of every other reader is how that stays true.
+     *
+     * The server prunes dead tokens through the Admin SDK, which bypasses
+     * these rules.
+     */
+    match /pushSubscriptions/{uid} {
+      allow read: if isOwner(uid);
+
+      allow create, update: if isOwner(uid) && request.resource.data.uid == uid;
+
+      // Turning reminders off clears the record entirely if the client wants.
+      allow delete: if isOwner(uid);
+    }
+
     // ---------------------------------------------------------------- billing
 
     /**

@@ -137,3 +137,72 @@ sides of the friendship immediately.
 
 Your shared card refreshes whenever you open the Habits page or tick a habit.
 Accounts that never claim a username publish nothing at all.
+
+## Privacy policy and consent
+
+The policy lives at `/privacy` and is readable signed out. It is written from
+what the code actually does — including the parts a template would leave out:
+the AI assistant sends a snapshot of your tasks, planner, habits and finances
+to Groq, AdSense sets its own cookies, and there is no delete-account button
+yet.
+
+Signup requires a tick, on the Google path as well as the email one. Consent is
+recorded in `consents/{uid}` against `PRIVACY_POLICY_VERSION` from
+`src/utils/consent.js` — raise that number and everyone is asked again on their
+next visit. Update `PRIVACY_POLICY_UPDATED` at the same time.
+
+## Reminders (web push)
+
+### What you need to do once
+
+**1. Generate a web push key**
+
+Firebase Console → Project settings → Cloud Messaging → Web Push certificates →
+Generate key pair. Put the resulting key in the environment as
+`VITE_FIREBASE_VAPID_KEY`, locally in `.env.local` and in Vercel under Settings
+→ Environment Variables. Without it the Profile card says reminders are not
+configured rather than showing a toggle that does nothing.
+
+**2. Deploy the functions**
+
+```bash
+firebase deploy --only functions
+```
+
+`sendScheduledReminders` runs every 30 minutes on Cloud Scheduler, which needs
+the Blaze plan — already the case, since the v2 functions here are deployed.
+The two friend triggers are event-driven and need nothing extra.
+
+### How it decides when to send
+
+Each subscription stores the person's IANA time zone and the local time they
+chose. Every run derives their current local time from that zone and sends to
+whoever falls inside the half hour that just opened. Storing a precomputed UTC
+minute instead would be cheaper and wrong twice a year — a row that drifts
+across a DST change simply stops matching, so the reminder fails silently.
+
+The cost is one read per enabled subscription per run. At this size that is
+nothing; if it stops being nothing, shard by stored zone rather than going back
+to a frozen offset.
+
+### What gets sent
+
+- **Daily digest** — one message covering open tasks and unticked habits. With
+  it on, the two below stay quiet.
+- **Tasks due today**, **habit streak nudge** — separate messages, if the digest
+  is off.
+- **Friend requests and accepts** — sent as they happen, ignoring the chosen
+  time.
+
+An empty day sends nothing. A notification reading "0 tasks" is the fastest way
+to teach someone to turn reminders off.
+
+Dead tokens are pruned on every send, so a browser someone cleared stops being
+retried.
+
+### iPhone
+
+Safari delivers no web push at all until the site is installed to the Home
+Screen. The app detects this and says so, with the steps, instead of showing a
+toggle that silently does nothing. The manifest and the apple-touch icon are in
+`public/`.
