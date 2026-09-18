@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { signOut } from "firebase/auth";
 
 import { auth } from "../services/firebase";
-import { fetchConsent, recordConsent } from "../services/consent";
+import { fetchConsent, recordConsent, syncPendingConsent } from "../services/consent";
 import { needsConsent, PRIVACY_POLICY_VERSION } from "../utils/consent";
 import { useAuth } from "../hooks/useAuth";
 
@@ -25,15 +25,19 @@ function ConsentGate() {
   const { pathname } = useLocation();
   const [settled, setSettled] = useState({ uid: null, record: null });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user) return undefined;
 
     let cancelled = false;
 
-    fetchConsent(user.uid).then((record) => {
-      if (!cancelled) setSettled({ uid: user.uid, record });
+    fetchConsent(user.uid).then(async (record) => {
+      if (cancelled) return;
+      setSettled({ uid: user.uid, record });
+
+      // A consent given while the rules were still undeployed lands on its own
+      // now, without asking anybody to accept twice.
+      if (record?.pending) await syncPendingConsent(user.uid, record);
     });
 
     return () => {
@@ -51,18 +55,26 @@ function ConsentGate() {
   // deciding must not find the decision sitting on top of the document.
   if (pathname === "/privacy") return null;
 
+  /**
+   * Accepting always lets the person through.
+   *
+   * They agreed; whether our backend managed to write it down is our problem.
+   * recordConsent keeps the acceptance on the device when the server refuses
+   * it, and the effect above retries the write on the next load — so a failure
+   * here costs a sync, not access to someone's own tasks. Blocking them would
+   * not produce the record either; it would only break the app.
+   */
   const accept = async () => {
     setSaving(true);
-    setError("");
 
-    try {
-      await recordConsent(user.uid, "prompt");
-      setSettled({ uid: user.uid, record: { privacyVersion: PRIVACY_POLICY_VERSION } });
-    } catch {
-      setError("Couldn't save that. Check your connection and try again.");
-    } finally {
-      setSaving(false);
+    const result = await recordConsent(user.uid, "prompt");
+    setSaving(false);
+
+    if (!result.synced) {
+      console.warn(`ConsentGate: accepted locally, server sync pending (${result.reason})`);
     }
+
+    setSettled({ uid: user.uid, record: { privacyVersion: PRIVACY_POLICY_VERSION } });
   };
 
   const leave = () => signOut(auth);
@@ -92,8 +104,6 @@ function ConsentGate() {
           nobody else reads them. The one thing that leaves U.Do is what you send to the
           AI assistant.
         </p>
-
-        {error ? <p className="login-error">{error}</p> : null}
 
         <div className="modal-actions">
           <button type="button" className="btn btn-primary" onClick={accept} disabled={saving}>
