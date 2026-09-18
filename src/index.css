@@ -3203,15 +3203,29 @@ h3, .panel-title { letter-spacing: -0.013em; }
   border-top: 1px solid var(--border);
 }
 
-.push-time {
+/* Wraps to its own line on a phone rather than squeezing two time fields and
+   a label into one row. */
+.push-window {
   display: flex;
   align-items: center;
   gap: var(--s-3);
+  flex-wrap: wrap;
   font-size: var(--t-sm);
   color: var(--text-muted);
 }
 
-.push-time input[type="time"] {
+.push-window-times {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.push-window-note {
+  margin: calc(var(--s-2) * -1) 0 0;
+  font-size: var(--t-xs);
+}
+
+.push-window input[type="time"] {
   font: inherit;
   font-size: var(--t-sm);
   font-variant-numeric: tabular-nums;

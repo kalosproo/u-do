@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
-  DEFAULT_PUSH_TIME,
   DEFAULT_PUSH_TYPES,
   disablePush,
   enablePush,
   fetchPushSubscription,
   pushAvailability,
+  readWindow,
   savePushPreferences,
 } from "../services/push";
 import { useAuth } from "./useAuth";
@@ -51,7 +51,7 @@ export function usePush() {
   const subscription = current?.subscription ?? null;
 
   const enabled = subscription?.enabled === true;
-  const time = subscription?.time || DEFAULT_PUSH_TIME;
+  const { start, end } = readWindow(subscription);
   // Memoised: a fresh object every render would rebuild every callback below
   // it on every render, which is exactly the churn those callbacks exist to
   // avoid.
@@ -67,7 +67,7 @@ export function usePush() {
     setError("");
 
     try {
-      const result = await enablePush(user.uid, { time, types });
+      const result = await enablePush(user.uid, { start, end, types });
 
       if (!result.ok) {
         setError(
@@ -81,14 +81,14 @@ export function usePush() {
       setSettled({
         uid: user.uid,
         availability: current?.availability ?? "available",
-        subscription: { ...(subscription || {}), enabled: true, time, types },
+        subscription: { ...(subscription || {}), enabled: true, start, end, types },
       });
     } catch (cause) {
       setError(cause?.message || "Couldn't turn reminders on.");
     } finally {
       setBusy(false);
     }
-  }, [user, time, types, subscription, current]);
+  }, [user, start, end, types, subscription, current]);
 
   const disable = useCallback(async () => {
     if (!user) return;
@@ -114,7 +114,7 @@ export function usePush() {
     async (changes) => {
       if (!user) return;
 
-      const next = { time, types, ...changes };
+      const next = { start, end, types, ...changes };
       setSettled({
         uid: user.uid,
         availability: current?.availability ?? "available",
@@ -127,14 +127,15 @@ export function usePush() {
         setError("Couldn't save that change.");
       }
     },
-    [user, time, types, subscription, current],
+    [user, start, end, types, subscription, current],
   );
 
   return {
     loading: Boolean(user) && !current,
     availability: current?.availability ?? null,
     enabled,
-    time,
+    start,
+    end,
     types,
     busy,
     error,

@@ -9,13 +9,27 @@ const WORKER_PATH = "/firebase-messaging-sw.js";
 const subscriptionDoc = (uid) => doc(db, "pushSubscriptions", uid);
 
 export const DEFAULT_PUSH_TYPES = Object.freeze({
-  digest: true,
-  habits: true,
   tasks: true,
+  habits: true,
+  planner: true,
   friends: true,
 });
 
-export const DEFAULT_PUSH_TIME = "08:00";
+/**
+ * The window reminders are allowed to run in.
+ *
+ * Two times rather than one, because these repeat now. "Every 30 minutes until
+ * it is done" without an end is a notification at 3am, and the fastest way for
+ * a person to block the app entirely.
+ */
+export const DEFAULT_PUSH_START = "08:00";
+export const DEFAULT_PUSH_END = "21:00";
+
+/** Older records stored a single `time`; it becomes the start of the window. */
+export const readWindow = (subscription) => ({
+  start: subscription?.start || subscription?.time || DEFAULT_PUSH_START,
+  end: subscription?.end || DEFAULT_PUSH_END,
+});
 
 /**
  * Why push might be unavailable, in the order a person would want to hear it.
@@ -66,7 +80,10 @@ const registerMessagingWorker = () => {
  * device registering twice cannot duplicate itself and a dead one can be
  * removed by the server with a single field delete.
  */
-export const enablePush = async (uid, { time = DEFAULT_PUSH_TIME, types = DEFAULT_PUSH_TYPES } = {}) => {
+export const enablePush = async (
+  uid,
+  { start = DEFAULT_PUSH_START, end = DEFAULT_PUSH_END, types = DEFAULT_PUSH_TYPES } = {},
+) => {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return { ok: false, reason: permission };
 
@@ -85,7 +102,8 @@ export const enablePush = async (uid, { time = DEFAULT_PUSH_TIME, types = DEFAUL
     {
       uid,
       enabled: true,
-      time,
+      start,
+      end,
       types,
       // The zone, not an offset: an offset saved in January is wrong in July
       // anywhere that observes DST, and the server can derive the offset from
@@ -126,10 +144,10 @@ export const disablePush = async (uid) => {
   return { ok: true };
 };
 
-export const savePushPreferences = (uid, { time, types }) =>
+export const savePushPreferences = (uid, { start, end, types }) =>
   setDoc(
     subscriptionDoc(uid),
-    { uid, time, types, updatedAt: serverTimestamp() },
+    { uid, start, end, types, updatedAt: serverTimestamp() },
     { merge: true },
   );
 
