@@ -2,24 +2,26 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 
 import { db } from "../firebaseAdmin.js";
 import { sendToSubscription } from "./send.js";
+import { composeMessages, minutesOf, RUN_MINUTES, windowOffset } from "./cadence.js";
 
 /**
  * The scheduled reminders.
  *
- * Runs every half hour and sends to whoever's chosen time falls inside the
- * window that just opened. The alternative — storing a precomputed UTC firing
- * minute and querying it directly — is cheaper, and wrong twice a year: an
- * offset saved in January is an hour out in July anywhere that observes DST,
- * and the drifted row simply stops matching the query, so the reminder fails
- * silently and nothing reports it. Deriving the local time from the stored IANA
- * zone on every run cannot drift.
+ * Three rhythms, because the things being reminded about are not alike. A task
+ * that is overdue wants nagging; a plan for the day wants telling once. When
+ * each one fires lives in cadence.js, which is pure arithmetic and tested as
+ * such; this file is the part that talks to Firestore.
  *
- * The cost is one read per enabled subscription per run. At this size that is
- * nothing. If it ever stops being nothing, the fix is to shard by stored zone
- * rather than to go back to a frozen offset.
+ * All of it inside a window the person sets. Repeating reminders with no end
+ * time is a notification at 3am and an app whose notifications get blocked.
+ *
+ * Local time comes from each person's stored IANA zone, recomputed every run.
+ * A precomputed UTC firing minute would be cheaper and wrong twice a year — a
+ * row that drifts across a DST change stops matching its own query, so the
+ * reminder fails silently and nothing reports it.
  */
 
-const WINDOW_MINUTES = 30;
+const OVERDUE_SCAN_LIMIT = 50;
 
 /** Minutes past local midnight, for a real instant in a named zone. */
 const localMinutes = (instant, timeZone) => {
@@ -35,7 +37,7 @@ const localMinutes = (instant, timeZone) => {
   return hour * 60 + minute;
 };
 
-/** The local calendar day, as the app writes it on a task's dueDate. */
+/** The local calendar day, in the form the app writes on dueDate and date. */
 const localDateKey = (instant, timeZone) =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -44,101 +46,45 @@ const localDateKey = (instant, timeZone) =>
     day: "2-digit",
   }).format(instant);
 
-const parseChosen = (time) => {
-  const [hour, minute] = String(time || "08:00").split(":").map(Number);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return 8 * 60;
-  return hour * 60 + minute;
-};
+/** Tasks due today or overdue, habits unticked today, plans for today. */
+const gatherWork = async (uid, dayKey, wanted) => {
+  const workspace = db.collection("users").doc(uid);
 
-/**
- * True when the chosen minute sits inside the window that just opened.
- *
- * The comparison wraps, because a run at 23:45 covers a window that ends at
- * 00:15 the next day — without this, anyone who picks a time in that quarter
- * hour never hears from us.
- */
-const isDue = (chosen, current) => {
-  const delta = (chosen - current + 1440) % 1440;
-  return delta < WINDOW_MINUTES;
-};
-
-const countdown = (n, singular, plural) => `${n} ${n === 1 ? singular : plural}`;
-
-/** Tasks due today that aren't done, and habits not yet ticked today. */
-const gatherWork = async (uid, dayKey) => {
-  const [taskSnap, habitSnap] = await Promise.all([
-    db.collection("users").doc(uid).collection("tasks").where("dueDate", "==", dayKey).get(),
-    db.collection("users").doc(uid).collection("habits").get(),
+  const [taskSnap, habitSnap, planSnap] = await Promise.all([
+    // Both bounds on dueDate, so the empty string a task with no due date
+    // carries is excluded by the query rather than after it. Without the lower
+    // bound the implicit ordering puts those first and the row cap fills with
+    // them, hiding the overdue tasks this is for.
+    wanted.tasks
+      ? workspace.collection("tasks")
+          .where("dueDate", ">", "")
+          .where("dueDate", "<=", dayKey)
+          .limit(OVERDUE_SCAN_LIMIT)
+          .get()
+      : null,
+    wanted.habits ? workspace.collection("habits").get() : null,
+    wanted.planner
+      ? workspace.collection("planner").where("date", "==", dayKey).get()
+      : null,
   ]);
 
-  const tasks = taskSnap.docs
+  const tasks = (taskSnap?.docs || [])
     .map((entry) => entry.data())
     .filter((task) => task.status !== "done" && task.completed !== true);
 
-  const habits = habitSnap.docs
+  const habits = (habitSnap?.docs || [])
     .map((entry) => entry.data())
-    .filter((habit) => {
-      const logs = habit.logs || habit.completedDays || {};
-      return logs[dayKey] !== true;
-    });
+    .filter((habit) => (habit.logs || habit.completedDays || {})[dayKey] !== true);
 
-  return { tasks, habits };
-};
+  const plans = (planSnap?.docs || [])
+    .map((entry) => entry.data())
+    .filter((plan) => plan.completed !== true);
 
-/**
- * What to send, or null when there is nothing worth interrupting someone for.
- *
- * A reminder that says "you have 0 tasks" is the fastest way to teach a person
- * to turn reminders off, so an empty day sends nothing at all.
- */
-const composeMessages = ({ tasks, habits }, types) => {
-  const wantsDigest = types?.digest !== false;
-  const wantsTasks = types?.tasks !== false;
-  const wantsHabits = types?.habits !== false;
-
-  if (wantsDigest) {
-    const parts = [];
-    if (wantsTasks && tasks.length > 0) parts.push(countdown(tasks.length, "task", "tasks"));
-    if (wantsHabits && habits.length > 0) parts.push(countdown(habits.length, "habit", "habits"));
-    if (parts.length === 0) return [];
-
-    return [{
-      title: "Today on U.Do",
-      body: `${parts.join(" and ")} still open.`,
-      url: tasks.length >= habits.length ? "/tasks" : "/habits",
-      tag: "udo-digest",
-    }];
-  }
-
-  const messages = [];
-
-  if (wantsTasks && tasks.length > 0) {
-    messages.push({
-      title: "Due today",
-      body: tasks.length === 1
-        ? tasks[0].title
-        : `${countdown(tasks.length, "task", "tasks")} due today.`,
-      url: "/tasks",
-      tag: "udo-tasks",
-    });
-  }
-
-  if (wantsHabits && habits.length > 0) {
-    messages.push({
-      title: "Streak check",
-      body: habits.length === 1
-        ? `${habits[0].title} isn't ticked yet.`
-        : `${countdown(habits.length, "habit", "habits")} not ticked yet.`,
-      url: "/habits",
-      tag: "udo-habits",
-    });
-  }
-
-  return messages;
+  return { tasks, habits, plans, dayKey };
 };
 
 export const sendScheduledReminders = onSchedule(
-  { schedule: "every 30 minutes", timeZone: "Etc/UTC", timeoutSeconds: 300 },
+  { schedule: "every 30 minutes", timeZone: "Etc/UTC", timeoutSeconds: 540 },
   async () => {
     const now = new Date();
     const snapshot = await db
@@ -146,7 +92,7 @@ export const sendScheduledReminders = onSchedule(
       .where("enabled", "==", true)
       .get();
 
-    let considered = 0;
+    let active = 0;
     let sent = 0;
 
     for (const entry of snapshot.docs) {
@@ -162,14 +108,28 @@ export const sendScheduledReminders = onSchedule(
         continue;
       }
 
-      if (!isDue(parseChosen(subscription.time), current)) continue;
-      considered += 1;
+      // `time` is what the single-time version stored; it becomes the start.
+      const start = minutesOf(subscription.start || subscription.time, 8 * 60);
+      const end = minutesOf(subscription.end, 21 * 60);
+      const offset = windowOffset(current, start, end);
+
+      if (offset === null) continue;
+      active += 1;
+
+      const types = subscription.types || {};
+      const wanted = {
+        tasks: types.tasks !== false,
+        habits: types.habits !== false,
+        planner: types.planner !== false && offset < RUN_MINUTES,
+      };
+
+      // Nothing this person wants can fire on this run — skip the reads.
+      if (!wanted.tasks && !wanted.habits && !wanted.planner) continue;
 
       try {
-        const work = await gatherWork(subscription.uid, localDateKey(now, timeZone));
-        const messages = composeMessages(work, subscription.types);
+        const work = await gatherWork(subscription.uid, localDateKey(now, timeZone), wanted);
 
-        for (const message of messages) {
+        for (const message of composeMessages(work, types, offset)) {
           const result = await sendToSubscription(subscription, message);
           sent += result.sent;
         }
@@ -178,6 +138,6 @@ export const sendScheduledReminders = onSchedule(
       }
     }
 
-    console.log(`sendScheduledReminders: ${considered} due, ${sent} notifications sent`);
+    console.log(`sendScheduledReminders: ${active} in window, ${sent} notifications sent`);
   },
 );

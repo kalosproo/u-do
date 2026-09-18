@@ -2,31 +2,50 @@ import { FiBell, FiBellOff } from "react-icons/fi";
 
 import { usePush } from "../hooks/usePush";
 
-const TYPE_LABEL = {
-  digest: "Daily digest",
-  habits: "Habit streak nudge",
-  tasks: "Tasks due today",
-  friends: "Friend requests",
-};
-
-const TYPE_NOTE = {
-  digest: "One message covering everything below. With this on, the next two stay quiet.",
-  habits: "If a habit still isn't ticked at your reminder time.",
-  tasks: "Anything due today that isn't done.",
-  friends: "When someone sends or accepts a request. Sent as it happens.",
-};
-
 /**
- * The reminder controls.
+ * Each reminder has its own rhythm, and the copy says what it is.
  *
- * Every unavailable case says which one it is. A greyed-out toggle teaches
- * nobody anything, and the iOS case in particular is invisible otherwise:
- * Safari delivers no web push until the site is on the Home Screen, so an
- * iPhone user who is not told that concludes the feature is broken.
+ * A switch labelled only "Tasks" gives no way to predict what turning it on
+ * costs you. One that says "every 30 minutes until they're done" does, which
+ * is the difference between a reminder someone keeps and one they block.
  */
+const TYPES = [
+  {
+    key: "tasks",
+    label: "Tasks",
+    note: "Every 30 minutes until everything due is done. Overdue tasks count.",
+  },
+  {
+    key: "habits",
+    label: "Habits",
+    note: "Every hour until the day's habits are ticked.",
+  },
+  {
+    key: "planner",
+    label: "Today's plan",
+    note: "Once, when the window opens, listing what you planned for today.",
+  },
+  {
+    key: "friends",
+    label: "Friend requests",
+    note: "As they happen. Ignores the window.",
+  },
+];
+
 function NotificationSettings() {
-  const { loading, availability, enabled, time, types, busy, error, enable, disable, update } =
-    usePush();
+  const {
+    loading,
+    availability,
+    enabled,
+    start,
+    end,
+    types,
+    busy,
+    error,
+    enable,
+    disable,
+    update,
+  } = usePush();
 
   if (loading) return null;
 
@@ -39,8 +58,8 @@ function NotificationSettings() {
       {availability === "available" ? (
         <>
           <p className="profile-data-copy">
-            A notification at a time you choose, so a streak doesn&apos;t quietly end while
-            you&apos;re busy. Turning this off deletes the token your browser gave us.
+            Nudges that keep coming until the thing is actually done, inside a window
+            you set. Turning this off deletes the token your browser gave us.
           </p>
 
           <div className="profile-actions">
@@ -57,17 +76,33 @@ function NotificationSettings() {
 
           {enabled ? (
             <div className="push-settings">
-              <label className="push-time">
-                <span>Remind me at</span>
-                <input
-                  type="time"
-                  value={time}
-                  onChange={(event) => update({ time: event.target.value })}
-                />
-              </label>
+              <div className="push-window">
+                <span className="push-window-label">Remind me between</span>
+
+                <div className="push-window-times">
+                  <input
+                    type="time"
+                    value={start}
+                    aria-label="Reminders start"
+                    onChange={(event) => update({ start: event.target.value })}
+                  />
+                  <span aria-hidden="true">and</span>
+                  <input
+                    type="time"
+                    value={end}
+                    aria-label="Reminders end"
+                    onChange={(event) => update({ end: event.target.value })}
+                  />
+                </div>
+              </div>
+
+              <p className="panel-note push-window-note">
+                Nothing is sent outside this. Repeating reminders without an end is how
+                you get a notification at 3am.
+              </p>
 
               <div className="push-types">
-                {Object.keys(TYPE_LABEL).map((key) => (
+                {TYPES.map(({ key, label, note }) => (
                   <label key={key} className="push-type">
                     <input
                       type="checkbox"
@@ -77,8 +112,8 @@ function NotificationSettings() {
                       }
                     />
                     <span>
-                      <strong>{TYPE_LABEL[key]}</strong>
-                      <span className="panel-note">{TYPE_NOTE[key]}</span>
+                      <strong>{label}</strong>
+                      <span className="panel-note">{note}</span>
                     </span>
                   </label>
                 ))}

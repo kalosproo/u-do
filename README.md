@@ -175,24 +175,38 @@ The two friend triggers are event-driven and need nothing extra.
 
 ### How it decides when to send
 
-Each subscription stores the person's IANA time zone and the local time they
-chose. Every run derives their current local time from that zone and sends to
-whoever falls inside the half hour that just opened. Storing a precomputed UTC
-minute instead would be cheaper and wrong twice a year — a row that drifts
-across a DST change simply stops matching, so the reminder fails silently.
+Each subscription stores the person's IANA time zone and the window they chose.
+Every run derives their current local time from that zone. Storing a
+precomputed UTC minute instead would be cheaper and wrong twice a year — a row
+that drifts across a DST change simply stops matching, so the reminder fails
+silently.
 
 The cost is one read per enabled subscription per run. At this size that is
 nothing; if it stops being nothing, shard by stored zone rather than going back
 to a frozen offset.
 
-### What gets sent
+### What gets sent, and how often
 
-- **Daily digest** — one message covering open tasks and unticked habits. With
-  it on, the two below stay quiet.
-- **Tasks due today**, **habit streak nudge** — separate messages, if the digest
-  is off.
-- **Friend requests and accepts** — sent as they happen, ignoring the chosen
-  time.
+| Reminder | Rhythm |
+| --- | --- |
+| **Tasks** | Every 30 minutes while anything due or overdue is open |
+| **Habits** | Every hour while any of the day's habits are unticked |
+| **Today's plan** | Once, when the window opens |
+| **Friend requests** | As they happen, ignoring the window |
+
+The window matters. These repeat, and a repeating reminder with no end is a
+notification at 3am and an app whose notifications get blocked. Nothing is sent
+outside it.
+
+Which run a rhythm fires on is derived from the clock, not from stored
+counters, so nothing is written back per send and a missed run cannot leave
+someone a rhythm behind. That arithmetic lives in
+`functions/src/notifications/cadence.js`, free of Firebase so it can be tested
+directly:
+
+```bash
+node --test functions/reminders.test.mjs
+```
 
 An empty day sends nothing. A notification reading "0 tasks" is the fastest way
 to teach someone to turn reminders off.
