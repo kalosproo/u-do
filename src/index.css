@@ -787,7 +787,8 @@ input[type="file"].upload-input { display: none; }
 
 .task-compose {
   display: grid;
-  grid-template-columns: 1fr 150px 140px auto;
+  /* title · date · time · priority · repeat · add */
+  grid-template-columns: minmax(0, 1fr) 140px 110px 110px 140px auto;
   gap: var(--s-2);
   align-items: center;
 }
@@ -2831,6 +2832,8 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .finance-grid { grid-template-columns: 1fr; }
   .kanban-grid { grid-template-columns: 1fr; }
   .task-compose { grid-template-columns: 1fr 1fr; }
+  .task-compose > input:first-child { grid-column: 1 / -1; }
+  .task-compose > .btn { grid-column: 1 / -1; }
   .week-grid { grid-template-columns: repeat(7, minmax(140px, 1fr)); }
 }
 
@@ -3276,4 +3279,65 @@ h3, .panel-title { letter-spacing: -0.013em; }
 .push-type .panel-note {
   margin: 0;
   font-size: var(--t-xs);
+}
+
+
+/* ------------------------------------------------------- repeat controls */
+
+.repeat-days {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--border);
+}
+
+.repeat-days-label {
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
+
+/* Square, so seven of them read as a week rather than as seven buttons. */
+.repeat-day {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease),
+    border-color var(--speed) var(--ease);
+}
+
+.repeat-day:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+/* Filled, not tinted: the palette has no hue to signal "on" with. */
+.repeat-day[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.repeat-days-note {
+  font-size: var(--t-xs);
+  color: var(--text-subtle);
+}
+
+.repeat-badge {
+  font-size: var(--t-xs);
+  padding: 2px var(--s-2);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  color: var(--text-subtle);
+  white-space: nowrap;
 }

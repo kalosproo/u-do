@@ -151,7 +151,7 @@ function Home() {
   const completeTodayTask = async (task) => {
     if (!user) return;
     setTasks((items) => items.map((item) => item.id === task.id ? { ...item, status: "done", completed: true } : item));
-    try { await setTaskStatus(user.uid, task.id, "done"); await loadDashboard(); }
+    try { await setTaskStatus(user.uid, task, "done"); await loadDashboard(); }
     catch (saveError) { setError(saveError?.message || "Couldn't complete that task."); await loadDashboard(); }
   };
 

@@ -189,7 +189,8 @@ to a frozen offset.
 
 | Reminder | Rhythm |
 | --- | --- |
-| **Tasks** | Every 30 minutes while anything due or overdue is open |
+| **Tasks, no time** | Every 30 minutes while anything due or overdue is open |
+| **Tasks with a time** | Silent until then, one heads-up before, then every 30 minutes |
 | **Habits** | Every hour while any of the day's habits are unticked |
 | **Today's plan** | Once, when the window opens |
 | **Friend requests** | As they happen, ignoring the window |
@@ -208,8 +209,33 @@ directly:
 node --test functions/reminders.test.mjs
 ```
 
+A task can carry an optional time and its own lead time (default 30 minutes).
+It stays silent all morning, gets one heads-up at `dueTime - lead`, and only
+starts nagging once its time has actually arrived — nothing should buzz about
+something that is not due yet. A task with no time behaves as it always has.
+
 An empty day sends nothing. A notification reading "0 tasks" is the fastest way
 to teach someone to turn reminders off.
+
+## Repeating tasks
+
+A task can repeat daily, on chosen weekdays, or monthly on the same date.
+
+Each occurrence is a real task, so history fills in and the Dashboard heatmap
+counts it. Exactly one is open at a time: ticking it creates the next on its
+date, with an id derived from the series and that date, so a double tap or a
+retried write lands on the same document instead of stacking duplicates.
+
+Missed occurrences are **not** backfilled. Skipping three weeks leaves one
+overdue task nagging, rather than three identical rows to dismiss. Monthly
+clamps into short months — the 31st becomes the 28th in February, not the 3rd
+of March.
+
+The date arithmetic is in `src/utils/recurrence.js`, pure and tested:
+
+```bash
+node --test src/utils/recurrence.test.mjs
+```
 
 Dead tokens are pruned on every send, so a browser someone cleared stops being
 retried.

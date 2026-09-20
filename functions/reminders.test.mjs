@@ -54,8 +54,8 @@ const work = {
   dayKey: "2026-09-18",
 };
 const all = { tasks: true, habits: true, planner: true };
-const titles = (offset, w = work, t = all) =>
-  composeMessages(w, t, offset).map((message) => message.title);
+const titles = (offset, w = work, t = all, current = 0) =>
+  composeMessages(w, t, offset, current).map((message) => message.title);
 
 test("tasks repeat on every run inside the window", () => {
   const offsets = runsAcross("08:00", "21:00");
@@ -123,4 +123,96 @@ test("each reminder carries its own tag, so they replace rather than stack", () 
   const tags = composeMessages(work, all, 0).map((message) => message.tag);
   assert.deepEqual(new Set(tags).size, tags.length);
   assert.deepEqual(tags.sort(), ["udo-habits", "udo-planner", "udo-tasks"]);
+});
+
+
+// --------------------------------------------------------- tasks with a time
+
+const timed = (dueTime, extra = {}) => ({
+  tasks: [{ title: "DBMS lab", dueDate: "2026-09-18", dueTime, leadMinutes: 30, ...extra }],
+  habits: [],
+  plans: [],
+  dayKey: "2026-09-18",
+});
+const tasksOnly = { tasks: true, habits: false, planner: false };
+
+test("a task due at 2pm is silent all morning", () => {
+  for (const clock of ["08:00", "09:30", "12:00", "13:00"]) {
+    assert.deepEqual(
+      composeMessages(timed("14:00"), tasksOnly, 0, at(clock)),
+      [],
+      `should be silent at ${clock}`,
+    );
+  }
+});
+
+test("the heads-up fires once, at the lead time", () => {
+  const firing = [];
+  for (let minute = 0; minute < 1440; minute += 30) {
+    if (titles(0, timed("14:00"), tasksOnly, minute).includes("Coming up")) firing.push(minute);
+  }
+  assert.deepEqual(firing, [at("13:30")], "exactly one heads-up, 30 minutes before");
+});
+
+test("a custom lead time is honoured", () => {
+  const twoHours = timed("14:00", { leadMinutes: 120 });
+  assert.ok(titles(0, twoHours, tasksOnly, at("12:00")).includes("Coming up"));
+  assert.ok(!titles(0, twoHours, tasksOnly, at("13:30")).includes("Coming up"));
+
+  const [message] = composeMessages(twoHours, tasksOnly, 0, at("12:00"));
+  assert.match(message.body, /in 2 hours/);
+});
+
+test("once its time arrives, a timed task nags every run", () => {
+  const firing = [];
+  for (let minute = at("14:00"); minute <= at("21:00"); minute += 30) {
+    if (titles(0, timed("14:00"), tasksOnly, minute).includes("Due now")) firing.push(minute);
+  }
+  assert.equal(firing.length, 15, "14:00 to 21:00 inclusive, every 30 minutes");
+  assert.equal(firing[0], at("14:00"), "starts exactly at its time, not before");
+});
+
+test("an untimed task still reads as due today, not due now", () => {
+  const untimed = {
+    tasks: [{ title: "Read chapter 4", dueDate: "2026-09-18" }],
+    habits: [],
+    plans: [],
+    dayKey: "2026-09-18",
+  };
+  assert.deepEqual(titles(0, untimed, tasksOnly, at("08:00")), ["Due today"]);
+});
+
+test("a task overdue by a day nags regardless of its time", () => {
+  const yesterday = {
+    tasks: [{ title: "Pay fees", dueDate: "2026-09-17", dueTime: "23:00" }],
+    habits: [],
+    plans: [],
+    dayKey: "2026-09-18",
+  };
+  // 08:00 is long before 23:00, but the day has already passed.
+  assert.deepEqual(titles(0, yesterday, tasksOnly, at("08:00")), ["Overdue"]);
+});
+
+test("a heads-up whose lead falls before midnight is skipped, not fired at 00:00", () => {
+  const earlyTask = timed("00:15", { leadMinutes: 30 });
+  const firing = [];
+  for (let minute = 0; minute < 1440; minute += 30) {
+    if (titles(0, earlyTask, tasksOnly, minute).includes("Coming up")) firing.push(minute);
+  }
+  assert.deepEqual(firing, [], "no heads-up rather than a wrong one");
+});
+
+test("a heads-up and a nag can both land, and do not share a tag", () => {
+  const two = {
+    tasks: [
+      { title: "Lab", dueDate: "2026-09-18", dueTime: "14:00", leadMinutes: 30 },
+      { title: "Essay", dueDate: "2026-09-18", dueTime: "09:00", leadMinutes: 30 },
+    ],
+    habits: [],
+    plans: [],
+    dayKey: "2026-09-18",
+  };
+  const messages = composeMessages(two, tasksOnly, 0, at("13:30"));
+  assert.equal(messages.length, 2, "one heads-up for the lab, one nag for the essay");
+  assert.equal(new Set(messages.map((m) => m.tag)).size, 2);
 });

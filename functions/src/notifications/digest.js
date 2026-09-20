@@ -129,7 +129,7 @@ export const sendScheduledReminders = onSchedule(
       try {
         const work = await gatherWork(subscription.uid, localDateKey(now, timeZone), wanted);
 
-        for (const message of composeMessages(work, types, offset)) {
+        for (const message of composeMessages(work, types, offset, current)) {
           const result = await sendToSubscription(subscription, message);
           sent += result.sent;
         }
