@@ -11,6 +11,7 @@ import {
   fetchTasks,
   setTaskStatus,
 } from "../services/tasks";
+import { describeRepeat, EMPTY_REPEAT, WEEKDAYS } from "../utils/recurrence";
 import ClearDataButton from "../components/ClearDataButton";
 import PageMenu, { PageMenuLabel } from "../components/PageMenu";
 
@@ -29,6 +30,24 @@ const FILTERS = [
 
 const PRIORITIES = ["low", "medium", "high"];
 
+const REPEAT_OPTIONS = [
+  ["none", "Once"],
+  ["daily", "Every day"],
+  ["weekly", "Certain days"],
+  ["monthly", "Every month"],
+];
+
+/** 14:00 as "2:00 PM", in whatever the reader's locale calls it. */
+function formatDueTime(value) {
+  if (!/^\d{2}:\d{2}$/.test(value || "")) return "";
+
+  const [hour, minute] = value.split(":").map(Number);
+  const at = new Date();
+  at.setHours(hour, minute, 0, 0);
+
+  return at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
 function formatDueDate(value) {
   if (!value) return "";
 
@@ -45,7 +64,9 @@ function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [dueTime, setDueTime] = useState("");
   const [priority, setPriority] = useState("medium");
+  const [repeat, setRepeat] = useState(EMPTY_REPEAT);
   // The dashboard links here with ?filter=overdue etc., so the arriving view
   // actually shows the number that was clicked.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -82,10 +103,12 @@ function Tasks() {
     if (!currentUser || !title.trim()) return;
 
     try {
-      await createTask(currentUser.uid, { title: title.trim(), dueDate, priority });
+      await createTask(currentUser.uid, { title: title.trim(), dueDate, dueTime, priority, repeat });
       setTitle("");
       setDueDate("");
+      setDueTime("");
       setPriority("medium");
+      setRepeat(EMPTY_REPEAT);
       setError("");
       loadTasks();
     } catch (addError) {
@@ -120,7 +143,7 @@ function Tasks() {
     );
 
     try {
-      await setTaskStatus(currentUser.uid, task.id, nextStatus);
+      await setTaskStatus(currentUser.uid, task, nextStatus);
       setError("");
       loadTasks();
     } catch (updateError) {
@@ -262,10 +285,31 @@ function Tasks() {
             onChange={(e) => setDueDate(e.target.value)}
             aria-label="Due date"
           />
+          <input
+            type="time"
+            value={dueTime}
+            onChange={(e) => setDueTime(e.target.value)}
+            aria-label="Due time (optional)"
+            title="Optional. A task with a time stays quiet until then, and is reminded 30 minutes before."
+          />
+          {/* Just the level. The row carries two more controls than it used
+              to, and "Medium priority" no longer fits — the label says what
+              the field is, so the option does not have to repeat it. */}
           <select value={priority} onChange={(e) => setPriority(e.target.value)} aria-label="Priority">
             {PRIORITIES.map((item) => (
               <option key={item} value={item}>
-                {item[0].toUpperCase() + item.slice(1)} priority
+                {item[0].toUpperCase() + item.slice(1)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={repeat.kind}
+            onChange={(e) => setRepeat({ kind: e.target.value, days: repeat.days })}
+            aria-label="Repeat"
+          >
+            {REPEAT_OPTIONS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
               </option>
             ))}
           </select>
@@ -273,6 +317,42 @@ function Tasks() {
             <FiPlus /> Add
           </button>
         </div>
+
+        {/* Only asked for when it is the answer to something. A day picker
+            sitting there permanently would imply every task repeats. */}
+        {repeat.kind === "weekly" ? (
+          <div className="repeat-days" role="group" aria-label="Repeat on">
+            <span className="repeat-days-label">Repeat on</span>
+            {WEEKDAYS.map((day) => {
+              const picked = repeat.days.includes(day.value);
+
+              return (
+                <button
+                  key={day.value}
+                  type="button"
+                  className="repeat-day"
+                  aria-pressed={picked}
+                  aria-label={day.label}
+                  title={day.label}
+                  onClick={() =>
+                    setRepeat((current) => ({
+                      kind: "weekly",
+                      days: picked
+                        ? current.days.filter((value) => value !== day.value)
+                        : [...current.days, day.value].sort((a, b) => a - b),
+                    }))
+                  }
+                >
+                  {day.short}
+                </button>
+              );
+            })}
+
+            {repeat.days.length === 0 ? (
+              <span className="repeat-days-note">Pick at least one, or it never comes back.</span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="kanban-grid">
@@ -339,10 +419,16 @@ function Tasks() {
                         <span className={`date-badge ${overdue ? "due-overdue" : ""}`}>
                           {overdue ? "Overdue · " : ""}
                           {formatDueDate(task.dueDate)}
+                          {task.dueTime ? ` · ${formatDueTime(task.dueTime)}` : ""}
                         </span>
                       ) : (
                         <span className="date-badge is-undated">No due date</span>
                       )}
+                      {describeRepeat(task.repeat) ? (
+                        <span className="repeat-badge" title="Repeats — the next one appears when you tick this">
+                          {describeRepeat(task.repeat)}
+                        </span>
+                      ) : null}
                     </div>
 
                     <div className="task-actions-row">
