@@ -36,11 +36,13 @@ function normalizeEntry(raw, originalText) {
 }
 
 function formatCaptureError(error) {
-  const status = error?.response?.status || error?.status;
-  const message = (error?.response?.data?.error?.message || error?.message || "").toLowerCase();
-  if (message.includes("groq api key missing") || !import.meta.env.VITE_GROQ_API_KEY) return "Groq API key not found. Add VITE_GROQ_API_KEY to your .env file and restart the app.";
-  if (status === 401 || status === 403 || message.includes("api key")) return "Assistant access is blocked. Check your Groq API key at console.groq.com/keys.";
-  if (status === 429 || message.includes("quota") || message.includes("rate")) return "Assistant usage limit reached. Please wait a moment and try again.";
+  // askGroq already turned anything the assistant itself reported into words
+  // a person can act on. Repeating the old checks here would be worse than
+  // useless now: they tested a browser env var that no longer exists, so every
+  // failure told users to edit a .env file — and pointed them at the Groq
+  // console, which is our plumbing, not theirs.
+  if (error?.assistant && error.message) return error.message;
+
   return "Couldn't understand that note. Try rephrasing it.";
 }
 

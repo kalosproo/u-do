@@ -112,5 +112,9 @@ export { seedPlanLimits, backfillBilling } from "./admin/billing.js";
 // Reminders. The scheduled one derives each person's local time from the IANA
 // zone they stored, so it cannot drift across a DST change; the two triggers
 // fire on the event itself and ignore the clock.
+// The assistant. Its key was in the browser bundle until now; it is a
+// Firebase secret here and the client only ever sees the answer.
+export { askAssistant } from "./ai/assistant.js";
+
 export { sendScheduledReminders } from "./notifications/digest.js";
 export { onFriendRequest, onFriendAdded } from "./notifications/friends.js";
