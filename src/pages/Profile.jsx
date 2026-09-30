@@ -11,6 +11,7 @@ import {
   inspectBackup,
 } from "../services/workspace";
 import NotificationSettings from "../components/NotificationSettings";
+import DeleteAccount from "../components/DeleteAccount";
 
 const IMPORT_MODE_OPTIONS = [
   ["merge", "Keep newer", "Existing entries stay if they were changed more recently than the backup."],
@@ -277,6 +278,8 @@ function Profile() {
           </button>
         </div>
       </article>
+
+      <DeleteAccount />
     </section>
   );
 }

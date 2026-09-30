@@ -3341,3 +3341,44 @@ h3, .panel-title { letter-spacing: -0.013em; }
   color: var(--text-subtle);
   white-space: nowrap;
 }
+
+/* --------------------------------------------------------- delete account */
+
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+}
+
+.danger-zone .panel-note {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+
+.danger-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+  max-width: 320px;
+}
+
+.danger-field input {
+  font: inherit;
+  font-size: var(--t-base);
+  padding: 9px var(--s-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.danger-field input:disabled {
+  opacity: 0.6;
+}

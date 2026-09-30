@@ -117,5 +117,9 @@ export { seedPlanLimits, backfillBilling } from "./admin/billing.js";
 // Firebase secret here and the client only ever sees the answer.
 export { askAssistant } from "./ai/assistant.js";
 
+// Account deletion. Half of what has to go is unreachable by the person who
+// owns it, so this cannot be done from the client.
+export { deleteMyAccount } from "./account/delete.js";
+
 export { sendScheduledReminders } from "./notifications/digest.js";
 export { onFriendRequest, onFriendAdded } from "./notifications/friends.js";

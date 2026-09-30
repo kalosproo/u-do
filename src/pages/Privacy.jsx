@@ -136,15 +136,27 @@ function Privacy() {
           workspace. Each page can also clear just its own data.
         </p>
         <p>
-          There is no button that deletes your account itself yet. Email the address
-          above and we will delete the account and everything attached to it.
+          <strong>Delete account</strong> at the bottom of Profile permanently removes
+          the account itself and everything attached to it: your tasks, habits, planner
+          and transactions, your profile and handle, your billing and reminder records,
+          and your place in anyone else&apos;s friends list. It asks you to sign in again
+          first, because an unattended laptop should not be two clicks from destroying
+          an account. It cannot be undone and we cannot recover it for you.
         </p>
 
         <h2>How long we keep it</h2>
         <p>
           Until you delete it. Clearing your workspace removes the content immediately.
-          Deleting your account removes the account and its content. Backups you
-          exported yourself are on your own device and are yours to manage.
+          Deleting your account removes the account and its content, including the
+          record of your having accepted this policy. Backups you exported yourself are
+          on your own device and are yours to manage.
+        </p>
+        <p>
+          Two things outlive a deletion and it would be wrong not to say so. Vercel&apos;s
+          server logs keep IP addresses and request times on their own retention
+          schedule, as any web host does. And anything you sent to the AI assistant was
+          processed by Groq under their terms — we cannot reach into their systems to
+          remove it.
         </p>
 
         <h2>Children</h2>
