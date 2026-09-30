@@ -8,6 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
 import { auth, googleProvider } from "../services/firebase";
 import { recordConsent } from "../services/consent";
+import { authorizeAttempt } from "../services/authGuard";
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -79,6 +80,13 @@ function Login() {
     try {
       const formattedEmail = normalizeEmail(email);
 
+      // Before Firebase sees a credential at all, so a guessing run is
+      // counted and stopped rather than merely failing one attempt at a time.
+      await authorizeAttempt({
+        email: formattedEmail,
+        mode: isSignup ? "signup" : "login",
+      });
+
       if (isSignup) {
         const created = await createUserWithEmailAndPassword(auth, formattedEmail, password);
         // Recorded after the account exists, because the record is keyed by uid
@@ -90,7 +98,7 @@ function Login() {
 
       navigate("/", { replace: true });
     } catch (authError) {
-      setError(describeAuthError(authError));
+      setError(authError?.policyCode ? authError.message : describeAuthError(authError));
     } finally {
       setBusy(false);
     }
@@ -106,6 +114,8 @@ function Login() {
     setError("");
 
     try {
+      await authorizeAttempt({ email: "", mode: "google" });
+
       const result = await signInWithPopup(auth, googleProvider);
 
       // Google is a signup path as much as a login one, and there is no flag on
@@ -116,7 +126,7 @@ function Login() {
 
       navigate("/", { replace: true });
     } catch (authError) {
-      setError(describeAuthError(authError));
+      setError(authError?.policyCode ? authError.message : describeAuthError(authError));
     } finally {
       setBusy(false);
     }
