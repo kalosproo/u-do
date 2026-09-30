@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test src/utils/recurrence.test.mjs functions/reminders.test.mjs",
+    "test:rules": "firebase emulators:exec --only firestore --project u-do-rules-test \"node firestore.rules.test.mjs\"",
+    "lint:admin": "npm --prefix admin run lint",
+    "build:admin": "npm --prefix admin run build"
   },
   "dependencies": {
     "animejs": "^4.5.0",
