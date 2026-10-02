@@ -73,12 +73,74 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/profiles/$(ownerId)/friends/$(request.auth.uid));
     }
 
-    // Private workspace: tasks, planner, expenses, habits and their logs.
+    /**
+     * A transaction, checked field by field.
+     *
+     * `amountMinor` is an integer count of the currency's smallest unit, and
+     * the only figure the app treats as the amount. `amount` is the same
+     * number in major units, kept so a client running the bundle that predates
+     * minor units still reads something correct; it is bounded here as well,
+     * because the reader prefers it when the two disagree and an unbounded
+     * mirror would walk straight past the bound on the field beside it.
+     *
+     * This deliberately does not use hasOnly(). Records written by earlier
+     * versions carry fields these rules were never told about, and refusing
+     * them would leave someone unable to edit their own row — a worse outcome
+     * than a stray key. What is checked is checked strictly.
+     */
+    function validExpense(data) {
+      return data.amountMinor is int
+        && data.amountMinor > 0
+        && data.amountMinor <= 10000000000
+        && data.amount is number
+        && data.amount > 0
+        && data.amount <= 100000000
+        && data.currency in ['INR']
+        && data.type in ['expense', 'income']
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 120
+        && data.category is string
+        && data.category.size() > 0
+        && data.category.size() <= 60
+        && data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    // Private workspace: tasks, planner, expenses and habits.
     // Nothing here is ever readable by another account, friend or not — and
     // that includes admins. Admin access to an account is mediated by
     // getAdminUserDetail, which returns counts rather than content.
-    match /users/{uid}/{document=**} {
+    //
+    // The four collections are written out rather than covered by one
+    // recursive wildcard. Rules are OR'd, so a `users/{uid}/{document=**}`
+    // that allows any write would have granted every expense write on its own
+    // and made the validation below dead code. Naming them also closes the
+    // door on a client inventing a fifth collection under someone's account.
+    match /users/{uid} {
       allow read, write: if isOwner(uid);
+
+      match /expenses/{entryId} {
+        allow read, delete: if isOwner(uid);
+
+        // request.resource.data is the whole document after the write, for a
+        // partial update as much as a create, so one check covers both.
+        allow create, update: if isOwner(uid) && validExpense(request.resource.data);
+      }
+
+      // Not yet validated field by field. They carry no money, so the gap is
+      // shape rather than value, and narrowing them is its own change.
+      match /tasks/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /planner/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /habits/{docId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     match /profiles/{uid} {
