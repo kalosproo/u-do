@@ -1,19 +1,9 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { EMAIL_POLICY, extractDomain, normalizeEmail } from "./emailPolicy.js";
+import { buildRateKeys, clientIp, EMAIL_POLICY, extractDomain, normalizeEmail } from "./emailPolicy.js";
 import { db } from "./firebaseAdmin.js";
 
 const RATE_LIMIT_COLLECTION = "authRateLimits";
-
-const buildRateKeys = ({ ip = "unknown-ip", email = "", deviceId = "unknown-device" }) => {
-  const normalizedEmail = normalizeEmail(email);
-
-  return [
-    `ip:${ip}`,
-    `email:${normalizedEmail || "unknown-email"}`,
-    `device:${deviceId || "unknown-device"}`,
-  ];
-};
 
 const getLimitForKey = (key) => {
   if (key.startsWith("ip:")) return EMAIL_POLICY.rateLimit.maxAttemptsPerIp;
@@ -87,12 +77,23 @@ const enforceRateLimit = async ({ ip, email, deviceId }) => {
   });
 };
 
+/**
+ * The brake in front of sign-in, called before any credential reaches Firebase.
+ *
+ * It has been deployed since the auth work landed and nothing called it, so
+ * every login path has been unthrottled this whole time.
+ */
 export const authorizeAuthAttempt = onCall(async (request) => {
   const { email = "", deviceId = "", mode = "login" } = request.data || {};
-  const ip = request.rawRequest.ip || "unknown-ip";
 
-  const normalizedEmail = enforceEmailPolicy(email);
-  await enforceRateLimit({ ip, email: normalizedEmail, deviceId });
+  // A provider sign-in has no address to apply the email policy to yet — the
+  // popup has not returned. Running the policy anyway would reject it as an
+  // invalid email and block every Google sign-in outright. The attempt is
+  // still counted, by IP and by device.
+  const federated = mode === "google";
+  const normalizedEmail = federated ? "" : enforceEmailPolicy(email);
+
+  await enforceRateLimit({ ip: clientIp(request), email: normalizedEmail, deviceId });
 
   return {
     ok: true,
@@ -112,5 +113,13 @@ export { seedPlanLimits, backfillBilling } from "./admin/billing.js";
 // Reminders. The scheduled one derives each person's local time from the IANA
 // zone they stored, so it cannot drift across a DST change; the two triggers
 // fire on the event itself and ignore the clock.
+// The assistant. Its key was in the browser bundle until now; it is a
+// Firebase secret here and the client only ever sees the answer.
+export { askAssistant } from "./ai/assistant.js";
+
+// Account deletion. Half of what has to go is unreachable by the person who
+// owns it, so this cannot be done from the client.
+export { deleteMyAccount } from "./account/delete.js";
+
 export { sendScheduledReminders } from "./notifications/digest.js";
 export { onFriendRequest, onFriendAdded } from "./notifications/friends.js";

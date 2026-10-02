@@ -1,72 +1,63 @@
-import axios from "axios";
+import { httpsCallable } from "firebase/functions";
 
-// Groq gives a free API key (no credit card) at https://console.groq.com/keys
-// Its chat completions endpoint is OpenAI-compatible, so this mirrors openai.js.
-const API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
-const MODEL = import.meta.env.VITE_GROQ_MODEL || "openai/gpt-oss-120b";
+import { functions } from "./firebase";
 
-// Free tier is rate-limited (~30 req/min). Retry with backoff instead of
-// failing the whole request the moment a burst of calls trips the limit.
-const MAX_RETRIES = 3;
-const BASE_DELAY_MS = 1000;
+/**
+ * The assistant's model call, now made by the server.
+ *
+ * This file used to hold the Groq API key and talk to api.groq.com straight
+ * from the browser. Vite inlines `import.meta.env.VITE_*` into the bundle, so
+ * that key shipped to every visitor and anyone could read it out of the
+ * JavaScript and spend the quota. It also meant a signed-out visitor could
+ * drive the model for free.
+ *
+ * The key lives in a Firebase secret now and the browser never sees it. The
+ * signature is unchanged on purpose — aiAssistant, ai/assistant, quickCapture
+ * and autoPlanner all call askGroq(prompt) and none of them had to change.
+ */
+/**
+ * Built on first use, not at import time.
+ *
+ * Four modules import askGroq, and several pages import those. Constructing
+ * the callable at module scope would mean a bad Functions instance takes the
+ * whole Planner down on load rather than failing the one button that needed
+ * it.
+ */
+let callAssistant;
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function getRetryDelayMs(error, attempt) {
-  const retryAfterHeader = error?.response?.headers?.["retry-after"];
-  const retryAfterSeconds = Number(retryAfterHeader);
-
-  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
-    return retryAfterSeconds * 1000;
+const assistant = () => {
+  if (!callAssistant) {
+    callAssistant = httpsCallable(functions, "askAssistant", { timeout: 120_000 });
   }
+  return callAssistant;
+};
 
-  return BASE_DELAY_MS * 2 ** attempt;
-}
-
-function isRetryableStatus(status) {
-  return status === 429 || (status >= 500 && status < 600);
-}
+/** Callable errors arrive with a code; turn the ones worth explaining into words. */
+const readableError = (error) => {
+  switch (error?.code) {
+    case "functions/unauthenticated":
+      return "Sign in to use the assistant.";
+    case "functions/resource-exhausted":
+      return "The assistant is busy or you've used it a lot recently. Try again shortly.";
+    case "functions/failed-precondition":
+      return "The assistant isn't set up on this deployment yet.";
+    case "functions/invalid-argument":
+      return "That request was too large for the assistant.";
+    default:
+      return "The assistant could not be reached. Try again in a moment.";
+  }
+};
 
 export async function askGroq(prompt) {
-  if (!API_KEY) {
-    throw new Error("Groq API key missing. Set VITE_GROQ_API_KEY in your environment.");
+  try {
+    const result = await assistant()({ prompt });
+    return result?.data?.text ?? "";
+  } catch (error) {
+    // Tagged so each feature can pass this straight through while keeping its
+    // own wording for the failures it raises itself — a reply it could not
+    // parse is not the same as the assistant being unreachable.
+    const readable = new Error(readableError(error));
+    readable.assistant = true;
+    throw readable;
   }
-
-  let lastError;
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
-    try {
-      const response = await axios.post(
-        API_URL,
-        {
-          model: MODEL,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.2,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${API_KEY}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      return response?.data?.choices?.[0]?.message?.content ?? "";
-    } catch (error) {
-      lastError = error;
-      const status = error?.response?.status;
-
-      if (isRetryableStatus(status) && attempt < MAX_RETRIES) {
-        await wait(getRetryDelayMs(error, attempt));
-        continue;
-      }
-
-      throw error;
-    }
-  }
-
-  throw lastError;
 }

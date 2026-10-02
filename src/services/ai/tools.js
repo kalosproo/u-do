@@ -1,6 +1,13 @@
 import { todayKey } from "../../utils/dateKeys";
 import { taskStats, habitStats, financeStats, plannerStats, activityByDay } from "../../utils/dashboard";
-import { inMonth, monthPrefix, sortByDateDesc, spendByCategory } from "../../utils/financeReport";
+import {
+  amountMinorOf,
+  inMonth,
+  monthPrefix,
+  sortByDateDesc,
+  spendByCategory,
+} from "../../utils/financeReport";
+import { formatMoney, readCurrency, toDecimalString, toMinor } from "../../utils/money";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../../config/financeCategories";
 import * as tasks from "../tasks";
 import * as habits from "../habits";
@@ -85,14 +92,31 @@ export const TOOLS = {
       const all = await finance.fetchExpenses(uid);
       const scoped = oneOf(args?.scope, ["month", "all"], "month") === "all" ? all : inMonth(all, monthPrefix());
 
+      // Everything the report layer returns is in minor units. Handing those
+      // to a language model under a key called "amount" is how ₹1,250 gets
+      // read back to someone as ₹1,25,000, so each figure is converted to its
+      // major-unit decimal and the currency is stated alongside it.
+      const stats = financeStats(all);
+      const currency = readCurrency(all[0]);
+
       return {
         scope: args?.scope || "month",
-        stats: financeStats(all),
-        byCategory: spendByCategory(scoped),
+        currency,
+        stats: {
+          ...stats,
+          balance: toDecimalString(stats.balance, currency),
+          income: toDecimalString(stats.income, currency),
+          spend: toDecimalString(stats.spend, currency),
+        },
+        byCategory: spendByCategory(scoped).map((row) => ({
+          category: row.category,
+          amount: toDecimalString(row.amountMinor, currency),
+        })),
         entries: sortByDateDesc(scoped).slice(0, 40).map((entry) => ({
           id: entry.id,
           title: entry.title,
-          amount: entry.amount,
+          amount: toDecimalString(amountMinorOf(entry), readCurrency(entry)),
+          currency: readCurrency(entry),
           type: entry.type,
           category: entry.category,
           date: entry.date,
@@ -283,25 +307,41 @@ export const TOOLS = {
     kind: TOOL_KINDS.WRITE,
     describe:
       'Record money in or out. Args: {"title":"...","amount":123,"type":"expense"|"income","category":"...","date":"YYYY-MM-DD"}',
+    // What the person approves before the write happens, so it has to show the
+    // figure that will actually be stored rather than a re-parse of the model's
+    // argument.
     summarize: (args) =>
-      `${oneOf(args?.type, ["expense", "income"], "expense") === "income" ? "Income" : "Expense"} "${str(args?.title)}" ₹${Number(args?.amount) || 0}`,
+      `${oneOf(args?.type, ["expense", "income"], "expense") === "income" ? "Income" : "Expense"} "${str(args?.title)}" ${formatMoney(toMinor(args?.amount))}`,
     run: async ({ uid }, args) => {
       const title = str(args?.title);
-      const amount = Number(args?.amount);
-
       if (!title) throw new Error("A transaction needs a title.");
-      if (!Number.isFinite(amount) || amount <= 0) throw new Error("A transaction needs an amount above zero.");
 
       const type = oneOf(args?.type, ["expense", "income"], "expense");
       const allowed = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
       const category = allowed.includes(str(args?.category)) ? str(args.category) : allowed[0];
 
-      const expense = buildExpense({ title, amount, type, category, date: optionalDate(args?.date) || todayKey() });
+      // buildExpense decides what a valid amount is, here as everywhere else.
+      const expense = buildExpense({
+        title,
+        amount: args?.amount,
+        type,
+        category,
+        date: optionalDate(args?.date) || todayKey(),
+      });
+
       const current = await finance.fetchExpenses(uid);
       const { error } = await finance.addExpense(uid, expense, current);
 
       if (error) throw error;
-      return { created: title, amount, type, category, date: expense.date };
+
+      return {
+        created: title,
+        amount: toDecimalString(expense.amountMinor, expense.currency),
+        currency: expense.currency,
+        type,
+        category,
+        date: expense.date,
+      };
     },
   },
 
@@ -316,7 +356,12 @@ export const TOOLS = {
 
       const changes = {};
       if (args?.newTitle !== undefined) changes.title = str(args.newTitle, match.title);
-      if (args?.amount !== undefined) changes.amount = Number(args.amount);
+      // Passed through untouched: updateExpense parses it, and a string like
+      // "12.35" is exact there in a way Number() is not.
+      if (args?.amount !== undefined) {
+        changes.amount = args.amount;
+        changes.currency = readCurrency(match);
+      }
       if (args?.category !== undefined) changes.category = str(args.category, match.category);
       if (args?.date !== undefined) changes.date = optionalDate(args.date) || match.date;
 

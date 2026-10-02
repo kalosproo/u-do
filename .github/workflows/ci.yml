@@ -1,0 +1,100 @@
+# The quality gate.
+#
+# What was here before was GitHub's "publish an npm package" template: it fired
+# only on `release: created`, and its build step ran `npm test`, which did not
+# exist. So nothing had ever gated a merge, and the one workflow present would
+# have failed if it ever ran. U.Do is an application, not a package — it is not
+# published to a registry at all.
+#
+# Every step below has been executed locally before being committed.
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+# A second push to the same branch makes the first run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Lint, test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      # ci, not install: it installs exactly the lockfile and fails if
+      # package.json and the lockfile have drifted apart.
+      - name: Install (consumer)
+        run: npm ci
+
+      - name: Install (admin)
+        run: npm --prefix admin ci
+
+      - name: Lint (consumer)
+        run: npm run lint
+
+      - name: Lint (admin)
+        run: npm run lint:admin
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build (consumer)
+        run: npm run build
+
+      - name: Build (admin)
+        run: npm run build:admin
+
+      # A syntax error here is only discovered at deploy time otherwise, which
+      # is the worst moment to find one.
+      - name: Cloud Functions parse
+        run: |
+          for f in $(find functions/src -name '*.js'); do
+            node --check "$f" || exit 1
+          done
+
+      # Names the secret if one is ever committed again. .env is already
+      # ignored, but it was committed once before and the keys are still public.
+      - name: No .env committed
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "::error::.env is tracked by git. Secrets must not be committed."
+            exit 1
+          fi
+
+  rules:
+    name: Firestore security rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      # The emulator is a Java process, and firebase-tools requires a JDK of
+      # at least 21. Pinning 17 here passed locally — this container ships a
+      # newer JDK — and failed in CI with "no longer supports Java version
+      # before 21", which is exactly the drift a real CI run exists to catch.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install rule-test tooling
+        run: npm ci && npm i --no-save @firebase/rules-unit-testing firebase-tools
+
+      - name: Run the rules against the emulator
+        run: npm run test:rules

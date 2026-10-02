@@ -51,19 +51,14 @@ const normalizeCalls = (raw) =>
     .filter((entry) => TOOLS[entry.tool]);
 
 export const formatAssistantError = (error) => {
-  const status = error?.response?.status || error?.status;
-  const message = (error?.response?.data?.error?.message || error?.message || "").toLowerCase();
+  // askGroq already turned anything the assistant itself reported into words
+  // a person can act on. Repeating the old checks here would be worse than
+  // useless now: they tested a browser env var that no longer exists, so every
+  // failure told users to edit a .env file — and pointed them at the Groq
+  // console, which is our plumbing, not theirs.
+  if (error?.assistant && error.message) return error.message;
 
-  if (message.includes("groq api key missing")) {
-    return "Groq API key not found. Add VITE_GROQ_API_KEY to your .env file and restart the app.";
-  }
-  if (status === 401 || status === 403 || message.includes("api key")) {
-    return "Assistant access is blocked. Check your Groq API key at console.groq.com/keys.";
-  }
-  if (status === 429 || message.includes("quota") || message.includes("rate")) {
-    return "Assistant usage limit reached. Please wait a moment and try again.";
-  }
-  return "Couldn't reach the assistant right now. Please try again.";
+  return "The assistant couldn't answer that. Try rephrasing it.";
 };
 
 /**

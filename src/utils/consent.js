@@ -6,8 +6,8 @@
  * would make "they agreed" permanently true no matter how much the policy
  * later changed, which is the failure mode worth designing out.
  */
-export const PRIVACY_POLICY_VERSION = 1;
-export const PRIVACY_POLICY_UPDATED = "18 September 2026";
+export const PRIVACY_POLICY_VERSION = 2;
+export const PRIVACY_POLICY_UPDATED = "30 September 2026";
 
 /** True when this account has not accepted the version currently published. */
 export const needsConsent = (record) =>

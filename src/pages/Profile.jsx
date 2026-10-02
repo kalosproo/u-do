@@ -11,6 +11,7 @@ import {
   inspectBackup,
 } from "../services/workspace";
 import NotificationSettings from "../components/NotificationSettings";
+import DeleteAccount from "../components/DeleteAccount";
 
 const IMPORT_MODE_OPTIONS = [
   ["merge", "Keep newer", "Existing entries stay if they were changed more recently than the backup."],
@@ -106,7 +107,11 @@ function Profile() {
       const kept = result.skippedTotal
         ? `, kept ${result.skippedTotal} newer local ${result.skippedTotal === 1 ? "entry" : "entries"}`
         : "";
-      say("success", `Imported ${result.total} record${result.total === 1 ? "" : "s"}${kept}.`);
+      // Dropping a row without saying so would be worse than refusing the file.
+      const refused = result.rejectedTotal
+        ? `, skipped ${result.rejectedTotal} transaction${result.rejectedTotal === 1 ? "" : "s"} with no valid amount`
+        : "";
+      say("success", `Imported ${result.total} record${result.total === 1 ? "" : "s"}${kept}${refused}.`);
     } catch (error) {
       say("error", error?.message || "Import failed. Nothing else was changed.");
     } finally {
@@ -277,6 +282,8 @@ function Profile() {
           </button>
         </div>
       </article>
+
+      <DeleteAccount />
     </section>
   );
 }

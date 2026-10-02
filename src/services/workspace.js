@@ -3,6 +3,8 @@ import { recordTimestamp } from "../utils/dateKeys";
 import { db } from "./firebase";
 import { WORKSPACE_COLLECTIONS, workspaceCollection, workspaceDoc } from "./paths";
 import { expensesCacheKey } from "./finance";
+import { amountMinorOf, normalizeExpense, stripLocalFields } from "../utils/financeReport";
+import { isValidMinor, readMinor } from "../utils/money";
 import { habitsCacheKey } from "./habits";
 import { LEGACY_PHOTO_KEY_PREFIX } from "../utils/profilePhoto";
 
@@ -11,6 +13,41 @@ const BATCH_SIZE = 400;
 
 /** A backup with more than this is refused rather than half-written. */
 const MAX_IMPORT_DOCS = 5000;
+
+/**
+ * A backup is a text file a person can edit, so nothing in it is trusted as a
+ * stored shape. Transactions in particular are brought back through the same
+ * normaliser every other write path uses: a hand-edited `"amount": "banana"`
+ * or a figure past the ledger's range would otherwise be written verbatim, and
+ * with the rules validating expense documents it would take the whole batch
+ * down with it.
+ *
+ * It is also what lets a backup exported before minor units restore correctly
+ * — the float becomes an exact `amountMinor` with its currency stated, rather
+ * than a record the new app cannot read.
+ *
+ * A row whose amount is missing, unreadable, zero or out of range is refused
+ * rather than written. Normalising would turn it into a ₹0 row, which the rules
+ * refuse — and a refused write fails its whole batch, so one bad row in a
+ * backup used to be able to sink four hundred good ones. It is counted and
+ * reported instead.
+ *
+ * Only transactions are covered here. Tasks, planner entries and habits are
+ * still written as the file gives them.
+ */
+const SANITIZE = {
+  expenses: (body) => {
+    const minor = readMinor(body);
+    if (!isValidMinor(minor) || minor <= 0) return null;
+
+    const clean = stripLocalFields(normalizeExpense(body));
+    return amountMinorOf(clean) > 0 ? clean : null;
+  },
+};
+
+// `body` has already had its id split off by the caller, so nothing here can
+// reintroduce one as a field. Null means the row cannot be stored at all.
+const sanitize = (name, body) => (SANITIZE[name] ? SANITIZE[name](body) : body);
 
 /**
  * "merge" keeps whichever copy was touched most recently, so restoring an old
@@ -98,6 +135,7 @@ export const importWorkspace = async (uid, raw, { mode = "merge" } = {}) => {
 
   const written = {};
   const skipped = {};
+  const rejected = {};
 
   for (const name of WORKSPACE_COLLECTIONS) {
     const rows = Array.isArray(data[name]) ? data[name] : [];
@@ -105,6 +143,7 @@ export const importWorkspace = async (uid, raw, { mode = "merge" } = {}) => {
 
     written[name] = 0;
     skipped[name] = 0;
+    rejected[name] = 0;
 
     if (usable.length === 0) continue;
 
@@ -131,7 +170,14 @@ export const importWorkspace = async (uid, raw, { mode = "merge" } = {}) => {
         }
       }
 
-      queue.push({ docId, body });
+      const clean = sanitize(name, body);
+
+      if (clean === null) {
+        rejected[name] += 1;
+        return;
+      }
+
+      queue.push({ docId, body: clean });
     });
 
     for (let start = 0; start < queue.length; start += BATCH_SIZE) {
@@ -148,7 +194,16 @@ export const importWorkspace = async (uid, raw, { mode = "merge" } = {}) => {
 
   const sum = (obj) => Object.values(obj).reduce((total, n) => total + n, 0);
 
-  return { counts, written, skipped, mode, total: sum(written), skippedTotal: sum(skipped) };
+  return {
+    counts,
+    written,
+    skipped,
+    rejected,
+    mode,
+    total: sum(written),
+    skippedTotal: sum(skipped),
+    rejectedTotal: sum(rejected),
+  };
 };
 
 export const clearWorkspace = async (uid) => {
