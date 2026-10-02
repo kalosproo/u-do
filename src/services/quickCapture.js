@@ -1,6 +1,7 @@
 import { askGroq } from "./groq";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../config/financeCategories";
 import { todayKey } from "../utils/dateKeys";
+import { MAX_AMOUNT_MINOR, fromMinor, parseMinor } from "../utils/money";
 
 const TYPES = ["expense", "income", "task", "habit"];
 
@@ -10,9 +11,15 @@ function extractJson(content) {
   return fencedMatch ? fencedMatch[1].trim() : cleaned;
 }
 
+/**
+ * The model answers with a JSON number, so this is the one place an amount
+ * arrives already parsed. It still goes through the money module: Number()
+ * accepts 1e5 and -0, and the rest of the app no longer does.
+ */
 function normalizeAmount(value) {
-  const number = Number(value);
-  return Number.isFinite(number) && number > 0 ? number : 0;
+  const minor = parseMinor(value);
+  if (minor === null || minor <= 0 || minor > MAX_AMOUNT_MINOR) return 0;
+  return fromMinor(minor);
 }
 
 function normalizeCategory(category, type) {
