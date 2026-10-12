@@ -8,11 +8,11 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test src/utils/recurrence.test.mjs src/utils/money.test.mjs src/utils/financeReport.test.mjs functions/reminders.test.mjs functions/auth.test.mjs functions/usage.test.mjs",
+    "test": "node --test src/utils/recurrence.test.mjs src/utils/money.test.mjs src/utils/financeReport.test.mjs functions/reminders.test.mjs functions/auth.test.mjs functions/usage.test.mjs functions/errors.test.mjs",
     "test:rules": "firebase emulators:exec --only firestore --project u-do-rules-test \"node firestore.rules.test.mjs\"",
     "lint:admin": "npm --prefix admin run lint",
     "build:admin": "npm --prefix admin run build",
-    "test:usage": "firebase emulators:exec --only firestore --project u-do-0 \"node functions/usage.it.mjs\""
+    "test:functions": "firebase emulators:exec --only firestore --project u-do-0 \"node functions/usage.it.mjs && node functions/errors.it.mjs\""
   },
   "dependencies": {
     "animejs": "^4.5.0",

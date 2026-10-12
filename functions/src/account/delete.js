@@ -3,6 +3,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { db } from "../firebaseAdmin.js";
 import { recordActivity } from "../usage/track.js";
+import { logServerError } from "../errors/report.js";
 
 /**
  * Deleting an account, for real.
@@ -36,6 +37,7 @@ const OWNED_DOCS = [
   "pushSubscriptions",
   "usageCounters",
   "aiUsage",
+  "errorRate",
 ];
 
 /** Subcollections hanging off the person's public profile. */
@@ -166,6 +168,7 @@ export const deleteMyAccount = onCall({ timeoutSeconds: 300 }, async (request) =
     await getAuth().deleteUser(uid);
   } catch (error) {
     console.error(`deleteMyAccount: ${uid} failed`, error);
+    await logServerError("deleteMyAccount", error);
     throw new HttpsError(
       "internal",
       "Your account could not be fully deleted. Nothing was left half-done that we can see — try again, or email us.",

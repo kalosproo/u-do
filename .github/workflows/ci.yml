@@ -99,11 +99,11 @@ jobs:
       - name: Run the rules against the emulator
         run: npm run test:rules
 
-      # The usage triggers, run against a real Firestore. They are invoked
+      # The usage triggers and error reporting, run against a real Firestore. They are invoked
       # directly rather than through the Functions emulator, which cannot
       # register Firestore triggers behind some proxies.
       - name: Install Functions dependencies
         run: npm install --prefix functions --no-audit --no-fund
 
-      - name: Run the usage triggers against the emulator
-        run: npm run test:usage
+      - name: Run the usage and error-report functions against the emulator
+        run: npm run test:functions

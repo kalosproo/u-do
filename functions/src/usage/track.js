@@ -5,6 +5,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { db } from "../firebaseAdmin.js";
 import { DEFAULT_USAGE, PLAN_IDS } from "../schema/plans.js";
 import { COUNTER_FOR, eventTypeFor, monthKeyFor, monthRange } from "./counters.js";
+import { logServerError } from "../errors/report.js";
 
 /**
  * Keeps the numbers the admin console shows real.
@@ -104,6 +105,7 @@ export const onWorkspaceWrite = onDocumentWritten(
       if (live && type) await recordActivity(type, uid);
     } catch (error) {
       console.error("onWorkspaceWrite failed", { uid, collection, error });
+      await logServerError("onWorkspaceWrite", error, "error");
     }
   },
 );
@@ -127,6 +129,7 @@ export const onFriendsChanged = onDocumentWritten(
       }
     } catch (error) {
       console.error("onFriendsChanged failed", { uid, error });
+      await logServerError("onFriendsChanged", error, "error");
     }
   },
 );
@@ -186,5 +189,6 @@ export const onUserCreated = functionsV1.auth.user().onCreate(async (user) => {
     await recordActivity("signup", user.uid);
   } catch (error) {
     console.error("onUserCreated failed", { uid: user.uid, error });
+    await logServerError("onUserCreated", error);
   }
 });
