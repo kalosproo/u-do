@@ -20,6 +20,7 @@ import FriendStreaks from "../components/FriendStreaks";
 import ChartPatterns from "../components/ChartPatterns";
 import { seriesFill } from "../utils/chartSeries";
 import { monthlyTotals } from "../utils/financeReport";
+import { compactMoney, formatMoney } from "../utils/money";
 import {
   activityByDay,
   activityWeekGrid,
@@ -29,20 +30,16 @@ import {
   taskStats,
 } from "../utils/dashboard";
 
-const money = (value) => `₹${Math.round(value).toLocaleString("en-IN")}`;
-
 /**
+ * Both figures arrive in minor units, so they are shown exactly rather than
+ * rounded to the nearest rupee on the way out.
+ *
  * Axis ticks have about five characters before they start colliding, so a
  * six-figure amount has to lose its digits rather than its axis. Indian
- * grouping, so 1,50,000 reads as 1.5L and not 150k.
+ * grouping, so 1,50,000 reads as 1.5L and not 150k — which is the one place
+ * rounding a figure is the job.
  */
-const compactMoney = (value) => {
-  const n = Math.abs(value);
-  if (n >= 1e7) return `₹${+(value / 1e7).toFixed(1)}Cr`;
-  if (n >= 1e5) return `₹${+(value / 1e5).toFixed(1)}L`;
-  if (n >= 1e3) return `₹${+(value / 1e3).toFixed(1)}k`;
-  return `₹${Math.round(value)}`;
-};
+const money = (minor) => formatMoney(minor);
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;

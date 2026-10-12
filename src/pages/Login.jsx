@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
 } from "firebase/auth";
@@ -8,16 +9,44 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
 import { auth, googleProvider } from "../services/firebase";
 import { recordConsent } from "../services/consent";
+import { authorizeAttempt } from "../services/authGuard";
 
 const MIN_PASSWORD_LENGTH = 6;
 
 const normalizeEmail = (value) => value.trim().toLowerCase();
 
-const validate = (email, password) => {
-  const normalized = normalizeEmail(email);
-  const [, domain = ""] = normalized.split("@");
+/**
+ * Worded the same whether or not the address has an account, so the form
+ * cannot be used to find out who is signed up.
+ */
+const RESET_SENT =
+  "If an account uses that email, a reset link is on its way. Check your spam folder too.";
 
-  if (!normalized.includes("@") || !domain.includes(".")) return "Enter a valid email address.";
+const isEmail = (value) => {
+  const normalized = normalizeEmail(value);
+  const [, domain = ""] = normalized.split("@");
+  return normalized.includes("@") && domain.includes(".");
+};
+
+/**
+ * Sends the reset email, bringing the person back to the login page once the
+ * new password is set. A preview deployment's domain may not be on the
+ * project's authorized list, so a rejected return address falls back to
+ * Firebase's own confirmation page rather than failing the reset.
+ */
+const sendReset = async (email) => {
+  try {
+    await sendPasswordResetEmail(auth, email, { url: `${window.location.origin}/login` });
+  } catch (error) {
+    if (error?.code !== "auth/unauthorized-continue-uri" && error?.code !== "auth/invalid-continue-uri") {
+      throw error;
+    }
+    await sendPasswordResetEmail(auth, email);
+  }
+};
+
+const validate = (email, password) => {
+  if (!isEmail(email)) return "Enter a valid email address.";
   if (password.length < MIN_PASSWORD_LENGTH) {
     return `Password needs at least ${MIN_PASSWORD_LENGTH} characters.`;
   }
@@ -59,6 +88,36 @@ function Login() {
   const [isSignup, setIsSignup] = useState(false);
   const [busy, setBusy] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [isReset, setIsReset] = useState(false);
+  const [notice, setNotice] = useState("");
+
+  const requestReset = async () => {
+    if (!isEmail(email)) {
+      setError("Enter the email you signed up with.");
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const formattedEmail = normalizeEmail(email);
+      // Counted like a login: an open reset form is a free way to flood
+      // someone's inbox otherwise.
+      await authorizeAttempt({ email: formattedEmail, mode: "reset" });
+      await sendReset(formattedEmail);
+      setNotice(RESET_SENT);
+    } catch (resetError) {
+      if (resetError?.code === "auth/user-not-found") {
+        setNotice(RESET_SENT);
+      } else {
+        setError(resetError?.policyCode ? resetError.message : describeAuthError(resetError));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submit = async () => {
     const validationError = validate(email, password);
@@ -79,6 +138,13 @@ function Login() {
     try {
       const formattedEmail = normalizeEmail(email);
 
+      // Before Firebase sees a credential at all, so a guessing run is
+      // counted and stopped rather than merely failing one attempt at a time.
+      await authorizeAttempt({
+        email: formattedEmail,
+        mode: isSignup ? "signup" : "login",
+      });
+
       if (isSignup) {
         const created = await createUserWithEmailAndPassword(auth, formattedEmail, password);
         // Recorded after the account exists, because the record is keyed by uid
@@ -90,7 +156,7 @@ function Login() {
 
       navigate("/", { replace: true });
     } catch (authError) {
-      setError(describeAuthError(authError));
+      setError(authError?.policyCode ? authError.message : describeAuthError(authError));
     } finally {
       setBusy(false);
     }
@@ -106,6 +172,8 @@ function Login() {
     setError("");
 
     try {
+      await authorizeAttempt({ email: "", mode: "google" });
+
       const result = await signInWithPopup(auth, googleProvider);
 
       // Google is a signup path as much as a login one, and there is no flag on
@@ -116,7 +184,7 @@ function Login() {
 
       navigate("/", { replace: true });
     } catch (authError) {
-      setError(describeAuthError(authError));
+      setError(authError?.policyCode ? authError.message : describeAuthError(authError));
     } finally {
       setBusy(false);
     }
@@ -124,9 +192,58 @@ function Login() {
 
   const switchMode = (signup) => {
     setIsSignup(signup);
+    setIsReset(false);
     setError("");
+    setNotice("");
     setAgreed(false);
   };
+
+  const showReset = (on) => {
+    setIsReset(on);
+    setError("");
+    setNotice("");
+  };
+
+  if (isReset) {
+    return (
+      <section className="login-page">
+        <div className="login-card">
+          <BrandLogo />
+          <p>Enter your email and we'll send you a link to set a new password.</p>
+
+          <label>
+            Email
+            <input
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") requestReset();
+              }}
+            />
+          </label>
+
+          {error ? <p className="login-error">{error}</p> : null}
+          {notice ? <p className="login-note" role="status">{notice}</p> : null}
+
+          <button
+            type="button"
+            className="btn btn-primary login-primary"
+            onClick={requestReset}
+            disabled={busy}
+          >
+            {busy ? "Please wait…" : "Send reset link"}
+          </button>
+
+          <button type="button" className="login-link" onClick={() => showReset(false)}>
+            Back to login
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="login-page">
@@ -201,6 +318,12 @@ function Login() {
               .
             </span>
           </label>
+        ) : null}
+
+        {!isSignup ? (
+          <button type="button" className="login-link login-forgot" onClick={() => showReset(true)}>
+            Forgot password?
+          </button>
         ) : null}
 
         {error ? <p className="login-error">{error}</p> : null}

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "./styles/fonts.css";
 @import "./styles/tokens.css";
 
 /* =========================================================================
@@ -1446,6 +1446,10 @@ input[type="file"].upload-input { display: none; }
 .login-divider { height: 1px; background: var(--border); }
 .login-card label { display: flex; flex-direction: column; gap: var(--s-1); font-size: 12px; font-weight: 550; color: var(--text-muted); }
 .login-primary { width: 100%; }
+.login-link { align-self: center; background: none; border: 0; padding: 0; font: inherit; font-size: 12.5px; font-weight: 550; color: var(--text-muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.login-link:hover { color: var(--text); }
+.login-forgot { align-self: flex-end; margin-top: calc(var(--s-1) * -1); }
+.login-note { font-size: 12.5px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-2) var(--s-3); }
 .login-error { font-size: 12.5px; color: var(--danger); background: var(--danger-soft); border: 1px solid var(--danger); border-radius: var(--r-sm); padding: var(--s-2) var(--s-3); }
 
 /* =========================================================================
@@ -3340,4 +3344,45 @@ h3, .panel-title { letter-spacing: -0.013em; }
   border: 1px solid var(--border);
   color: var(--text-subtle);
   white-space: nowrap;
+}
+
+/* --------------------------------------------------------- delete account */
+
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+}
+
+.danger-zone .panel-note {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+
+.danger-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+  max-width: 320px;
+}
+
+.danger-field input {
+  font: inherit;
+  font-size: var(--t-base);
+  padding: 9px var(--s-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.danger-field input:disabled {
+  opacity: 0.6;
 }

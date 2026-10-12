@@ -20,6 +20,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { formatShortDate, todayKey } from "../utils/dateKeys";
 import {
+  amountMinorOf,
   buildExpense,
   expensesToCSV,
   inMonth,
@@ -28,10 +29,16 @@ import {
   netBalance,
   sortByDateDesc,
   spendByCategory,
-  toAmount,
   totalIncome,
   totalSpend,
 } from "../utils/financeReport";
+import {
+  compactMoney,
+  formatMoney,
+  fromMinor,
+  parseMinor,
+  readCurrency,
+} from "../utils/money";
 import {
   addExpense as addExpenseRecord,
   clearExpenses,
@@ -52,16 +59,12 @@ const CHART_MODES = [
   ["bars", "Income vs spend"],
 ];
 
-const money = (value) => `₹${Math.round(value).toLocaleString("en-IN")}`;
-
-/** Axis ticks, in Indian grouping: 1,50,000 reads as 1.5L rather than 150k. */
-const compactMoney = (value) => {
-  const n = Math.abs(value);
-  if (n >= 1e7) return `₹${+(value / 1e7).toFixed(1)}Cr`;
-  if (n >= 1e5) return `₹${+(value / 1e5).toFixed(1)}L`;
-  if (n >= 1e3) return `₹${+(value / 1e3).toFixed(1)}k`;
-  return `₹${Math.round(value)}`;
-};
+/**
+ * Every figure on this page is in minor units, so the formatter shows exactly
+ * what is stored. It used to be `Math.round(value)`, which printed ₹12.50 as
+ * ₹13 and left four ₹0.50 rows reading ₹1 each under a total of ₹2.
+ */
+const money = (minor) => formatMoney(minor);
 
 /** History shows a page at a time; a year of spending should not render at once. */
 const PAGE_SIZE = 12;
@@ -153,7 +156,7 @@ function Finance() {
   );
 
   const pieData = useMemo(
-    () => categoryRows.map((row) => ({ name: row.category, value: row.amount })),
+    () => categoryRows.map((row) => ({ name: row.category, value: row.amountMinor })),
     [categoryRows]
   );
 
@@ -176,12 +179,17 @@ function Finance() {
       return;
     }
 
-    if (toAmount(amount) <= 0) {
-      setStatus("Amount has to be more than zero.");
+    // buildExpense is the only thing that decides what a valid amount is now.
+    // Every caller used to check for itself, and the weakest check won.
+    let expense;
+
+    try {
+      expense = buildExpense({ title, amount, type, category, date });
+    } catch (error) {
+      setStatus(error.message);
       return;
     }
 
-    const expense = buildExpense({ title, amount, type, category, date });
     resetForm();
 
     const { list, error } = await addExpenseRecord(currentUser.uid, expense, expenses);
@@ -194,14 +202,18 @@ function Finance() {
     const currentUser = requireUser();
     if (!currentUser || !editing) return;
 
-    if (!editing.title.trim() || toAmount(editing.amount) <= 0) {
+    const currency = readCurrency(editing);
+    const amountMinor = parseMinor(editing.amount, currency);
+
+    if (!editing.title.trim() || amountMinor === null || amountMinor <= 0) {
       setStatus("A transaction needs a title and an amount above zero.");
       return;
     }
 
     const changes = {
       title: editing.title.trim(),
-      amount: toAmount(editing.amount),
+      amountMinor,
+      currency,
       type: editing.type,
       category: editing.category,
       date: editing.date,
@@ -312,7 +324,7 @@ function Finance() {
           <span className="stat-label">Top category</span>
           <strong className="stat-value">{categoryRows[0]?.category || "—"}</strong>
           <span className="stat-note">
-            {categoryRows[0] ? money(categoryRows[0].amount) : "No spending yet"}
+            {categoryRows[0] ? money(categoryRows[0].amountMinor) : "No spending yet"}
           </span>
         </div>
       </div>
@@ -355,6 +367,7 @@ function Finance() {
               <input
                 type="number"
                 min="0"
+                step="any"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0"
@@ -397,7 +410,7 @@ function Finance() {
                       <span className="legend-swatch" style={seriesStyle(index)} />
                       {row.category}
                     </span>
-                    <span className="num">{money(row.amount)}</span>
+                    <span className="num">{money(row.amountMinor)}</span>
                   </li>
                 ))}
               </ul>
@@ -558,7 +571,7 @@ function Finance() {
                         <td className="text-muted">{entry.category}</td>
                         <td className={`num ${entry.type === "income" ? "amount-in" : "amount-out"}`}>
                           {entry.type === "income" ? "+" : "−"}
-                          {money(entry.amount)}
+                          {money(amountMinorOf(entry))}
                         </td>
                         <td>
                           <div className="row-actions">
@@ -566,7 +579,12 @@ function Finance() {
                               type="button"
                               className="btn-icon"
                               aria-label={`Edit ${entry.title}`}
-                              onClick={() => setEditing({ ...entry, amount: String(entry.amount) })}
+                              onClick={() =>
+                                setEditing({
+                                  ...entry,
+                                  amount: String(fromMinor(amountMinorOf(entry), readCurrency(entry))),
+                                })
+                              }
                             >
                               <FiEdit2 />
                             </button>
@@ -644,6 +662,7 @@ function Finance() {
               <input
                 type="number"
                 min="0"
+                step="any"
                 value={editing.amount}
                 onChange={(e) => setEditing({ ...editing, amount: e.target.value })}
               />

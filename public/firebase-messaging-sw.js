@@ -1,5 +1,3 @@
-/* eslint-env serviceworker */
-/* global importScripts, firebase */
 
 /**
  * The background half of push.

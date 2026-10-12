@@ -187,6 +187,107 @@ await t("a record whose uid lies is refused", () =>
   assertFails(setDoc(doc(alice,"pushSubscriptions",ALICE),{uid:BOB,enabled:true})));
 await t("alice can delete her own subscription", () => assertSucceeds(deleteDoc(doc(alice,"pushSubscriptions",ALICE))));
 
+console.log("\n=== a transaction is checked field by field ===");
+await seed();
+
+// The shape the app writes. Each case below changes exactly one thing.
+const TXN = Object.freeze({
+  id: "e1",
+  title: "Groceries",
+  amountMinor: 1235,
+  amount: 12.35,
+  currency: "INR",
+  type: "expense",
+  category: "Needs",
+  date: "2026-09-30",
+  createdAt: "2026-09-30T10:00:00.000Z",
+  updatedAt: "2026-09-30T10:00:00.000Z",
+});
+
+const txn = (patch) => ({ ...TXN, ...patch });
+const write = (as, uid, id, body) => setDoc(doc(as, "users", uid, "expenses", id), body);
+
+await t("owner writes a well-formed transaction", () => assertSucceeds(write(alice, ALICE, "e1", TXN)));
+await t("owner reads own transactions", () => assertSucceeds(getDocs(collection(alice,"users",ALICE,"expenses"))));
+await t("stranger CANNOT read someone's transactions", () => assertFails(getDocs(collection(mallory,"users",ALICE,"expenses"))));
+await t("stranger CANNOT write someone's transactions", () => assertFails(write(mallory, ALICE, "e2", TXN)));
+
+// Money. The whole point of the change these rules came with.
+await t("amountMinor CANNOT be fractional", () => assertFails(write(alice, ALICE, "e2", txn({ amountMinor: 12.35 }))));
+await t("amountMinor CANNOT be a string", () => assertFails(write(alice, ALICE, "e2", txn({ amountMinor: "1235" }))));
+await t("amountMinor CANNOT be zero", () => assertFails(write(alice, ALICE, "e2", txn({ amountMinor: 0, amount: 0 }))));
+await t("amountMinor CANNOT be negative", () => assertFails(write(alice, ALICE, "e2", txn({ amountMinor: -1235, amount: -12.35 }))));
+await t("amountMinor CANNOT exceed the ledger's range", () =>
+  assertFails(write(alice, ALICE, "e2", txn({ amountMinor: 10000000001, amount: 100000000.01 }))));
+await t("amountMinor is required", () => {
+  const body = txn({});
+  delete body.amountMinor;
+  return assertFails(write(alice, ALICE, "e2", body));
+});
+
+// The mirror is what the reader prefers when the two disagree, so it is
+// bounded too — otherwise it is a way straight past the bound above.
+await t("the major-unit mirror CANNOT be unbounded", () =>
+  assertFails(write(alice, ALICE, "e2", txn({ amount: 1e12 }))));
+await t("the major-unit mirror CANNOT be a string", () => assertFails(write(alice, ALICE, "e2", txn({ amount: "12.35" }))));
+
+await t("currency must be one we know", () => assertFails(write(alice, ALICE, "e2", txn({ currency: "ZZZ" }))));
+await t("currency is required", () => {
+  const body = txn({});
+  delete body.currency;
+  return assertFails(write(alice, ALICE, "e2", body));
+});
+
+await t("type must be expense or income", () => assertFails(write(alice, ALICE, "e2", txn({ type: "transfer" }))));
+await t("income is a valid type", () => assertSucceeds(write(alice, ALICE, "e3", txn({ type: "income", category: "Salary" }))));
+
+await t("title CANNOT be empty", () => assertFails(write(alice, ALICE, "e2", txn({ title: "" }))));
+await t("title CANNOT be unbounded", () => assertFails(write(alice, ALICE, "e2", txn({ title: "x".repeat(121) }))));
+await t("a title at the limit is fine", () => assertSucceeds(write(alice, ALICE, "e4", txn({ title: "x".repeat(120) }))));
+await t("category CANNOT be empty", () => assertFails(write(alice, ALICE, "e2", txn({ category: "" }))));
+await t("category CANNOT be unbounded", () => assertFails(write(alice, ALICE, "e2", txn({ category: "y".repeat(61) }))));
+
+await t("date must be a YYYY-MM-DD key", () => assertFails(write(alice, ALICE, "e2", txn({ date: "30/09/2026" }))));
+await t("date CANNOT be a timestamp object", () => assertFails(write(alice, ALICE, "e2", txn({ date: { seconds: 1 } }))));
+
+// Deliberately permissive: an old record carries fields these rules never
+// knew about, and refusing them would lock someone out of their own row.
+await t("an unknown extra field is still allowed", () =>
+  assertSucceeds(write(alice, ALICE, "e5", txn({ note: "written by an older build" }))));
+
+// A partial update is validated on the merged document, not the patch.
+await t("an update that keeps the shape valid is allowed", () =>
+  assertSucceeds(setDoc(doc(alice,"users",ALICE,"expenses","e1"), { title: "Groceries, again" }, { merge: true })));
+await t("an update that breaks the shape is refused", () =>
+  assertFails(setDoc(doc(alice,"users",ALICE,"expenses","e1"), { amountMinor: -1 }, { merge: true })));
+
+await t("deleting does not require a valid body", () => assertSucceeds(deleteDoc(doc(alice,"users",ALICE,"expenses","e1"))));
+
+// A record from before minor units: a float `amount` and nothing else. These
+// two cases are why the client writes every validated field on an edit
+// rather than the patch alone.
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(),"users",ALICE,"expenses","legacy"), {
+    id: "legacy", title: "Old rent", amount: 1350, type: "expense", category: "Housing", date: "2026-08-01",
+  });
+});
+await t("a title-only patch on a legacy record is refused", () =>
+  assertFails(setDoc(doc(alice,"users",ALICE,"expenses","legacy"), { title: "Rent" }, { merge: true })));
+await t("the full record an edit now writes brings it up to date", () =>
+  assertSucceeds(setDoc(doc(alice,"users",ALICE,"expenses","legacy"), {
+    title: "Rent", type: "expense", category: "Housing", date: "2026-08-01",
+    amountMinor: 135000, amount: 1350, currency: "INR",
+  }, { merge: true })));
+await t("a legacy record can still be deleted", () => assertSucceeds(deleteDoc(doc(alice,"users",ALICE,"expenses","legacy"))));
+
+console.log("\n=== the workspace is four named collections, not a wildcard ===");
+await t("owner still writes tasks", () => assertSucceeds(setDoc(doc(alice,"users",ALICE,"tasks","t1"),{title:"ship it"})));
+await t("owner still writes planner entries", () => assertSucceeds(setDoc(doc(alice,"users",ALICE,"planner","p1"),{date:"2026-09-30"})));
+await t("owner still writes habits", () => assertSucceeds(setDoc(doc(alice,"users",ALICE,"habits","h2"),{title:"read"})));
+await t("a collection nobody declared is refused", () =>
+  assertFails(setDoc(doc(alice,"users",ALICE,"secrets","s1"),{anything:true})));
+await t("stranger CANNOT write someone's tasks", () => assertFails(setDoc(doc(mallory,"users",ALICE,"tasks","t2"),{title:"x"})));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

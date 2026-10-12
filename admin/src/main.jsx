@@ -6,6 +6,7 @@ import SetupNeeded from "./pages/SetupNeeded.jsx";
 import { AdminAuthProvider } from "./context/AdminAuthContext.jsx";
 import { applyStoredTheme } from "./hooks/useTheme.js";
 import { MISSING_ENV } from "./services/firebase.js";
+import "./styles/fonts.css";
 import "./styles/tokens.css";
 import "./styles/admin.css";
 
