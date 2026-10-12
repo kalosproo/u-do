@@ -152,11 +152,14 @@ function Privacy() {
           on your own device and are yours to manage.
         </p>
         <p>
-          Two things outlive a deletion and it would be wrong not to say so. Vercel&apos;s
-          server logs keep IP addresses and request times on their own retention
-          schedule, as any web host does. And anything you sent to the AI assistant was
-          processed by Groq under their terms — we cannot reach into their systems to
-          remove it.
+          Three things outlive a deletion and it would be wrong not to say so. Our
+          database is backed up daily so that a mistake or an outage cannot wipe out
+          everyone&apos;s data; a deleted account remains in those backups until they
+          expire, which is at most 7 days later, and is never restored from them on
+          purpose. Vercel&apos;s server logs keep IP addresses and request times on their
+          own retention schedule, as any web host does. And anything you sent to the AI
+          assistant was processed by Groq under their terms — we cannot reach into their
+          systems to remove it.
         </p>
 
         <h2>Children</h2>
