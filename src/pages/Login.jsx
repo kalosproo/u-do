@@ -10,6 +10,7 @@ import BrandLogo from "../components/BrandLogo";
 import { auth, googleProvider } from "../services/firebase";
 import { recordConsent } from "../services/consent";
 import { authorizeAttempt } from "../services/authGuard";
+import { sendVerification } from "../services/verification";
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -150,6 +151,9 @@ function Login() {
         // Recorded after the account exists, because the record is keyed by uid
         // and the rules only accept it from the account it describes.
         await recordConsent(created.user.uid, "signup");
+        // Best effort: the account exists either way, and the banner in the
+        // app offers to send it again.
+        await sendVerification(created.user).catch(() => {});
       } else {
         await signInWithEmailAndPassword(auth, formattedEmail, password);
       }

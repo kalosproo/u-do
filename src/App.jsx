@@ -22,6 +22,7 @@ import QuickCapture from "./components/QuickCapture";
 import UdoBackground from "./components/UdoBackground";
 import CommandPalette from "./components/CommandPalette";
 import ConsentGate from "./components/ConsentGate";
+import VerifyEmailBanner from "./components/VerifyEmailBanner";
 import KeyboardShortcuts from "./components/KeyboardShortcuts";
 
 /** The signed-in chrome. Login sits outside it, on its own full-page canvas. */
@@ -48,6 +49,7 @@ function AppLayout() {
       </div>
 
       <main className="main-content with-sidebar">
+        <VerifyEmailBanner />
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
