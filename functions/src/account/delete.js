@@ -2,6 +2,7 @@ import { getAuth } from "firebase-admin/auth";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { db } from "../firebaseAdmin.js";
+import { recordActivity } from "../usage/track.js";
 
 /**
  * Deleting an account, for real.
@@ -155,6 +156,12 @@ export const deleteMyAccount = onCall({ timeoutSeconds: 300 }, async (request) =
       await db.collection(name).doc(uid).delete().catch(() => {});
     }
 
+    // The activity log carries no content, only a type and the uid — but the
+    // uid is still theirs, so it goes too.
+    const events = await db.collection("activityEvents").where("uid", "==", uid).get();
+    for (const doc of events.docs) await doc.ref.delete().catch(() => {});
+    removed.activityEvents = events.size;
+
     // Last, and only once the data is gone.
     await getAuth().deleteUser(uid);
   } catch (error) {
@@ -164,6 +171,9 @@ export const deleteMyAccount = onCall({ timeoutSeconds: 300 }, async (request) =
       "Your account could not be fully deleted. Nothing was left half-done that we can see — try again, or email us.",
     );
   }
+
+  // Counted, not identified: the event says an account went, not whose.
+  await recordActivity("account_deleted", null).catch(() => {});
 
   console.log(`deleteMyAccount: ${uid} deleted`, removed);
   return { ok: true };
