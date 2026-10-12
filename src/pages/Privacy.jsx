@@ -65,6 +65,25 @@ function Privacy() {
           your finances, or anything else.
         </p>
 
+        <h3>How the service is used</h3>
+        <p>
+          To run U.Do we keep counts of what each account has — how many active tasks,
+          habits and friends, and how many transactions, plans and assistant requests
+          this month — and when it was last active. We also keep a log of what kind of
+          thing happened and when, such as &quot;added a transaction&quot; or
+          &quot;completed a task&quot;. Neither ever includes what you wrote: not a title,
+          not an amount, not a note. Deleting your account deletes both.
+        </p>
+
+        <h3>Error reports</h3>
+        <p>
+          If the app crashes while you are signed in, it sends us a report of the error
+          and the page it happened on, so we can fix it. Before a report is stored,
+          email addresses, long numbers and anything after a &quot;?&quot; in a web
+          address are removed, and no account id is attached — we cannot tell whose
+          error it was. Reports are deleted after 30 days.
+        </p>
+
         <h3>On your device</h3>
         <p>
           Your theme choice and a cached copy of your expenses and habits are kept in
