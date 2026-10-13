@@ -1,4 +1,4 @@
-import { addDoc, deleteDoc, getDocs, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { deleteDoc, getDocs, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 import { expenseDoc, expensesCollection } from "./paths";
 import {
@@ -94,15 +94,22 @@ const resendPending = async (uid, list) => {
   return list.map((entry) => (sent.has(entry.id) ? stripLocalFields(entry) : entry));
 };
 
-/** Writes at a known id so the local copy and the remote copy share one identity. */
+/**
+ * Writes at a known id so the local copy and the remote copy share one
+ * identity.
+ *
+ * This used to fall back to addDoc when the write failed. addDoc picks a new
+ * random id, so a write that failed after actually landing — a dropped
+ * acknowledgement — stored the transaction twice, and the local copy, still
+ * under its own id, could never be matched to either. Every failure that stops
+ * setDoc stops addDoc too, so the fallback only ever produced duplicates. A
+ * failure now stays a failure; the entry is kept pending and re-sent at its
+ * own id, which is idempotent.
+ */
 export const saveExpense = async (uid, expense) => {
   const body = stripLocalFields(expense);
-
-  try {
-    await setDoc(expenseDoc(uid, body.id), body);
-  } catch {
-    await addDoc(expensesCollection(uid), body);
-  }
+  const id = body.id || crypto.randomUUID();
+  await setDoc(expenseDoc(uid, id), { ...body, id });
 };
 
 /**
