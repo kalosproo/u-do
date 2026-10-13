@@ -130,3 +130,6 @@ export { onUserCreated, onWorkspaceWrite, onFriendsChanged } from "./usage/track
 
 // Crash reports into the errorLogs panel the admin Overview already shows.
 export { reportClientError, pruneErrorLogs } from "./errors/report.js";
+
+// Pro through Razorpay. Off until a price, a Razorpay plan and the keys exist.
+export { createProSubscription, cancelProSubscription, razorpayWebhook } from "./billing/razorpay.js";

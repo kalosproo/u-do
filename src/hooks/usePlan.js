@@ -31,7 +31,7 @@ const describe = (planId) => ({
  */
 export function usePlan() {
   const { user } = useAuth();
-  const [settled, setSettled] = useState({ uid: null, planId: "free" });
+  const [settled, setSettled] = useState({ uid: null, planId: "free", record: {} });
 
   useEffect(() => {
     if (!user) return undefined;
@@ -39,18 +39,31 @@ export function usePlan() {
     const unsubscribe = onSnapshot(
       doc(db, "billing", user.uid),
       (snapshot) => {
-        const planId = snapshot.exists() ? snapshot.data().planId || "free" : "free";
-        setSettled({ uid: user.uid, planId });
+        const record = snapshot.exists() ? snapshot.data() : {};
+        setSettled({ uid: user.uid, planId: record.planId || "free", record });
       },
-      () => setSettled({ uid: user.uid, planId: "free" }),
+      () => setSettled({ uid: user.uid, planId: "free", record: {} }),
     );
 
     return unsubscribe;
   }, [user]);
 
-  if (!user) return { ...FREE, loading: false };
+  if (!user) return { ...FREE, subscription: null, loading: false };
 
   const loading = settled.uid !== user.uid;
-  // No ad until the plan is known, so a Pro account never sees one flash in.
-  return { ...describe(loading ? "free" : settled.planId), adsEnabled: !loading && settled.planId !== "pro", loading };
+  const record = loading ? {} : settled.record;
+  return {
+    ...describe(loading ? "free" : settled.planId),
+    // No ad until the plan is known, so a Pro account never sees one flash in.
+    adsEnabled: !loading && settled.planId !== "pro",
+    // What the Plan card needs to say about a subscription. Read-only, like the rest.
+    subscription: record.subscriptionId
+      ? {
+          status: record.subscriptionStatus || "pending",
+          cancelAtPeriodEnd: record.cancelAtPeriodEnd === true,
+          periodEnd: record.currentPeriodEnd?.toDate?.() || null,
+        }
+      : null,
+    loading,
+  };
 }

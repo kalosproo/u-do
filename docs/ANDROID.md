@@ -67,7 +67,7 @@ Without this, Android shows a browser bar at the top of the app.
 | Asked for | Answer |
 | --- | --- |
 | Privacy policy URL | https://u-do-sigma.vercel.app/privacy |
-| Account deletion | In-app: Profile → Delete account. Web: the "Your rights" section of the privacy policy. |
+| Account deletion | In-app: Profile → Delete account. Web: email the address in the privacy policy's "Who runs U.Do" section. |
 | Data safety | Email, name and photo (from Google sign-in); user content (tasks, habits, plans, finance entries); app activity counts; crash logs (no account id). Data is encrypted in transit; users can delete it. Not sold, not shared for advertising beyond AdSense on the web. |
 | Ads | Yes — AdSense shows on the Free plan. |
 | Target audience | 13+ |

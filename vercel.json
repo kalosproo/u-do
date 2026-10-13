@@ -32,7 +32,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), midi=()"
+          "value": "accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(self \"https://api.razorpay.com\" \"https://checkout.razorpay.com\"), usb=(), midi=()"
         },
         {
           "key": "Cross-Origin-Opener-Policy",

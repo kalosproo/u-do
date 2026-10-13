@@ -4,6 +4,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db } from "../firebaseAdmin.js";
 import { recordActivity } from "../usage/track.js";
 import { logServerError } from "../errors/report.js";
+import { KEY_ID, KEY_SECRET, cancelSubscriptionNow } from "../billing/razorpay.js";
 
 /**
  * Deleting an account, for real.
@@ -114,7 +115,7 @@ const releaseReservations = async (uid) => {
   return released;
 };
 
-export const deleteMyAccount = onCall({ timeoutSeconds: 300 }, async (request) => {
+export const deleteMyAccount = onCall({ timeoutSeconds: 300, secrets: [KEY_ID, KEY_SECRET] }, async (request) => {
   const auth = request.auth;
 
   if (!auth) {
@@ -137,6 +138,20 @@ export const deleteMyAccount = onCall({ timeoutSeconds: 300 }, async (request) =
 
   const uid = auth.uid;
   const removed = {};
+
+  // Before anything is deleted: a Pro subscription is stopped at Razorpay, or
+  // the deletion does not start. Deleting the billing record first would lose
+  // the only pointer to a card that is still being charged.
+  try {
+    const billing = (await db.collection("billing").doc(uid).get()).data();
+    removed.subscriptionCancelled = await cancelSubscriptionNow(billing);
+  } catch (error) {
+    await logServerError("deleteMyAccount", error);
+    throw new HttpsError(
+      "unavailable",
+      "Couldn't cancel your Pro subscription, so nothing was deleted. Try again in a moment.",
+    );
+  }
 
   try {
     for (const name of WORKSPACE) {

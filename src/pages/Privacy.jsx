@@ -132,6 +132,15 @@ function Privacy() {
           . We do not send your workspace content to AdSense.
         </p>
 
+        <h3>Razorpay</h3>
+        <p>
+          If you buy Pro, the payment is handled by Razorpay. Your card, UPI or bank
+          details go to Razorpay directly and never reach us. Razorpay tells us whether
+          the subscription is active and the amount, date and status of each payment,
+          and we keep that to know who is on Pro. Razorpay processes your payment under
+          its own privacy policy and the law that applies to payment providers.
+        </p>
+
         <h2>What we do not do</h2>
         <ul>
           <li>We do not sell your data.</li>
@@ -179,6 +188,12 @@ function Privacy() {
           own retention schedule, as any web host does. And anything you sent to the AI
           assistant was processed by Groq under their terms — we cannot reach into their
           systems to remove it.
+        </p>
+        <p>
+          A fourth applies only if you paid for Pro. Deleting your account cancels the
+          subscription first, so nothing more is charged, but the record of each payment — amount, date, status —
+          is kept for as long as tax and accounting law requires, without your workspace
+          content, and Razorpay keeps its own records under its own obligations.
         </p>
 
         <h2>Children</h2>
