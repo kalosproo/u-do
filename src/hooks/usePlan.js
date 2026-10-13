@@ -4,11 +4,13 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useAuth } from "./useAuth";
 
-const FREE = { planId: "free", label: "Free" };
+const FREE = { planId: "free", label: "Free", adsEnabled: true };
 
 const describe = (planId) => ({
   planId,
   label: planId === "pro" ? "Pro" : "Free",
+  // Pro is ad-free. Asked here rather than at each ad slot.
+  adsEnabled: planId !== "pro",
 });
 
 /**
@@ -49,5 +51,6 @@ export function usePlan() {
   if (!user) return { ...FREE, loading: false };
 
   const loading = settled.uid !== user.uid;
-  return { ...describe(loading ? "free" : settled.planId), loading };
+  // No ad until the plan is known, so a Pro account never sees one flash in.
+  return { ...describe(loading ? "free" : settled.planId), adsEnabled: !loading && settled.planId !== "pro", loading };
 }
