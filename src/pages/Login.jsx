@@ -10,6 +10,7 @@ import BrandLogo from "../components/BrandLogo";
 import { auth, googleProvider } from "../services/firebase";
 import { recordConsent } from "../services/consent";
 import { authorizeAttempt } from "../services/authGuard";
+import { sendVerification } from "../services/verification";
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -61,8 +62,12 @@ const describeAuthError = (error) => {
     case "auth/wrong-password":
     case "auth/user-not-found":
       return "That email and password don't match an account.";
+    // A password signup cannot hide that an address is taken — the account
+    // was not created, and that is the answer. What it can avoid is saying so
+    // outright, and the attempt is rate-limited like a login, so the form is
+    // not a fast way to check a list of addresses.
     case "auth/email-already-in-use":
-      return "An account already uses that email. Try logging in.";
+      return "Couldn't create an account with that email. If it's yours, log in or reset your password.";
     case "auth/weak-password":
       return `Password needs at least ${MIN_PASSWORD_LENGTH} characters.`;
     case "auth/invalid-email":
@@ -150,6 +155,9 @@ function Login() {
         // Recorded after the account exists, because the record is keyed by uid
         // and the rules only accept it from the account it describes.
         await recordConsent(created.user.uid, "signup");
+        // Best effort: the account exists either way, and the banner in the
+        // app offers to send it again.
+        await sendVerification(created.user).catch(() => {});
       } else {
         await signInWithEmailAndPassword(auth, formattedEmail, password);
       }

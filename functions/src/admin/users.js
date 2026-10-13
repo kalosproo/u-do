@@ -7,10 +7,26 @@ import { db } from "../firebaseAdmin.js";
 import { clampLimit, requireAdmin } from "./guard.js";
 import { writeAccessLog } from "./audit.js";
 import { DEFAULT_USAGE, PLAN_IDS } from "../schema/plans.js";
+import { monthKeyFor } from "../usage/counters.js";
 
 
 const toMillis = (value) =>
   value instanceof Timestamp ? value.toMillis() : null;
+
+/**
+ * Monthly counters are recounted on the next write, so a quiet account still
+ * carries last month's figure into this one. Read it as zero instead.
+ */
+const currentCounters = (usage = {}) => {
+  const counters = { ...DEFAULT_USAGE, ...(usage.counters || {}) };
+  const month = monthKeyFor();
+  if (usage.monthKey !== month) {
+    counters.financeEntriesPerMonth = 0;
+    counters.plannerEventsPerMonth = 0;
+  }
+  if (usage.aiMonthKey !== month) counters.aiRequestsPerMonth = 0;
+  return counters;
+};
 
 /** Everything an admin list row is allowed to show, and nothing more. */
 const toUserRow = (uid, { billing = {}, profile = {}, usage = {} }) => ({
@@ -23,7 +39,7 @@ const toUserRow = (uid, { billing = {}, profile = {}, usage = {} }) => ({
   disabled: billing.disabled === true,
   createdAt: toMillis(billing.createdAt),
   lastActiveAt: toMillis(usage.lastActiveAt),
-  usage: { ...DEFAULT_USAGE, ...(usage.counters || {}) },
+  usage: currentCounters(usage),
 });
 
 const hydrate = async (uids) => {
@@ -169,7 +185,7 @@ export const getAdminUserDetail = onCall(async (request) => {
       grantedProUntil: toMillis(billingDoc.data().grantedProUntil),
     } : null,
     usage: {
-      counters: { ...DEFAULT_USAGE, ...(usage.counters || {}) },
+      counters: currentCounters(usage),
       lastActiveAt: toMillis(usage.lastActiveAt),
       monthKey: usage.monthKey || null,
     },

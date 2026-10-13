@@ -65,6 +65,25 @@ function Privacy() {
           your finances, or anything else.
         </p>
 
+        <h3>How the service is used</h3>
+        <p>
+          To run U.Do we keep counts of what each account has — how many active tasks,
+          habits and friends, and how many transactions, plans and assistant requests
+          this month — and when it was last active. We also keep a log of what kind of
+          thing happened and when, such as &quot;added a transaction&quot; or
+          &quot;completed a task&quot;. Neither ever includes what you wrote: not a title,
+          not an amount, not a note. Deleting your account deletes both.
+        </p>
+
+        <h3>Error reports</h3>
+        <p>
+          If the app crashes while you are signed in, it sends us a report of the error
+          and the page it happened on, so we can fix it. Before a report is stored,
+          email addresses, long numbers and anything after a &quot;?&quot; in a web
+          address are removed, and no account id is attached — we cannot tell whose
+          error it was. Reports are deleted after 30 days.
+        </p>
+
         <h3>On your device</h3>
         <p>
           Your theme choice and a cached copy of your expenses and habits are kept in
@@ -111,6 +130,15 @@ function Privacy() {
             Google&apos;s policy for partner sites
           </a>
           . We do not send your workspace content to AdSense.
+        </p>
+
+        <h3>Razorpay</h3>
+        <p>
+          If you buy Pro, the payment is handled by Razorpay. Your card, UPI or bank
+          details go to Razorpay directly and never reach us. Razorpay tells us whether
+          the subscription is active and the amount, date and status of each payment,
+          and we keep that to know who is on Pro. Razorpay processes your payment under
+          its own privacy policy and the law that applies to payment providers.
         </p>
 
         <h2>What we do not do</h2>
@@ -160,6 +188,12 @@ function Privacy() {
           own retention schedule, as any web host does. And anything you sent to the AI
           assistant was processed by Groq under their terms — we cannot reach into their
           systems to remove it.
+        </p>
+        <p>
+          A fourth applies only if you paid for Pro. Deleting your account cancels the
+          subscription first, so nothing more is charged, but the record of each payment — amount, date, status —
+          is kept for as long as tax and accounting law requires, without your workspace
+          content, and Razorpay keeps its own records under its own obligations.
         </p>
 
         <h2>Children</h2>

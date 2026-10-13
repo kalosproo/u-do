@@ -280,6 +280,36 @@ await t("the full record an edit now writes brings it up to date", () =>
   }, { merge: true })));
 await t("a legacy record can still be deleted", () => assertSucceeds(deleteDoc(doc(alice,"users",ALICE,"expenses","legacy"))));
 
+console.log("\n=== tasks, plans and habits are bounded ===");
+const task = (patch = {}) => ({ title: "Ship it", status: "todo", completed: false, priority: "high", dueDate: "2026-10-13", dueTime: "09:30", leadMinutes: 30, repeat: { kind: "weekly", days: [1, 3] }, seriesId: "s1", createdAt: new Date(), ...patch });
+const tdoc = (id) => doc(alice, "users", ALICE, "tasks", id);
+await t("a task as the app writes it is accepted", () => assertSucceeds(setDoc(tdoc("tv1"), task())));
+await t("a task title over 500 characters is refused", () => assertFails(setDoc(tdoc("tv2"), task({ title: "x".repeat(501) }))));
+await t("a task title as a number is refused", () => assertFails(setDoc(tdoc("tv3"), task({ title: 42 }))));
+await t("'completed' must be true or false", () => assertFails(setDoc(tdoc("tv4"), task({ completed: "yes" }))));
+await t("a dueDate longer than a date key is refused", () => assertFails(setDoc(tdoc("tv5"), task({ dueDate: "x".repeat(50) }))));
+await t("a cleared due date (empty string) is fine", () => assertSucceeds(setDoc(tdoc("tv6"), task({ dueDate: "" }))));
+await t("a task with 41 fields is refused", () => {
+  const big = task(); for (let i = 0; i < 35; i += 1) big[`f${i}`] = i;
+  return assertFails(setDoc(tdoc("tv7"), big));
+});
+await t("status change on a valid task is accepted", () => assertSucceeds(setDoc(tdoc("tv1"), { status: "done", completed: true }, { merge: true })));
+
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), "users", ALICE, "habits", "legacyH"), { type: "daily", completedDays: {} });
+});
+await t("an old-format habit with no title can still be ticked", () =>
+  assertSucceeds(setDoc(doc(alice, "users", ALICE, "habits", "legacyH"), { logs: { "2026-10-13": true } }, { merge: true })));
+await t("a habit log over 4000 days is refused", () => {
+  const logs = {}; for (let i = 0; i < 4001; i += 1) logs[`d${i}`] = true;
+  return assertFails(setDoc(doc(alice, "users", ALICE, "habits", "hv1"), { title: "run", frequency: "daily", logs }));
+});
+await t("a habit title over 500 characters is refused", () => assertFails(setDoc(doc(alice, "users", ALICE, "habits", "hv2"), { title: "x".repeat(501), logs: {} })));
+
+await t("a plan as the app writes it is accepted", () => assertSucceeds(setDoc(doc(alice, "users", ALICE, "planner", "pv1"), { title: "Deep work", date: "2026-10-13", priority: "high", completed: false, order: 0 })));
+await t("a plan 'order' as text is refused", () => assertFails(setDoc(doc(alice, "users", ALICE, "planner", "pv2"), { title: "x", date: "2026-10-13", order: "first" })));
+await t("a stranger still cannot write someone's plans", () => assertFails(setDoc(doc(mallory, "users", ALICE, "planner", "pv3"), { title: "x" })));
+
 console.log("\n=== the workspace is four named collections, not a wildcard ===");
 await t("owner still writes tasks", () => assertSucceeds(setDoc(doc(alice,"users",ALICE,"tasks","t1"),{title:"ship it"})));
 await t("owner still writes planner entries", () => assertSucceeds(setDoc(doc(alice,"users",ALICE,"planner","p1"),{date:"2026-09-30"})));

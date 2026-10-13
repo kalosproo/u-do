@@ -1,4 +1,5 @@
 import { Component } from "react";
+import { reportError } from "../services/errorReporting";
 
 /**
  * Catches a render-time crash so one broken page doesn't blank the whole app.
@@ -17,6 +18,7 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error("Unhandled UI error:", error, info?.componentStack);
+    reportError(error, { source: "render" });
   }
 
   render() {

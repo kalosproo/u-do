@@ -2,6 +2,9 @@ import { getAuth } from "firebase-admin/auth";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { db } from "../firebaseAdmin.js";
+import { recordActivity } from "../usage/track.js";
+import { logServerError } from "../errors/report.js";
+import { KEY_ID, KEY_SECRET, cancelSubscriptionNow } from "../billing/razorpay.js";
 
 /**
  * Deleting an account, for real.
@@ -35,6 +38,7 @@ const OWNED_DOCS = [
   "pushSubscriptions",
   "usageCounters",
   "aiUsage",
+  "errorRate",
 ];
 
 /** Subcollections hanging off the person's public profile. */
@@ -111,7 +115,7 @@ const releaseReservations = async (uid) => {
   return released;
 };
 
-export const deleteMyAccount = onCall({ timeoutSeconds: 300 }, async (request) => {
+export const deleteMyAccount = onCall({ timeoutSeconds: 300, secrets: [KEY_ID, KEY_SECRET] }, async (request) => {
   const auth = request.auth;
 
   if (!auth) {
@@ -135,6 +139,20 @@ export const deleteMyAccount = onCall({ timeoutSeconds: 300 }, async (request) =
   const uid = auth.uid;
   const removed = {};
 
+  // Before anything is deleted: a Pro subscription is stopped at Razorpay, or
+  // the deletion does not start. Deleting the billing record first would lose
+  // the only pointer to a card that is still being charged.
+  try {
+    const billing = (await db.collection("billing").doc(uid).get()).data();
+    removed.subscriptionCancelled = await cancelSubscriptionNow(billing);
+  } catch (error) {
+    await logServerError("deleteMyAccount", error);
+    throw new HttpsError(
+      "unavailable",
+      "Couldn't cancel your Pro subscription, so nothing was deleted. Try again in a moment.",
+    );
+  }
+
   try {
     for (const name of WORKSPACE) {
       removed[name] = await deleteAll(db.collection("users").doc(uid).collection(name));
@@ -155,15 +173,25 @@ export const deleteMyAccount = onCall({ timeoutSeconds: 300 }, async (request) =
       await db.collection(name).doc(uid).delete().catch(() => {});
     }
 
+    // The activity log carries no content, only a type and the uid — but the
+    // uid is still theirs, so it goes too.
+    const events = await db.collection("activityEvents").where("uid", "==", uid).get();
+    for (const doc of events.docs) await doc.ref.delete().catch(() => {});
+    removed.activityEvents = events.size;
+
     // Last, and only once the data is gone.
     await getAuth().deleteUser(uid);
   } catch (error) {
     console.error(`deleteMyAccount: ${uid} failed`, error);
+    await logServerError("deleteMyAccount", error);
     throw new HttpsError(
       "internal",
       "Your account could not be fully deleted. Nothing was left half-done that we can see — try again, or email us.",
     );
   }
+
+  // Counted, not identified: the event says an account went, not whose.
+  await recordActivity("account_deleted", null).catch(() => {});
 
   console.log(`deleteMyAccount: ${uid} deleted`, removed);
   return { ok: true };
