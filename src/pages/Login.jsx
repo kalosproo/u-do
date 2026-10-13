@@ -62,8 +62,12 @@ const describeAuthError = (error) => {
     case "auth/wrong-password":
     case "auth/user-not-found":
       return "That email and password don't match an account.";
+    // A password signup cannot hide that an address is taken — the account
+    // was not created, and that is the answer. What it can avoid is saying so
+    // outright, and the attempt is rate-limited like a login, so the form is
+    // not a fast way to check a list of addresses.
     case "auth/email-already-in-use":
-      return "An account already uses that email. Try logging in.";
+      return "Couldn't create an account with that email. If it's yours, log in or reset your password.";
     case "auth/weak-password":
       return `Password needs at least ${MIN_PASSWORD_LENGTH} characters.`;
     case "auth/invalid-email":
