@@ -1,5 +1,6 @@
 import { addDoc, deleteDoc, getDocs, updateDoc } from "firebase/firestore";
 import { plannerCollection, plannerDoc } from "./paths";
+import { clipTitle } from "../utils/labels.js";
 
 export const fetchPlans = async (uid) => {
   const snapshot = await getDocs(plannerCollection(uid));
@@ -8,7 +9,7 @@ export const fetchPlans = async (uid) => {
 
 export const createPlan = (uid, { title, date, priority = "medium", order = 0 }) =>
   addDoc(plannerCollection(uid), {
-    title,
+    title: clipTitle(title),
     date,
     priority,
     completed: false,
@@ -16,7 +17,7 @@ export const createPlan = (uid, { title, date, priority = "medium", order = 0 })
     createdAt: new Date(),
   });
 
-export const renamePlan = (uid, planId, title) => updateDoc(plannerDoc(uid, planId), { title });
+export const renamePlan = (uid, planId, title) => updateDoc(plannerDoc(uid, planId), { title: clipTitle(title) });
 
 export const setPlanCompleted = (uid, planId, completed, order) =>
   updateDoc(plannerDoc(uid, planId), { completed, order });

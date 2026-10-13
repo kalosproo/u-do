@@ -2,6 +2,7 @@ import { addDoc, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch 
 import { db } from "./firebase";
 import { taskDoc, tasksCollection } from "./paths";
 import { EMPTY_REPEAT, isRepeating, nextOccurrence, normalizeRepeat } from "../utils/recurrence";
+import { clipTitle } from "../utils/labels.js";
 
 /** Minutes of warning before a timed task is due. */
 export const DEFAULT_LEAD_MINUTES = 30;
@@ -72,7 +73,7 @@ export const createTask = (uid, {
   const rule = normalizeRepeat(repeat);
 
   return addDoc(tasksCollection(uid), {
-    title,
+    title: clipTitle(title),
     dueDate,
     dueTime: cleanTime(dueTime),
     priority,
@@ -113,7 +114,7 @@ const spawnNextOccurrence = async (uid, task) => {
   if (existing.exists()) return null;
 
   const next = {
-    title: task.title,
+    title: clipTitle(task.title),
     dueDate,
     dueTime: cleanTime(task.dueTime),
     priority: task.priority || "medium",
@@ -155,7 +156,7 @@ export const setTaskStatus = async (uid, task, status) => {
 export const updateTask = (uid, taskId, changes) => {
   const patch = {};
 
-  if (changes.title !== undefined) patch.title = String(changes.title).trim();
+  if (changes.title !== undefined) patch.title = clipTitle(changes.title);
   // An empty string is meaningful here: it clears the due date back to none.
   if (changes.dueDate !== undefined) patch.dueDate = changes.dueDate || "";
   if (changes.dueTime !== undefined) patch.dueTime = cleanTime(changes.dueTime);

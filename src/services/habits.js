@@ -2,6 +2,7 @@ import { addDoc, deleteDoc, getDocs, updateDoc, writeBatch } from "firebase/fire
 import { db } from "./firebase";
 import { habitDoc, habitsCollection } from "./paths";
 import { clearSharedSummary, publishHabitSummary } from "./friends";
+import { clipTitle } from "../utils/labels.js";
 
 /** Scoped per account: an unscoped key let one account's cache show to another. */
 export const habitsCacheKey = (uid) => `u_do_habits_${uid}`;
@@ -53,7 +54,7 @@ export const fetchHabits = async (user) => {
 };
 
 export const createHabit = (uid, { title, frequency = "daily" }) =>
-  addDoc(habitsCollection(uid), { title, frequency, createdAt: new Date(), logs: {} });
+  addDoc(habitsCollection(uid), { title: clipTitle(title), frequency, createdAt: new Date(), logs: {} });
 
 export const setHabitLogs = (uid, habitId, logs) => updateDoc(habitDoc(uid, habitId), { logs });
 
@@ -61,7 +62,7 @@ export const setHabitLogs = (uid, habitId, logs) => updateDoc(habitDoc(uid, habi
 export const updateHabit = (uid, habitId, changes) => {
   const patch = {};
 
-  if (changes.title !== undefined) patch.title = String(changes.title).trim();
+  if (changes.title !== undefined) patch.title = clipTitle(changes.title);
   if (changes.frequency !== undefined) patch.frequency = changes.frequency;
 
   return updateDoc(habitDoc(uid, habitId), patch);

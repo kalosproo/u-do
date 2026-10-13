@@ -109,7 +109,7 @@ function Profile() {
         : "";
       // Dropping a row without saying so would be worse than refusing the file.
       const refused = result.rejectedTotal
-        ? `, skipped ${result.rejectedTotal} transaction${result.rejectedTotal === 1 ? "" : "s"} with no valid amount`
+        ? `, skipped ${result.rejectedTotal} ${result.rejectedTotal === 1 ? "entry" : "entries"} that couldn't be stored`
         : "";
       say("success", `Imported ${result.total} record${result.total === 1 ? "" : "s"}${kept}${refused}.`);
     } catch (error) {
