@@ -754,7 +754,10 @@ input[type="search"]::placeholder {
 
 @media (max-width: 880px) {
   .shell {
-    grid-template-columns: 1fr;
+    /* minmax(0, …), not 1fr: a bare 1fr track grows to fit its widest
+       unbreakable content, so one long error message widened the whole
+       page past the phone. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .rail {
@@ -824,3 +827,33 @@ input[type="search"]::placeholder {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Expandable error rows: the summary is a normal row, the body is the stack. */
+.row-details > summary { list-style: none; cursor: pointer; }
+.row-details > summary::-webkit-details-marker { display: none; }
+.row-details[open] > summary { background: var(--surface-2, transparent); }
+.stack {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-bottom: 1px solid var(--border);
+}
+.stack-none { padding: var(--s-2) var(--s-4); margin: 0; }
+
+/* Plan table on Limits. */
+.grid-table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
+.grid-table th,
+.grid-table td { text-align: left; padding: 10px var(--s-4); border-bottom: 1px solid var(--border); }
+.grid-table th { font-weight: 500; color: var(--text-subtle); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+.grid-table td:not(:first-child),
+.grid-table th:not(:first-child) { font-family: var(--font-mono); text-align: right; }
+
+/* Settings actions. */
+.setting { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-4); padding: var(--s-3) 0; border-bottom: 1px solid var(--border); }
+.setting:last-child { border-bottom: 0; }
+.setting p { margin: 4px 0 0; }
