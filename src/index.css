@@ -3826,10 +3826,13 @@ body.is-focusing { overflow: hidden; }
   .focus-pause-btn { transition: none; }
 }
 
-/* Narrow phones: the flip clock's top bar carries five controls. */
-@media (max-width: 360px) {
+/* Phones in portrait: the flip clock's top bar carries up to five
+   controls, and the subject line under it already says what's running. */
+@media (max-width: 500px) {
   .focus-style-2 .focus-top-label { display: none; }
   .focus-style-2 .focus-top { grid-template-columns: auto 1fr; }
+}
+@media (max-width: 360px) {
   .focus-style-2 .focus-icon-btn,
   .focus-style-2 .focus-pause-btn { width: 34px; height: 34px; font-size: 15px; }
   .focus-style-2 .focus-style button { width: 28px; }
