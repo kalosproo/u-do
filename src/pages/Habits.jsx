@@ -13,6 +13,7 @@ import {
   getRecentWindowKeys,
   getWindowKeyForDate,
 } from "../utils/streaks";
+import { celebrate } from "../utils/feedback";
 
 const FILTER_OPTIONS = [
   ["all", "All"],
@@ -131,6 +132,7 @@ function Habits() {
       });
     } else {
       nextLogs[todayKey] = true;
+      celebrate();
     }
 
     try {

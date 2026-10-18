@@ -14,6 +14,7 @@ import {
 import { describeRepeat, EMPTY_REPEAT, WEEKDAYS } from "../utils/recurrence";
 import ClearDataButton from "../components/ClearDataButton";
 import PageMenu, { PageMenuLabel } from "../components/PageMenu";
+import { celebrate } from "../utils/feedback";
 
 const COLUMNS = [
   { key: "todo", title: "To do" },
@@ -132,6 +133,8 @@ function Tasks() {
   const updateTaskStatus = async (task, nextStatus) => {
     const currentUser = requireUser();
     if (!currentUser || task.status === nextStatus) return;
+
+    if (nextStatus === "done") celebrate();
 
     // Move the card first so the board feels immediate, then persist.
     setTasks((current) =>

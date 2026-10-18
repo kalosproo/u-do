@@ -13,6 +13,7 @@ import {
   renamePlan,
   setPlanCompleted,
 } from "../services/planner";
+import { celebrate } from "../utils/feedback";
 
 function sortPlans(list) {
   return [...list].sort((a, b) => {
@@ -170,6 +171,8 @@ function Planner() {
   const toggleCompleted = async (plan) => {
     const currentUser = requireUser();
     if (!currentUser) return;
+
+    if (!plan.completed) celebrate();
 
     const sameDay = plans.filter((item) => item.date === plan.date && item.id !== plan.id);
     const targetGroup = sameDay.filter((item) => item.completed === !plan.completed);

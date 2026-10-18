@@ -23,6 +23,8 @@ import QuickCapture from "./components/QuickCapture";
 import UdoBackground from "./components/UdoBackground";
 import CommandPalette from "./components/CommandPalette";
 import ConsentGate from "./components/ConsentGate";
+import OfflineNotice from "./components/OfflineNotice";
+import WelcomeTour from "./components/WelcomeTour";
 import VerifyEmailBanner from "./components/VerifyEmailBanner";
 import AdSlot from "./components/AdSlot";
 import IndexingPolicy from "./components/IndexingPolicy";
@@ -42,6 +44,7 @@ function AppLayout() {
       <KeyboardShortcuts />
 
       <AdSlot enabled={showAds} />
+      <OfflineNotice />
 
       <main className="main-content with-sidebar">
         <VerifyEmailBanner />
@@ -137,6 +140,9 @@ function App() {
       <div className="app-layer">
         <AppRoutes />
       </div>
+
+      {/* Before the consent prompt, so the prompt renders above it. */}
+      <WelcomeTour />
 
       {/* Outside the routes so it covers every page, and portalled to the body
           so it sits above the background layer. */}
