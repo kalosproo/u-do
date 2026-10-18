@@ -25,6 +25,8 @@ import CommandPalette from "./components/CommandPalette";
 import ConsentGate from "./components/ConsentGate";
 import OfflineNotice from "./components/OfflineNotice";
 import WelcomeTour from "./components/WelcomeTour";
+import FocusScreen from "./components/focus/FocusScreen";
+import FocusPill from "./components/focus/FocusPill";
 import VerifyEmailBanner from "./components/VerifyEmailBanner";
 import AdSlot from "./components/AdSlot";
 import IndexingPolicy from "./components/IndexingPolicy";
@@ -140,6 +142,11 @@ function App() {
       <div className="app-layer">
         <AppRoutes />
       </div>
+
+      {/* The focus timer follows the person around the app: full screen or
+          the small pill. */}
+      <FocusPill />
+      <FocusScreen />
 
       {/* Before the consent prompt, so the prompt renders above it. */}
       <WelcomeTour />
