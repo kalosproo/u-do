@@ -1,4 +1,10 @@
 User-agent: *
+Allow: /login
+Allow: /privacy
 Disallow: /
+
+# AdSense reviews and matches ads by reading pages; it must not be blocked.
+User-agent: Mediapartners-Google
+Allow: /
 
 Sitemap: https://u-do-sigma.vercel.app/sitemap.xml

@@ -12,6 +12,7 @@ import {
 } from "../services/workspace";
 import NotificationSettings from "../components/NotificationSettings";
 import DeleteAccount from "../components/DeleteAccount";
+import PlanCard from "../components/PlanCard";
 
 const IMPORT_MODE_OPTIONS = [
   ["merge", "Keep newer", "Existing entries stay if they were changed more recently than the backup."],
@@ -109,7 +110,7 @@ function Profile() {
         : "";
       // Dropping a row without saying so would be worse than refusing the file.
       const refused = result.rejectedTotal
-        ? `, skipped ${result.rejectedTotal} transaction${result.rejectedTotal === 1 ? "" : "s"} with no valid amount`
+        ? `, skipped ${result.rejectedTotal} ${result.rejectedTotal === 1 ? "entry" : "entries"} that couldn't be stored`
         : "";
       say("success", `Imported ${result.total} record${result.total === 1 ? "" : "s"}${kept}${refused}.`);
     } catch (error) {
@@ -171,6 +172,8 @@ function Profile() {
           </div>
         </div>
       </article>
+
+      <PlanCard />
 
       <NotificationSettings />
 

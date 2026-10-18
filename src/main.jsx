@@ -4,6 +4,9 @@ import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthProvider.jsx'
 import { ThemeProvider } from './context/ThemeProvider.jsx'
+import { installGlobalErrorReporting } from './services/errorReporting'
+
+installGlobalErrorReporting()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

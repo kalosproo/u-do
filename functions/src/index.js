@@ -123,3 +123,13 @@ export { deleteMyAccount } from "./account/delete.js";
 
 export { sendScheduledReminders } from "./notifications/digest.js";
 export { onFriendRequest, onFriendAdded } from "./notifications/friends.js";
+
+// Usage and activity for the admin console. The console has read these since
+// it was built; until now nothing on the server wrote them.
+export { onUserCreated, onWorkspaceWrite, onFriendsChanged } from "./usage/track.js";
+
+// Crash reports into the errorLogs panel the admin Overview already shows.
+export { reportClientError, pruneErrorLogs } from "./errors/report.js";
+
+// Pro through Razorpay. Off until a price, a Razorpay plan and the keys exist.
+export { createProSubscription, cancelProSubscription, razorpayWebhook } from "./billing/razorpay.js";

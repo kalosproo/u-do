@@ -5,6 +5,7 @@ import { WORKSPACE_COLLECTIONS, workspaceCollection, workspaceDoc } from "./path
 import { expensesCacheKey } from "./finance";
 import { amountMinorOf, normalizeExpense, stripLocalFields } from "../utils/financeReport";
 import { isValidMinor, readMinor } from "../utils/money";
+import { boundedLabelled, MAX_HABIT_LOG_DAYS } from "../utils/labels.js";
 import { habitsCacheKey } from "./habits";
 import { LEGACY_PHOTO_KEY_PREFIX } from "../utils/profilePhoto";
 
@@ -32,8 +33,8 @@ const MAX_IMPORT_DOCS = 5000;
  * backup used to be able to sink four hundred good ones. It is counted and
  * reported instead.
  *
- * Only transactions are covered here. Tasks, planner entries and habits are
- * still written as the file gives them.
+ * Tasks, planner entries and habits get their titles capped and their size
+ * checked against the same limits the rules apply.
  */
 const SANITIZE = {
   expenses: (body) => {
@@ -42,6 +43,14 @@ const SANITIZE = {
 
     const clean = stripLocalFields(normalizeExpense(body));
     return amountMinorOf(clean) > 0 ? clean : null;
+  },
+  tasks: (body) => boundedLabelled(body),
+  planner: (body) => boundedLabelled(body),
+  habits: (body) => {
+    const logs = body.logs;
+    if (logs != null && (typeof logs !== "object" || Array.isArray(logs))) return null;
+    if (logs && Object.keys(logs).length > MAX_HABIT_LOG_DAYS) return null;
+    return boundedLabelled(body);
   },
 };
 

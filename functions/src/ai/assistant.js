@@ -3,6 +3,7 @@ import { defineSecret } from "firebase-functions/params";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { db } from "../firebaseAdmin.js";
+import { monthKeyFor } from "../usage/counters.js";
 
 /**
  * The AI assistant's only door to Groq.
@@ -80,6 +81,36 @@ const meter = async (uid) => {
   }
 };
 
+/**
+ * Counts the request against the month for the admin console. Its own month
+ * key, because the other monthly counters are recounted from the workspace
+ * and resetting a shared key here would zero them. Never blocks the request.
+ */
+const countRequest = async (uid) => {
+  const ref = db.collection("usageCounters").doc(uid);
+  const month = monthKeyFor();
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const snap = await transaction.get(ref);
+      if (!snap.exists) return;
+      const data = snap.data();
+      const used = data.aiMonthKey === month ? data.counters?.aiRequestsPerMonth || 0 : 0;
+      transaction.set(
+        ref,
+        {
+          aiMonthKey: month,
+          counters: { aiRequestsPerMonth: used + 1 },
+          lastActiveAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    });
+  } catch (error) {
+    console.error("askAssistant: usage count failed", error);
+  }
+};
+
 export const askAssistant = onCall(
   { secrets: [GROQ_API_KEY], timeoutSeconds: 120 },
   async (request) => {
@@ -104,6 +135,7 @@ export const askAssistant = onCall(
     }
 
     await meter(request.auth.uid);
+    await countRequest(request.auth.uid);
 
     let lastStatus = 0;
 

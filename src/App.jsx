@@ -22,11 +22,16 @@ import QuickCapture from "./components/QuickCapture";
 import UdoBackground from "./components/UdoBackground";
 import CommandPalette from "./components/CommandPalette";
 import ConsentGate from "./components/ConsentGate";
+import VerifyEmailBanner from "./components/VerifyEmailBanner";
+import AdSlot from "./components/AdSlot";
+import IndexingPolicy from "./components/IndexingPolicy";
+import { usePlan } from "./hooks/usePlan";
 import KeyboardShortcuts from "./components/KeyboardShortcuts";
 
 /** The signed-in chrome. Login sits outside it, on its own full-page canvas. */
 function AppLayout() {
   const { user } = useAuth();
+  const { adsEnabled: showAds } = usePlan();
 
   return (
     <>
@@ -35,19 +40,10 @@ function AppLayout() {
       <CommandPalette />
       <KeyboardShortcuts />
 
-      <div className="adsense-container">
-        <ins
-          className="adsbygoogle"
-          style={{ display: "block" }}
-          data-ad-client="ca-pub-1234327380102132"
-          data-ad-slot="4768251063"
-          data-ad-format="auto"
-          data-full-width-responsive="true"
-        />
-        <script>{`(adsbygoogle = window.adsbygoogle || []).push({});`}</script>
-      </div>
+      <AdSlot enabled={showAds} />
 
       <main className="main-content with-sidebar">
+        <VerifyEmailBanner />
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
@@ -135,6 +131,7 @@ function App() {
           content is not positioned — Login and the 404 among them. Portalled
           overlays mount to document.body, outside this wrapper, so they still
           sit above it. */}
+      <IndexingPolicy />
       <div className="app-layer">
         <AppRoutes />
       </div>

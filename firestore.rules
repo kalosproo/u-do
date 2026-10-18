@@ -107,6 +107,65 @@ service cloud.firestore {
         && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
     }
 
+    /**
+     * Tasks, plans and habits carry no money, so these check shape and size
+     * rather than value: every field the app writes is the right type and
+     * bounded, so nobody can store a 10 MB title or turn a habit's log into
+     * a list of a million entries.
+     *
+     * The bounds are generous on purpose. The app caps titles at 200
+     * characters; the rules allow 500, so a record written before any cap
+     * existed can still be edited. Like the expense rules, unknown extra
+     * fields are tolerated rather than locking someone out of their own row.
+     */
+    function boundedDoc(data) {
+      return data.keys().size() <= 40;
+    }
+
+    function label(data, field, max) {
+      return !(field in data) || (data[field] is string && data[field].size() <= max);
+    }
+
+    function optionalOf(data, field, kind) {
+      return !(field in data)
+        || data[field] == null
+        || (kind == 'bool' && data[field] is bool)
+        || (kind == 'number' && data[field] is number)
+        || (kind == 'map' && data[field] is map);
+    }
+
+    function validTask(data) {
+      return boundedDoc(data)
+        && label(data, 'title', 500)
+        && label(data, 'status', 20)
+        && label(data, 'priority', 20)
+        && label(data, 'dueDate', 10)
+        && label(data, 'dueTime', 5)
+        && label(data, 'seriesId', 100)
+        && optionalOf(data, 'completed', 'bool')
+        && optionalOf(data, 'leadMinutes', 'number')
+        && optionalOf(data, 'repeat', 'map')
+        && (!('repeat' in data) || data.repeat == null || data.repeat.size() <= 10);
+    }
+
+    function validPlan(data) {
+      return boundedDoc(data)
+        && label(data, 'title', 500)
+        && label(data, 'date', 10)
+        && label(data, 'priority', 20)
+        && optionalOf(data, 'completed', 'bool')
+        && optionalOf(data, 'order', 'number');
+    }
+
+    function validHabit(data) {
+      return boundedDoc(data)
+        && label(data, 'title', 500)
+        && label(data, 'frequency', 20)
+        && optionalOf(data, 'logs', 'map')
+        // Ten years of daily ticks, with room to spare.
+        && (!('logs' in data) || data.logs == null || data.logs.size() <= 4000);
+    }
+
     // Private workspace: tasks, planner, expenses and habits.
     // Nothing here is ever readable by another account, friend or not — and
     // that includes admins. Admin access to an account is mediated by
@@ -128,18 +187,19 @@ service cloud.firestore {
         allow create, update: if isOwner(uid) && validExpense(request.resource.data);
       }
 
-      // Not yet validated field by field. They carry no money, so the gap is
-      // shape rather than value, and narrowing them is its own change.
       match /tasks/{docId} {
-        allow read, write: if isOwner(uid);
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validTask(request.resource.data);
       }
 
       match /planner/{docId} {
-        allow read, write: if isOwner(uid);
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validPlan(request.resource.data);
       }
 
       match /habits/{docId} {
-        allow read, write: if isOwner(uid);
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validHabit(request.resource.data);
       }
     }
 
