@@ -1,4 +1,14 @@
-import { addDoc, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import {
+  addDoc,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  writeBatch,
+} from "firebase/firestore";
 import { db } from "./firebase";
 import { taskDoc, tasksCollection } from "./paths";
 import { EMPTY_REPEAT, isRepeating, nextOccurrence, normalizeRepeat } from "../utils/recurrence";
@@ -139,7 +149,12 @@ const spawnNextOccurrence = async (uid, task) => {
 export const setTaskStatus = async (uid, task, status) => {
   const taskId = typeof task === "string" ? task : task.id;
 
-  await updateDoc(taskDoc(uid, taskId), { status, completed: status === "done" });
+  // completedAt dates the tick for the weekly review; unticking clears it.
+  await updateDoc(taskDoc(uid, taskId), {
+    status,
+    completed: status === "done",
+    completedAt: status === "done" ? serverTimestamp() : null,
+  });
 
   if (status !== "done" || typeof task === "string") return { next: null };
 
@@ -175,6 +190,7 @@ export const updateTask = (uid, taskId, changes) => {
   if (changes.status !== undefined) {
     patch.status = changes.status;
     patch.completed = changes.status === "done";
+    patch.completedAt = changes.status === "done" ? serverTimestamp() : null;
   }
 
   return updateDoc(taskDoc(uid, taskId), patch);

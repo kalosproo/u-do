@@ -1,7 +1,7 @@
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 
 import { db } from "./firebase";
-import { PRIVACY_POLICY_VERSION } from "../utils/consent";
+import { PRIVACY_POLICY_VERSION, TERMS_VERSION } from "../utils/consent";
 
 const consentDoc = (uid) => doc(db, "consents", uid);
 const localKey = (uid) => `u_do_consent_${uid}`;
@@ -20,7 +20,7 @@ const rememberLocally = (uid) => {
   try {
     localStorage.setItem(
       localKey(uid),
-      JSON.stringify({ privacyVersion: PRIVACY_POLICY_VERSION, at: Date.now() }),
+      JSON.stringify({ privacyVersion: PRIVACY_POLICY_VERSION, termsVersion: TERMS_VERSION, at: Date.now() }),
     );
   } catch {
     /* Private mode, blocked storage. The server write may still land. */
@@ -49,6 +49,7 @@ const write = (uid, source) =>
     {
       uid,
       privacyVersion: PRIVACY_POLICY_VERSION,
+      termsVersion: TERMS_VERSION,
       acceptedAt: serverTimestamp(),
       source,
     },

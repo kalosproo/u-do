@@ -2,6 +2,7 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   reauthenticateWithPopup,
+  sendPasswordResetEmail,
   signOut,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
@@ -22,7 +23,7 @@ import { auth, functions, googleProvider } from "./firebase";
  */
 
 /** True when the account signed in with a password rather than a provider. */
-const usesPassword = (user) =>
+export const usesPassword = (user) =>
   (user?.providerData || []).some((entry) => entry.providerId === "password");
 
 /**
@@ -88,5 +89,35 @@ export const deleteAccount = async () => {
     );
   }
 
+  await signOut(auth).catch(() => {});
+};
+
+/**
+ * Sends the reset email, bringing the person back to the login page once the
+ * new password is set. A preview deployment's domain may not be on the
+ * project's authorized list, so a rejected return address falls back to
+ * Firebase's own confirmation page rather than failing the reset.
+ */
+export const sendPasswordReset = async (email) => {
+  try {
+    await sendPasswordResetEmail(auth, email, { url: `${window.location.origin}/login` });
+  } catch (error) {
+    if (error?.code !== "auth/unauthorized-continue-uri" && error?.code !== "auth/invalid-continue-uri") {
+      throw error;
+    }
+    await sendPasswordResetEmail(auth, email);
+  }
+};
+
+/**
+ * Ends every session this account has, then this one. Other devices lose
+ * access within the hour, when their current token runs out.
+ */
+export const signOutEverywhere = async () => {
+  try {
+    await httpsCallable(functions, "signOutEverywhere")({});
+  } catch (error) {
+    throw new Error(error?.message || "Couldn't sign out other devices.");
+  }
   await signOut(auth).catch(() => {});
 };

@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /login
 Allow: /privacy
+Allow: /terms
 Disallow: /
 
 # AdSense reviews and matches ads by reading pages; it must not be blocked.

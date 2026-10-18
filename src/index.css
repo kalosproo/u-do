@@ -462,6 +462,7 @@ input[type="email"],
 input[type="password"],
 input[type="number"],
 input[type="date"],
+input[type="time"],
 input:not([type]),
 select,
 textarea,
@@ -488,6 +489,22 @@ select:focus,
 textarea:focus { border-color: var(--border-strong); outline: none; }
 
 select { cursor: pointer; }
+
+/* Chrome draws an empty time box as "--:--". Until a time is picked the box
+   shows a quiet hint instead; focusing it brings the real fields back. */
+.time-input { position: relative; min-width: 0; }
+.time-input input.is-empty:not(:focus) { color: transparent; }
+.time-input input.is-empty:not(:focus)::-webkit-datetime-edit { color: transparent; }
+.time-input-hint {
+  position: absolute;
+  inset: 0 auto 0 var(--s-3);
+  display: flex;
+  align-items: center;
+  font-size: 13.5px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.time-input input:focus + .time-input-hint { display: none; }
 
 .field { display: flex; flex-direction: column; gap: var(--s-1); }
 .field > span,
@@ -1369,7 +1386,43 @@ input[type="file"].upload-input { display: none; }
 .friend-habit-title { flex: 1; min-width: 110px; }
 .friend-habit-rate { color: var(--text-muted); min-width: 38px; text-align: right; }
 .friend-habit-streak { min-width: 62px; text-align: right; font-variant-numeric: tabular-nums; }
-.friends-status { font-size: 13px; color: var(--text-muted); }
+.friends-status {
+  font-size: 13px;
+  color: var(--text);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+
+/* One tap opens a friend: the summary sits on the button, the habits and
+   Remove behind it, so a long list scans as names and streaks. */
+.friend-card { padding: 0; overflow: hidden; }
+.friend-card-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: transparent;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.friend-card-toggle .friends-result-meta { min-width: 0; }
+.friend-card-toggle .friends-result-meta > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.friend-card-chevron { flex-shrink: 0; color: var(--text-muted); transition: transform var(--speed) var(--ease); }
+.friend-card.is-open .friend-card-chevron { transform: rotate(180deg); }
+.friend-card-body { padding: 0 var(--s-4) var(--s-3); }
+.friend-card-foot { display: flex; justify-content: flex-end; padding-top: var(--s-3); }
+
+.friends-filter { position: relative; display: flex; align-items: center; margin-bottom: var(--s-3); }
+.friends-filter > svg { position: absolute; left: var(--s-3); color: var(--text-muted); pointer-events: none; }
+.friends-filter .friends-input { padding-left: calc(var(--s-3) * 2 + 14px); }
+
+.friends-empty-state { display: flex; flex-direction: column; gap: var(--s-3); }
+.friends-empty-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 
 /* =========================================================================
    PROFILE
@@ -2906,7 +2959,12 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .chip,
   .friends-mode-pill { min-height: 36px; flex-shrink: 0; }
 
-  .week-grid { grid-template-columns: repeat(7, 82vw); }
+  /* One day under the next. Side by side at 82vw a phone showed a single day
+     at a time behind a sideways swipe, with the rest of the screen empty. */
+  .week-grid-wrap { overflow-x: visible; }
+  .week-grid { grid-template-columns: 1fr; }
+  .day-column { min-height: 0; }
+  .day-column .empty-day { padding: var(--s-2) 0; }
 
   /* Header row never stacks: the menu stays beside the title, top-right,
      far from the bottom-right capture button. */
@@ -3056,7 +3114,6 @@ h3, .panel-title { letter-spacing: -0.013em; }
 
 @media (max-width: 380px) {
   .stat-grid { grid-template-columns: 1fr; }
-  .week-grid { grid-template-columns: repeat(7, 88vw); }
 }
 
 /* Respect a reduced-motion preference. */
@@ -3355,6 +3412,20 @@ h3, .panel-title { letter-spacing: -0.013em; }
 
 /* --------------------------------------------------------- delete account */
 
+/* What a destructive action takes with it, spelled out before the button. */
+.danger-list {
+  margin: 0;
+  padding-left: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.danger-list li { list-style: disc; }
+
 .danger-zone {
   display: flex;
   flex-direction: column;
@@ -3392,4 +3463,268 @@ h3, .panel-title { letter-spacing: -0.013em; }
 
 .danger-field input:disabled {
   opacity: 0.6;
+}
+
+/* Links inside a card's small print read as links, not as more grey text. */
+.profile-card .panel-note a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* Read-and-accept box: the Terms and Privacy Policy, scrolled to the end
+   before the tick unlocks. */
+.agreement { display: flex; flex-direction: column; gap: var(--s-2); text-align: left; }
+
+.agreement-box {
+  max-height: min(42vh, 360px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg-elevated);
+  font-size: var(--t-sm);
+}
+
+.agreement-box:focus-visible { outline: 1px solid var(--border-strong); outline-offset: 2px; }
+.agreement-box h2 { font-size: var(--t-sm); margin: var(--s-4) 0 var(--s-1); }
+.agreement-box .agreement-title { font-size: 15px; margin-top: var(--s-1); }
+.agreement-version { margin: 0; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.agreement-rule { border: 0; border-top: 1px solid var(--border); margin: var(--s-5) 0 var(--s-4); }
+.agreement-end { margin: var(--s-4) 0 0; text-align: center; font-size: 12px; color: var(--text-muted); }
+
+.agreement-track { height: 2px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.agreement-track span { display: block; height: 100%; background: var(--text); transition: width 0.15s var(--ease); }
+
+.consent-check.is-locked { cursor: default; opacity: 0.6; }
+.consent-check.is-locked input { cursor: not-allowed; }
+.agreement .consent-check { flex-direction: row; align-items: flex-start; }
+
+/* The day's quote under the greeting: small print, not a banner. */
+.daily-quote { margin: var(--s-2) 0 0; max-width: 62ch; display: flex; flex-direction: column; gap: 2px; }
+.daily-quote blockquote { margin: 0; font-size: var(--t-sm); font-style: italic; color: var(--text-muted); line-height: 1.5; }
+.daily-quote figcaption { font-size: 12px; color: var(--text-muted); opacity: 0.75; }
+.daily-quote figcaption::before { content: "— "; }
+
+/* Finishing a task on Home: the circle fills and the title fades before the
+   row leaves the list. */
+.today-task { transition: opacity 0.3s var(--ease), transform 0.3s var(--ease); }
+.today-task.is-finishing { opacity: 0.45; transform: translateX(4px); }
+.today-task.is-finishing .today-check { background: var(--text); border-color: var(--text); color: var(--bg); }
+.today-task.is-finishing .today-check > svg { animation: udo-mark 0.26s var(--ease-spring); }
+.today-task.is-finishing .today-task-title { text-decoration: line-through; }
+
+/* Planner items tick the way task cards do. */
+.task-checkbox:checked { animation: udo-tick 0.32s var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .today-task,
+  .today-task.is-finishing .today-check > svg,
+  .task-checkbox:checked { animation: none; transition: none; }
+  .today-task.is-finishing { transform: none; }
+}
+
+.offline-notice {
+  position: fixed;
+  top: calc(var(--s-3) + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: calc(100vw - var(--s-6) - var(--tap-target) * 2);
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  animation: udo-rise 0.25s var(--ease-out);
+}
+
+/* Weekly review — Sunday and Monday on Home. */
+.weekly-review { display: flex; flex-direction: column; gap: var(--s-3); }
+.weekly-review-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-3); }
+.weekly-review-title { font-size: 20px; font-weight: 650; letter-spacing: -0.02em; margin-top: var(--s-1); }
+.weekly-review-close { width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--r-sm); border: 1px solid var(--border); background: transparent; color: var(--text-muted); flex-shrink: 0; }
+.weekly-review-close:hover { color: var(--text); background: var(--surface-hover); }
+.weekly-review-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); }
+.weekly-review-stat { display: flex; flex-direction: column; gap: 4px; padding: var(--s-3); border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-elevated); min-width: 0; }
+.weekly-review-stat span { font-size: 11.5px; color: var(--text-muted); }
+.weekly-review-stat strong { font-size: 18px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.weekly-review-actions { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+@media (max-width: 640px) { .weekly-review-grid { grid-template-columns: 1fr 1fr; } }
+
+/* Welcome tour — four slides on a new account's first visit. */
+.tour-card { max-width: 380px; text-align: center; align-items: center; gap: var(--s-3); padding: var(--s-6) var(--s-5) var(--s-5); }
+.tour-icon { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-strong); font-size: 22px; color: var(--text); animation: udo-mark 0.3s var(--ease-spring); }
+.tour-title { font-size: 20px; font-weight: 650; letter-spacing: -0.02em; }
+.tour-body { color: var(--text-muted); font-size: 14px; line-height: 1.55; max-width: 32ch; }
+.tour-dots { display: flex; gap: 6px; margin: var(--s-2) 0; }
+.tour-dots span { width: 6px; height: 6px; border-radius: 3px; background: var(--border-strong); transition: width var(--speed) var(--ease), background var(--speed) var(--ease); }
+.tour-dots span.is-active { width: 18px; background: var(--text); }
+.tour-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); width: 100%; }
+@media (prefers-reduced-motion: reduce) { .tour-icon { animation: none; } }
+.offline-notice > svg { flex-shrink: 0; width: 14px; height: 14px; }
+
+/* =========================================================================
+   FOCUS TIMER — Home card (C), mini pill, full screen in two styles
+   ========================================================================= */
+.focus-card { display: flex; flex-direction: column; gap: var(--s-3); }
+.focus-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-3); }
+.focus-card-title { font-size: 18px; font-weight: 650; letter-spacing: -0.02em; margin-top: var(--s-1); }
+.focus-card-time { font-size: clamp(44px, 9vw, 60px); font-weight: 300; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; line-height: 1; }
+.focus-presets { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.focus-presets .chip.active { background: var(--text); border-color: var(--text); color: var(--bg); }
+.focus-card-start { width: 100%; min-height: 46px; }
+.focus-card-today { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.focus-card-today strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.focus-card-today span { font-size: 11.5px; color: var(--text-muted); }
+.focus-card-setup { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-4); }
+.focus-card-week { display: flex; align-items: flex-end; gap: 4px; height: 40px; width: min(132px, 40%); }
+.focus-card-week span { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.focus-card-week i { display: block; width: 100%; border-radius: 2px; background: var(--text); opacity: 0.28; }
+.focus-card-week .is-today i { opacity: 1; }
+.focus-card-input { min-height: 44px; }
+
+/* Running: a live timer, not a row of buttons. */
+.focus-card.is-running { gap: var(--s-4); }
+.focus-card-live { display: flex; align-items: center; gap: var(--s-4); }
+.focus-card-live-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.focus-card-sub { font-size: 13px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.focus-card.is-running .focus-card-time { font-size: clamp(42px, 11vw, 56px); }
+.focus-mini-ring { position: relative; width: 76px; height: 76px; flex-shrink: 0; display: grid; place-items: center; }
+.focus-mini-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.focus-mini-ring .focus-ring-track,
+.focus-mini-ring .focus-ring-fill { stroke-width: 4; }
+.focus-mini-ring > span { display: grid; place-items: center; color: var(--text-muted); font-size: 18px; }
+.focus-mini-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text); animation: focus-breathe 2.4s ease-in-out infinite; }
+@keyframes focus-breathe { 50% { transform: scale(0.55); opacity: 0.5; } }
+.focus-card-bar { height: 2px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.focus-card-bar span { display: block; height: 100%; background: var(--text); transition: width 0.3s linear; }
+.focus-card-controls { display: flex; gap: var(--s-2); }
+.focus-card-open { flex: 1; min-height: 46px; }
+.focus-card-icon { width: 46px; height: 46px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 16px; transition: background var(--speed) var(--ease), border-color var(--speed) var(--ease); }
+.focus-card-icon:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.focus-card-icon:active { transform: scale(0.94); }
+@media (prefers-reduced-motion: reduce) { .focus-mini-dot { animation: none; } .focus-card-bar span { transition: none; } }
+
+.focus-pill {
+  position: fixed;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: fit-content;
+  bottom: calc(var(--s-5) + env(safe-area-inset-bottom, 0px));
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--r-pill);
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: udo-rise 0.25s var(--ease-out);
+  max-width: calc(100vw - var(--s-6));
+}
+.focus-pill button { background: transparent; border: 0; color: inherit; display: flex; align-items: center; gap: var(--s-2); }
+.focus-pill-open { padding: 6px 6px 6px 12px; min-width: 0; font-size: 14px; }
+.focus-pill-open strong { font-variant-numeric: tabular-nums; }
+.focus-pill-label { opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw; }
+.focus-pill-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; animation: focus-blink 2s ease-in-out infinite; }
+.focus-pill.is-paused .focus-pill-dot { animation: none; opacity: 0.35; }
+.focus-pill-toggle { width: 36px; height: 36px; justify-content: center; border-radius: 50%; }
+.focus-pill-toggle:hover { background: color-mix(in srgb, var(--bg) 12%, transparent); }
+@keyframes focus-blink { 50% { opacity: 0.25; } }
+@media (max-width: 1024px) {
+  .focus-pill { bottom: calc(62px + env(safe-area-inset-bottom, 0px) + var(--s-3)); }
+}
+
+body.is-focusing { overflow: hidden; }
+
+.focus-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--s-4) + env(safe-area-inset-top, 0px)) calc(var(--s-5) + env(safe-area-inset-right, 0px)) calc(var(--s-4) + env(safe-area-inset-bottom, 0px)) calc(var(--s-5) + env(safe-area-inset-left, 0px));
+  background: var(--bg);
+  color: var(--text);
+  animation: focus-in 0.28s var(--ease-out);
+}
+@keyframes focus-in { from { opacity: 0; transform: scale(0.985); } }
+
+.focus-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--s-3); }
+.focus-top .eyebrow { text-align: center; }
+.focus-icon-btn { width: var(--tap-target); height: var(--tap-target); display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 18px; }
+.focus-icon-btn:hover { color: var(--text); }
+
+/* The 1 / 2 switch, the same idea as the theme toggle. */
+.focus-style { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: var(--r-pill); }
+.focus-style button { width: 34px; height: 30px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.focus-style button.is-active { background: var(--text); color: var(--bg); }
+
+.focus-chip { display: inline-flex; align-items: center; gap: var(--s-2); padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--r-pill); font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Style 1 — ring */
+.focus-a { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: var(--s-4); }
+.focus-a-dial { display: flex; flex-direction: column; align-items: center; gap: var(--s-4); }
+.focus-a-side { width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: var(--s-5); }
+.focus-ring { position: relative; width: min(72vw, 46vh, 380px); aspect-ratio: 1; display: grid; place-items: center; }
+.focus-ring-svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.focus-ring-track { fill: none; stroke: var(--border); stroke-width: 1.4; }
+.focus-ring-fill { fill: none; stroke: var(--text); stroke-width: 1.4; stroke-linecap: round; transition: stroke-dashoffset 0.3s linear; }
+.focus-ring-label { display: flex; flex-direction: column; align-items: center; gap: var(--s-1); }
+.focus-ring-label span { font-size: 12px; color: var(--text-muted); }
+.focus-time { font-size: clamp(48px, 15vw, 92px); font-weight: 300; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; line-height: 1; }
+.focus-controls { display: flex; align-items: center; gap: var(--s-6); }
+.focus-round { width: 50px; height: 50px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 18px; }
+.focus-round:hover { color: var(--text); border-color: var(--border-strong); }
+.focus-main { width: 76px; height: 76px; display: grid; place-items: center; border-radius: 50%; border: 0; background: var(--text); color: var(--bg); font-size: 26px; transition: transform var(--speed) var(--ease); }
+.focus-main:active { transform: scale(0.94); }
+.focus-stats { width: 100%; display: flex; align-items: flex-end; gap: var(--s-4); padding-top: var(--s-4); border-top: 1px solid var(--border); }
+.focus-stats small { display: block; font-size: 11px; color: var(--text-muted); }
+.focus-stats strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.focus-stats-right { text-align: right; }
+.focus-week { flex: 1; height: 36px; display: flex; align-items: flex-end; gap: 5px; }
+.focus-week span { flex: 1; border-radius: 2px; background: var(--text); opacity: 0.4; }
+.focus-week span.is-today { opacity: 1; }
+.focus-end { background: none; border: 0; color: var(--text-muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.focus-end:hover { color: var(--text); }
+
+/* Style 2 — big clock */
+.focus-line { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--border); }
+.focus-line span { display: block; height: 100%; background: var(--text); transition: width 0.3s linear; }
+.focus-b { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-3); background: transparent; border: 0; color: inherit; cursor: pointer; min-height: 0; }
+.focus-b-subject { font-size: 16px; color: var(--text-muted); max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.focus-b-time { font-size: min(28vw, 30vh); font-weight: 200; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; line-height: 1; margin: var(--s-4) 0; }
+.focus-b-hint { font-size: 12px; color: var(--text-muted); }
+.focus-b-foot { display: flex; justify-content: center; align-items: center; gap: var(--s-4); font-size: 12.5px; color: var(--text-muted); }
+
+/* Landscape — iPad on its side, or a phone turned. Style 1 goes side by
+   side; style 2's clock grows into the width. */
+@media (orientation: landscape) and (min-width: 640px) {
+  .focus-a { flex-direction: row; justify-content: center; gap: clamp(32px, 7vw, 120px); }
+  .focus-ring { width: min(40vw, 62vh, 460px); }
+  .focus-a-side { max-width: 380px; gap: var(--s-6); }
+  .focus-b-time { font-size: min(22vw, 48vh); }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .focus-screen { padding-top: var(--s-3); padding-bottom: var(--s-3); }
+  .focus-a-dial { gap: var(--s-2); }
+  .focus-ring { width: min(40vw, 64vh); }
+  .focus-time { font-size: min(9vw, 15vh); }
+  .focus-a-side { gap: var(--s-3); }
+  .focus-main { width: 60px; height: 60px; }
+  .focus-stats { padding-top: var(--s-2); }
+  .focus-b-time { font-size: min(24vw, 52vh); margin: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-screen, .focus-pill { animation: none; }
+  .focus-pill-dot { animation: none; }
+  .focus-ring-fill, .focus-line span { transition: none; }
 }

@@ -13,6 +13,7 @@ const Habits = lazy(() => import("./pages/Habits"));
 const Friends = lazy(() => import("./pages/Friends"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
@@ -22,6 +23,10 @@ import QuickCapture from "./components/QuickCapture";
 import UdoBackground from "./components/UdoBackground";
 import CommandPalette from "./components/CommandPalette";
 import ConsentGate from "./components/ConsentGate";
+import OfflineNotice from "./components/OfflineNotice";
+import WelcomeTour from "./components/WelcomeTour";
+import FocusScreen from "./components/focus/FocusScreen";
+import FocusPill from "./components/focus/FocusPill";
 import VerifyEmailBanner from "./components/VerifyEmailBanner";
 import AdSlot from "./components/AdSlot";
 import IndexingPolicy from "./components/IndexingPolicy";
@@ -41,6 +46,7 @@ function AppLayout() {
       <KeyboardShortcuts />
 
       <AdSlot enabled={showAds} />
+      <OfflineNotice />
 
       <main className="main-content with-sidebar">
         <VerifyEmailBanner />
@@ -74,6 +80,7 @@ function AppRoutes() {
         {/* Readable signed out, and readable while the consent prompt is up:
             someone deciding whether to accept has to be able to read it. */}
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
 
         {/* Nothing to show a guest: every control on it needs an account. */}
         <Route
@@ -135,6 +142,14 @@ function App() {
       <div className="app-layer">
         <AppRoutes />
       </div>
+
+      {/* The focus timer follows the person around the app: full screen or
+          the small pill. */}
+      <FocusPill />
+      <FocusScreen />
+
+      {/* Before the consent prompt, so the prompt renders above it. */}
+      <WelcomeTour />
 
       {/* Outside the routes so it covers every page, and portalled to the body
           so it sits above the background layer. */}

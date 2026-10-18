@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { FiCheck, FiPlus } from "react-icons/fi";
 import { createTask, setTaskStatus } from "../services/tasks";
 import { formatDayLabel, formatRelativeDay, todayKey } from "../utils/dateKeys";
+import { quoteFor } from "../utils/quotes";
 import {
   Bar,
   BarChart,
@@ -17,6 +18,8 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import { workspaceCollection } from "../services/paths";
 import FriendStreaks from "../components/FriendStreaks";
+import WeeklyReview from "../components/WeeklyReview";
+import FocusCard from "../components/focus/FocusCard";
 import ChartPatterns from "../components/ChartPatterns";
 import { seriesFill } from "../utils/chartSeries";
 import { monthlyTotals } from "../utils/financeReport";
@@ -29,6 +32,7 @@ import {
   plannerStats,
   taskStats,
 } from "../utils/dashboard";
+import { celebrate } from "../utils/feedback";
 
 /**
  * Both figures arrive in minor units, so they are shown exactly rather than
@@ -131,6 +135,9 @@ function Home() {
   const attentionCount = tasksSummary.overdue + tasksSummary.dueToday + Math.max(habitsSummary.total - habitsSummary.doneNow, 0);
   const firstName = user?.displayName?.trim()?.split(/\s+/)[0] || "";
   const hour = new Date().getHours();
+  // Picked once per visit; quoteFor already keeps it steady for the whole day.
+  const [quote] = useState(() => quoteFor());
+  const [finishing, setFinishing] = useState(() => new Set());
   const greeting = firstName ? `${hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"}, ${firstName}.` : "Welcome back.";
 
   const addTodayTask = async () => {
@@ -146,7 +153,12 @@ function Home() {
   };
 
   const completeTodayTask = async (task) => {
-    if (!user) return;
+    if (!user || finishing.has(task.id)) return;
+    // The row shows itself ticked for a moment before it leaves the list, so
+    // finishing something is seen rather than the row just vanishing.
+    setFinishing((current) => new Set(current).add(task.id));
+    celebrate();
+    await new Promise((resolve) => setTimeout(resolve, 360));
     setTasks((items) => items.map((item) => item.id === task.id ? { ...item, status: "done", completed: true } : item));
     try { await setTaskStatus(user.uid, task, "done"); await loadDashboard(); }
     catch (saveError) { setError(saveError?.message || "Couldn't complete that task."); await loadDashboard(); }
@@ -167,15 +179,23 @@ function Home() {
         <h1 className="dashboard-greeting">{greeting}</h1>
         <p className="page-sub">{user ? `You have ${attentionCount} thing${attentionCount === 1 ? "" : "s"} that need${attentionCount === 1 ? "s" : ""} your attention today.` : "Sign in to bring your day into focus."}</p>
         {user ? <p className="dashboard-summary">{tasksSummary.active} active tasks <span>·</span> {habitsSummary.doneNow}/{habitsSummary.total} habits <span>·</span> {planner.todayTotal} plans today</p> : null}
+        <figure className="daily-quote">
+          <blockquote>&ldquo;{quote.text}&rdquo;</blockquote>
+          <figcaption>{quote.author}</figcaption>
+        </figure>
       </header>
+
+      {user && !loading ? <WeeklyReview uid={user.uid} tasks={tasks} habits={habits} plans={plans} expenses={expenses} /> : null}
 
       {error ? <div className="page-error" role="alert"><div><strong>Something went wrong</strong><span>Your data is safe. We couldn't load this right now.</span></div><button type="button" className="btn btn-sm" onClick={loadDashboard}>Try again</button></div> : null}
 
       <article className="panel today-panel">
         <div className="panel-head"><div><p className="eyebrow">TODAY</p><h2 className="today-title">The next things that matter.</h2></div><Link to="/tasks" className="panel-note panel-link">View all tasks</Link></div>
-        {user && todayTasks.length ? <div className="today-task-list">{todayTasks.map((task) => <div className="today-task" key={task.id}><button type="button" className="today-check" onClick={() => completeTodayTask(task)} aria-label={`Complete ${task.title}`}><FiCheck /></button><span className="today-task-title">{task.title}</span>{task.dueDate ? <span className={`today-pill ${task.dueDate < today ? "is-overdue" : ""}`}>{task.dueDate < today ? "Overdue" : "Today"}</span> : null}{task.priority && task.priority !== "medium" ? <span className={`priority-tag priority-${task.priority}`}>{task.priority}</span> : null}</div>)}</div> : <div className="today-empty"><strong>{user ? "No tasks are pressing today." : "Your day is ready when you are."}</strong><span>{user ? "Start with one thing you want to get done today." : "Sign in to see your personal plan."}</span></div>}
+        {user && todayTasks.length ? <div className="today-task-list">{todayTasks.map((task) => <div className={`today-task ${finishing.has(task.id) ? "is-finishing" : ""}`} key={task.id}><button type="button" className="today-check" onClick={() => completeTodayTask(task)} aria-label={`Complete ${task.title}`}><FiCheck /></button><span className="today-task-title">{task.title}</span>{task.dueDate ? <span className={`today-pill ${task.dueDate < today ? "is-overdue" : ""}`}>{task.dueDate < today ? "Overdue" : "Today"}</span> : null}{task.priority && task.priority !== "medium" ? <span className={`priority-tag priority-${task.priority}`}>{task.priority}</span> : null}</div>)}</div> : <div className="today-empty"><strong>{user ? "No tasks are pressing today." : "Your day is ready when you are."}</strong><span>{user ? "Start with one thing you want to get done today." : "Sign in to see your personal plan."}</span></div>}
         {user ? <form className="today-add" onSubmit={(event) => { event.preventDefault(); addTodayTask(); }}><FiPlus aria-hidden="true" /><input value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} placeholder="Add a task for today" aria-label="Add a task for today" /><button type="submit" className="btn btn-primary btn-sm" disabled={savingTask || !newTaskTitle.trim()}>{savingTask ? "Adding…" : "Add task"}</button></form> : <Link to="/login" className="btn btn-primary">Sign in</Link>}
       </article>
+      <FocusCard />
+
       {isEmpty ? (
         <div className="panel">
           <p className="empty">

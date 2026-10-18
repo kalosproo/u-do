@@ -13,6 +13,7 @@ import {
 import NotificationSettings from "../components/NotificationSettings";
 import DeleteAccount from "../components/DeleteAccount";
 import PlanCard from "../components/PlanCard";
+import SecurityCard from "../components/SecurityCard";
 
 const IMPORT_MODE_OPTIONS = [
   ["merge", "Keep newer", "Existing entries stay if they were changed more recently than the backup."],
@@ -125,7 +126,7 @@ function Profile() {
     if (!currentUser) return;
 
     const typed = window.prompt(
-      "This permanently deletes every task, habit, planner entry and transaction in this account.\n\nType DELETE to confirm."
+      "This permanently deletes every task, habit, planner entry and transaction in this account, on every device. It can't be undone.\n\nType DELETE to confirm."
     );
 
     if (typed !== "DELETE") {
@@ -174,6 +175,8 @@ function Profile() {
       </article>
 
       <PlanCard />
+
+      <SecurityCard />
 
       <NotificationSettings />
 
@@ -275,9 +278,13 @@ function Profile() {
         </div>
 
         <p className="profile-data-copy">
-          Clearing removes every task, habit, planner entry and transaction in this account. It
-          cannot be undone — export first if you might want any of it back.
+          Clearing permanently removes every task, habit, planner entry and transaction in
+          this account, on every device. Your account, friends and plan stay.
         </p>
+        <ul className="danger-list">
+          <li>It can&apos;t be undone, and we can&apos;t restore it for you.</li>
+          <li>Export your data first if you might want any of it back.</li>
+        </ul>
 
         <div className="profile-actions">
           <button type="button" className="btn btn-danger" onClick={handleClear} disabled={busy}>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FiAlertTriangle } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
 import { deleteAccount, reauthenticate, reauthMethod } from "../services/account";
 
@@ -56,10 +57,18 @@ function DeleteAccount() {
       </div>
 
       <p className="profile-data-copy">
-        Permanently deletes your account and everything in it — tasks, habits,
-        planner, transactions, your profile, and your place in anyone&apos;s friends
-        list. This cannot be undone and we cannot recover it for you.
-        Export your data first if you want a copy.
+        Permanently deletes your account and everything in it. Read this first:
+      </p>
+      <ul className="danger-list">
+        <li>Your tasks, habits, planner, transactions, profile and friends are removed at once.</li>
+        <li>It can&apos;t be undone. We can&apos;t recover it for you, even if you ask.</li>
+        <li>A Pro subscription is cancelled first. The rest of a paid period isn&apos;t refunded.</li>
+        <li>Your username becomes free for someone else to take.</li>
+        <li>Backup copies expire within 7 days and are never restored.</li>
+      </ul>
+      <p className="panel-note">
+        Want a copy? Use Export in Your data above first. Details in the{" "}
+        <Link to="/terms">Terms</Link>.
       </p>
 
       {open ? (

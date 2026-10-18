@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
 } from "firebase/auth";
@@ -11,6 +10,8 @@ import { auth, googleProvider } from "../services/firebase";
 import { recordConsent } from "../services/consent";
 import { authorizeAttempt } from "../services/authGuard";
 import { sendVerification } from "../services/verification";
+import { sendPasswordReset } from "../services/account";
+import AgreementReader from "../components/legal/AgreementReader";
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -29,22 +30,6 @@ const isEmail = (value) => {
   return normalized.includes("@") && domain.includes(".");
 };
 
-/**
- * Sends the reset email, bringing the person back to the login page once the
- * new password is set. A preview deployment's domain may not be on the
- * project's authorized list, so a rejected return address falls back to
- * Firebase's own confirmation page rather than failing the reset.
- */
-const sendReset = async (email) => {
-  try {
-    await sendPasswordResetEmail(auth, email, { url: `${window.location.origin}/login` });
-  } catch (error) {
-    if (error?.code !== "auth/unauthorized-continue-uri" && error?.code !== "auth/invalid-continue-uri") {
-      throw error;
-    }
-    await sendPasswordResetEmail(auth, email);
-  }
-};
 
 const validate = (email, password) => {
   if (!isEmail(email)) return "Enter a valid email address.";
@@ -111,7 +96,7 @@ function Login() {
       // Counted like a login: an open reset form is a free way to flood
       // someone's inbox otherwise.
       await authorizeAttempt({ email: formattedEmail, mode: "reset" });
-      await sendReset(formattedEmail);
+      await sendPasswordReset(formattedEmail);
       setNotice(RESET_SENT);
     } catch (resetError) {
       if (resetError?.code === "auth/user-not-found") {
@@ -133,7 +118,7 @@ function Login() {
     }
 
     if (isSignup && !agreed) {
-      setError("Please read and accept the Privacy Policy to create an account.");
+      setError("Please read and accept the Terms and Privacy Policy to create an account.");
       return;
     }
 
@@ -172,7 +157,7 @@ function Login() {
 
   const googleLogin = async () => {
     if (isSignup && !agreed) {
-      setError("Please read and accept the Privacy Policy to create an account.");
+      setError("Please read and accept the Terms and Privacy Policy to create an account.");
       return;
     }
 
@@ -312,20 +297,7 @@ function Login() {
         </label>
 
         {isSignup ? (
-          <label className="consent-check">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-            />
-            <span>
-              I have read and accept the{" "}
-              <Link to="/privacy" target="_blank" rel="noreferrer">
-                Privacy Policy
-              </Link>
-              .
-            </span>
-          </label>
+          <AgreementReader checked={agreed} onChange={setAgreed} />
         ) : null}
 
         {!isSignup ? (
