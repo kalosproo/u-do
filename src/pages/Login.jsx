@@ -11,6 +11,7 @@ import { recordConsent } from "../services/consent";
 import { authorizeAttempt } from "../services/authGuard";
 import { sendVerification } from "../services/verification";
 import { sendPasswordReset } from "../services/account";
+import AgreementReader from "../components/legal/AgreementReader";
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -296,24 +297,7 @@ function Login() {
         </label>
 
         {isSignup ? (
-          <label className="consent-check">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-            />
-            <span>
-              I have read and accept the{" "}
-              <Link to="/terms" target="_blank" rel="noreferrer">
-                Terms
-              </Link>{" "}
-              and the{" "}
-              <Link to="/privacy" target="_blank" rel="noreferrer">
-                Privacy Policy
-              </Link>
-              .
-            </span>
-          </label>
+          <AgreementReader checked={agreed} onChange={setAgreed} />
         ) : null}
 
         {!isSignup ? (

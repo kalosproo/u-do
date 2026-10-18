@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { signOut } from "firebase/auth";
 
 import { auth } from "../services/firebase";
 import { fetchConsent, recordConsent, syncPendingConsent } from "../services/consent";
-import { needsConsent, PRIVACY_POLICY_VERSION } from "../utils/consent";
+import { needsConsent, PRIVACY_POLICY_VERSION, TERMS_VERSION } from "../utils/consent";
+import AgreementReader from "./legal/AgreementReader";
 import { useAuth } from "../hooks/useAuth";
 
 /**
@@ -25,6 +26,7 @@ function ConsentGate() {
   const { pathname } = useLocation();
   const [settled, setSettled] = useState({ uid: null, record: null });
   const [saving, setSaving] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     if (!user) return undefined;
@@ -74,7 +76,7 @@ function ConsentGate() {
       console.warn(`ConsentGate: accepted locally, server sync pending (${result.reason})`);
     }
 
-    setSettled({ uid: user.uid, record: { privacyVersion: PRIVACY_POLICY_VERSION } });
+    setSettled({ uid: user.uid, record: { privacyVersion: PRIVACY_POLICY_VERSION, termsVersion: TERMS_VERSION } });
   };
 
   const leave = () => signOut(auth);
@@ -89,14 +91,13 @@ function ConsentGate() {
       >
         <div className="modal-head">
           <h3 id="consent-title">
-            {current.record ? "Our Privacy Policy has changed" : "Before you carry on"}
+            {current.record ? "Please review our updated terms" : "Before you carry on"}
           </h3>
         </div>
 
         <p className="panel-note">
-          {current.record
-            ? "We've updated what U.Do stores and where it goes. Please read the new version and accept it to keep using your account."
-            : "U.Do now has a privacy policy covering what it stores and where that goes. Please read it and accept to keep using your account."}
+          U.Do now has Terms of Service, and the Privacy Policy has been updated. Read
+          both to the end and accept them to keep using your account.
         </p>
 
         <p className="panel-note">
@@ -105,14 +106,12 @@ function ConsentGate() {
           AI assistant.
         </p>
 
+        <AgreementReader checked={agreed} onChange={setAgreed} />
+
         <div className="modal-actions">
-          <button type="button" className="btn btn-primary" onClick={accept} disabled={saving}>
+          <button type="button" className="btn btn-primary" onClick={accept} disabled={saving || !agreed}>
             {saving ? "Saving…" : "Accept"}
           </button>
-
-          <Link to="/privacy" target="_blank" rel="noreferrer" className="btn">
-            Open the policy
-          </Link>
 
           <button type="button" className="btn" onClick={leave} disabled={saving}>
             Sign out

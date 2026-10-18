@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { FiCheck, FiPlus } from "react-icons/fi";
 import { createTask, setTaskStatus } from "../services/tasks";
 import { formatDayLabel, formatRelativeDay, todayKey } from "../utils/dateKeys";
+import { quoteFor } from "../utils/quotes";
 import {
   Bar,
   BarChart,
@@ -131,6 +132,8 @@ function Home() {
   const attentionCount = tasksSummary.overdue + tasksSummary.dueToday + Math.max(habitsSummary.total - habitsSummary.doneNow, 0);
   const firstName = user?.displayName?.trim()?.split(/\s+/)[0] || "";
   const hour = new Date().getHours();
+  // Picked once per visit; quoteFor already keeps it steady for the whole day.
+  const [quote] = useState(() => quoteFor());
   const greeting = firstName ? `${hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"}, ${firstName}.` : "Welcome back.";
 
   const addTodayTask = async () => {
@@ -167,6 +170,10 @@ function Home() {
         <h1 className="dashboard-greeting">{greeting}</h1>
         <p className="page-sub">{user ? `You have ${attentionCount} thing${attentionCount === 1 ? "" : "s"} that need${attentionCount === 1 ? "s" : ""} your attention today.` : "Sign in to bring your day into focus."}</p>
         {user ? <p className="dashboard-summary">{tasksSummary.active} active tasks <span>·</span> {habitsSummary.doneNow}/{habitsSummary.total} habits <span>·</span> {planner.todayTotal} plans today</p> : null}
+        <figure className="daily-quote">
+          <blockquote>&ldquo;{quote.text}&rdquo;</blockquote>
+          <figcaption>{quote.author}</figcaption>
+        </figure>
       </header>
 
       {error ? <div className="page-error" role="alert"><div><strong>Something went wrong</strong><span>Your data is safe. We couldn't load this right now.</span></div><button type="button" className="btn btn-sm" onClick={loadDashboard}>Try again</button></div> : null}

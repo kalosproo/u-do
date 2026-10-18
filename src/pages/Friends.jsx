@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthGuard } from "../hooks/useAuthGuard";
-import { FiCheck, FiCopy, FiRefreshCw, FiUserPlus, FiX } from "react-icons/fi";
+import {
+  FiCheck,
+  FiChevronDown,
+  FiCopy,
+  FiRefreshCw,
+  FiSearch,
+  FiShare2,
+  FiUserPlus,
+  FiX,
+} from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
 import {
   CLAIM_ERRORS,
@@ -88,6 +97,8 @@ function Friends() {
   const [loading, setLoading] = useState(true);
   const [busyUid, setBusyUid] = useState("");
   const [status, setStatus] = useState("");
+  const [friendFilter, setFriendFilter] = useState("");
+  const [toggled, setToggled] = useState(() => new Set());
 
   const inviteLink = useMemo(
     () => (profile?.inviteCode ? buildInviteLink(profile.inviteCode) : ""),
@@ -356,6 +367,35 @@ function Friends() {
     }
   };
 
+  /**
+   * The phone's own share sheet where there is one (WhatsApp, Messages…),
+   * otherwise the link is copied. Backing out of the sheet is not an error.
+   */
+  const shareInvite = async () => {
+    if (!inviteLink) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Join me on U.Do",
+          text: "Add me on U.Do so we can keep each other's streaks going.",
+          url: inviteLink,
+        });
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+    }
+    copyToClipboard(inviteLink, "Invite link");
+  };
+
+  // A note says its piece and goes, rather than sitting there for the rest
+  // of the visit.
+  useEffect(() => {
+    if (!status) return undefined;
+    const timer = setTimeout(() => setStatus(""), 5000);
+    return () => clearTimeout(timer);
+  }, [status]);
+
   if (!user) {
     return (
       <section className="friends-page">
@@ -371,6 +411,39 @@ function Friends() {
       </section>
     );
   }
+
+  const query = friendFilter.trim().toLowerCase();
+  // Longest streak first: the list reads as who's keeping it up, not as an
+  // address book. Ties fall back to the name so the order never jumps around.
+  const shownFriends = friends
+    .filter((friend) =>
+      !query ||
+      String(friend.displayName || "").toLowerCase().includes(query) ||
+      String(friend.username || "").toLowerCase().includes(query)
+    )
+    .sort(
+      (a, b) =>
+        (b.summary?.longestStreak || 0) - (a.summary?.longestStreak || 0) ||
+        String(a.displayName || "").localeCompare(String(b.displayName || ""))
+    );
+
+  // With one or two friends everything is open; past that, cards start
+  // folded so the list stays scannable. Tapping flips just that one.
+  const startsOpen = friends.length <= 2;
+  const isOpen = (uid) => toggled.has(uid) !== startsOpen;
+  const toggle = (uid) =>
+    setToggled((current) => {
+      const next = new Set(current);
+      if (next.has(uid)) next.delete(uid);
+      else next.add(uid);
+      return next;
+    });
+
+  const focusAdd = () => {
+    const input = document.getElementById("friends-add-input");
+    input?.scrollIntoView({ behavior: "smooth", block: "center" });
+    input?.focus({ preventScroll: true });
+  };
 
   return (
     <section className="friends-page">
@@ -396,85 +469,22 @@ function Friends() {
         </div>
       </header>
 
-      <article className="wire-card friends-handle-card">
-        <h3>Your handle</h3>
-        <p className="friends-muted">
-          {profile?.username
-            ? `You're @${profile.username}. Friends can find you with any of these — changing your handle frees the old one.`
-            : "Pick a username so friends can find and add you. Letters, numbers and underscores, 3-20 characters."}
+      {/* Up here rather than under the last card, where on a phone it landed
+          off screen and a copied link looked like a button that did nothing. */}
+      {status ? (
+        <p className="friends-status" role="status">
+          {status}
         </p>
+      ) : null}
 
-        <div className="friends-field-row">
-          <span className="friends-at">@</span>
-          <input
-            className="friends-input"
-            placeholder="yourname"
-            value={usernameInput}
-            onChange={(event) => setUsernameInput(normalizeUsername(event.target.value))}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") handleClaimUsername();
-            }}
-          />
-          <button
-            type="button"
-            className="button-primary"
-            onClick={handleClaimUsername}
-            disabled={savingUsername}
-          >
-            {savingUsername ? "Saving..." : profile?.username ? "Change" : "Claim"}
-          </button>
-        </div>
-
-        {profile?.inviteCode ? (
-          <div className="friends-share-grid">
-            <div className="friends-share-row">
-              <span className="friends-muted">Invite code</span>
-              <code className="friends-code">{profile.inviteCode}</code>
-              <button
-                type="button"
-                className="button-secondary friends-copy"
-                onClick={() => copyToClipboard(profile.inviteCode, "Invite code")}
-              >
-                <FiCopy /> Copy
-              </button>
-            </div>
-
-            <div className="friends-share-row">
-              <span className="friends-muted">Invite link</span>
-              <code className="friends-code friends-code-link">{inviteLink}</code>
-              <button
-                type="button"
-                className="button-secondary friends-copy"
-                onClick={() => copyToClipboard(inviteLink, "Invite link")}
-              >
-                <FiCopy /> Copy
-              </button>
-            </div>
+      {/* Only when there is something to answer, and then first. */}
+      {requests.length > 0 ? (
+        <article className="wire-card friends-requests-card">
+          <div className="panel-head">
+            <h3>
+              {requests.length === 1 ? "1 friend request" : `${requests.length} friend requests`}
+            </h3>
           </div>
-        ) : null}
-      </article>
-
-      {/* First card on the page: an incoming request should never have to be
-          hunted for by searching the sender's invite code. */}
-      <article className="wire-card">
-        <div className="panel-head">
-          <h3>Requests{requests.length ? ` (${requests.length})` : ""}</h3>
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={refresh}
-            disabled={loading}
-            title="Check for new requests"
-          >
-            <FiRefreshCw /> {loading ? "Checking..." : "Refresh"}
-          </button>
-        </div>
-
-        {requests.length === 0 ? (
-          <p className="friends-muted">
-            No pending requests. When someone asks to be your friend they show up here.
-          </p>
-        ) : (
           <div className="friends-request-list is-scrollable">
             {requests.map((request) => (
               <div key={request.uid} className="friends-result-row">
@@ -496,11 +506,128 @@ function Friends() {
                   className="button-secondary"
                   onClick={() => handleDecline(request.uid)}
                   disabled={busyUid === request.uid}
+                  aria-label={`Decline ${request.displayName || "request"}`}
                 >
                   <FiX /> Decline
                 </button>
               </div>
             ))}
+          </div>
+        </article>
+      ) : null}
+
+      <article className="wire-card">
+        <div className="panel-head">
+          <h3 className="panel-title">
+            Your friends{friends.length ? ` (${friends.length})` : ""}
+          </h3>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={refresh}
+            disabled={loading}
+            title="Check for new friends and requests"
+          >
+            <FiRefreshCw /> {loading ? "Checking..." : "Refresh"}
+          </button>
+        </div>
+
+        {friends.length > 4 ? (
+          <div className="friends-filter">
+            <FiSearch aria-hidden="true" />
+            <input
+              className="friends-input"
+              placeholder="Find a friend"
+              value={friendFilter}
+              onChange={(event) => setFriendFilter(event.target.value)}
+              aria-label="Find a friend"
+            />
+          </div>
+        ) : null}
+
+        {loading && friends.length === 0 ? (
+          <p className="friends-muted">Loading your friends...</p>
+        ) : friends.length === 0 ? (
+          <div className="friends-empty-state">
+            <p className="friends-muted">
+              No friends yet. Send someone your invite link, or add them by username.
+            </p>
+            <div className="friends-empty-actions">
+              {inviteLink ? (
+                <button type="button" className="button-primary" onClick={shareInvite}>
+                  <FiShare2 /> Share invite link
+                </button>
+              ) : null}
+              <button type="button" className="button-secondary" onClick={focusAdd}>
+                <FiUserPlus /> Add by username
+              </button>
+            </div>
+          </div>
+        ) : shownFriends.length === 0 ? (
+          <p className="friends-muted">No friend matches &ldquo;{friendFilter}&rdquo;.</p>
+        ) : (
+          <div className="friends-list is-scrollable">
+            {shownFriends.map((friend) => {
+              const open = isOpen(friend.uid);
+              const summary = friend.summary;
+              return (
+                <section key={friend.uid} className={`friend-card ${open ? "is-open" : ""}`}>
+                  <button
+                    type="button"
+                    className="friend-card-toggle"
+                    onClick={() => toggle(friend.uid)}
+                    aria-expanded={open}
+                  >
+                    <Avatar person={friend} />
+                    <span className="friends-result-meta">
+                      <strong>{friend.displayName}</strong>
+                      <small>
+                        {friend.username ? `@${friend.username}` : "U.Do friend"}
+                        {summary && summary.totalCount > 0
+                          ? ` · ${summary.doneCount}/${summary.totalCount} done`
+                          : ""}
+                      </small>
+                    </span>
+                    {summary ? (
+                      <span className="friend-headline">
+                        <span className="friends-muted">Best streak</span>
+                        <strong>{summary.longestStreak}</strong>
+                      </span>
+                    ) : null}
+                    <FiChevronDown className="friend-card-chevron" aria-hidden="true" />
+                  </button>
+
+                  {open ? (
+                    <div className="friend-card-body">
+                      {!summary ? (
+                        <p className="friends-muted">
+                          Nothing shared yet — they need to open their Habits page once.
+                        </p>
+                      ) : summary.totalCount === 0 ? (
+                        <p className="friends-muted">No habits tracked yet.</p>
+                      ) : (
+                        <div className="friend-habit-list">
+                          {summary.habits.map((habit) => (
+                            <HabitRow key={habit.id} habit={habit} />
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="friend-card-foot">
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          onClick={() => handleRemove(friend.uid, friend.displayName)}
+                          disabled={busyUid === friend.uid}
+                        >
+                          {busyUid === friend.uid ? "Removing..." : "Remove friend"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </section>
+              );
+            })}
           </div>
         )}
       </article>
@@ -530,9 +657,13 @@ function Friends() {
         <div className="friends-field-row">
           {searchMode === "username" ? <span className="friends-at">@</span> : null}
           <input
+            id="friends-add-input"
             className="friends-input"
             placeholder={searchMode === "code" ? "ABCD2345" : "theirname"}
             value={searchValue}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck="false"
             onChange={(event) =>
               setSearchValue(
                 searchMode === "code"
@@ -604,9 +735,9 @@ function Friends() {
 
       {outgoing.length > 0 && (
         <article className="wire-card">
-          <h3>Sent ({outgoing.length})</h3>
+          <h3>Waiting on them ({outgoing.length})</h3>
           <p className="friends-muted">
-            Waiting on them to accept. Withdrawing removes the request from their page.
+            Requests you sent. Withdrawing removes it from their page.
           </p>
           <div className="friends-request-list is-scrollable">
             {outgoing.map((person) => (
@@ -623,7 +754,7 @@ function Friends() {
                   onClick={() => handleCancelRequest(person.uid)}
                   disabled={busyUid === person.uid}
                 >
-                  <FiX /> {busyUid === person.uid ? "Cancelling..." : "Cancel"}
+                  <FiX /> {busyUid === person.uid ? "Cancelling..." : "Withdraw"}
                 </button>
               </div>
             ))}
@@ -631,70 +762,66 @@ function Friends() {
         </article>
       )}
 
-      <article className="wire-card">
-        <div className="panel-head">
-          <h3 className="panel-title">Their streaks</h3>
+      <article className="wire-card friends-handle-card">
+        <h3>Your handle and invite</h3>
+        <p className="friends-muted">
+          {profile?.username
+            ? `You're @${profile.username}. Friends can find you with your handle, code or link — changing your handle frees the old one.`
+            : "Pick a username so friends can find and add you. Letters, numbers and underscores, 3-20 characters."}
+        </p>
+
+        <div className="friends-field-row">
+          <span className="friends-at">@</span>
+          <input
+            className="friends-input"
+            placeholder="yourname"
+            value={usernameInput}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck="false"
+            onChange={(event) => setUsernameInput(normalizeUsername(event.target.value))}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") handleClaimUsername();
+            }}
+          />
+          <button
+            type="button"
+            className="button-primary"
+            onClick={handleClaimUsername}
+            disabled={savingUsername}
+          >
+            {savingUsername ? "Saving..." : profile?.username ? "Change" : "Claim"}
+          </button>
         </div>
 
-        {loading ? (
-          <p className="friends-muted">Loading your friends...</p>
-        ) : friends.length === 0 ? (
-          <p className="friends-muted">
-            No friends yet. Share your invite link or search for their username above.
-          </p>
-        ) : (
-          <div className="friends-list is-scrollable">
-            {friends.map((friend) => (
-              <section key={friend.uid} className="friend-card">
-                <header className="friend-card-header">
-                  <Avatar person={friend} />
-                  <div className="friends-result-meta">
-                    <strong>{friend.displayName}</strong>
-                    {friend.username ? <small>@{friend.username}</small> : null}
-                  </div>
+        {profile?.inviteCode ? (
+          <div className="friends-share-grid">
+            <div className="friends-share-row">
+              <span className="friends-muted">Invite code</span>
+              <code className="friends-code">{profile.inviteCode}</code>
+              <button
+                type="button"
+                className="button-secondary friends-copy"
+                onClick={() => copyToClipboard(profile.inviteCode, "Invite code")}
+              >
+                <FiCopy /> Copy
+              </button>
+            </div>
 
-                  {friend.summary ? (
-                    <div className="friend-headline">
-                      <span className="friends-muted">Longest streak</span>
-                      <strong>{friend.summary.longestStreak}</strong>
-                    </div>
-                  ) : null}
-
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={() => handleRemove(friend.uid, friend.displayName)}
-                    disabled={busyUid === friend.uid}
-                  >
-                    Remove
-                  </button>
-                </header>
-
-                {!friend.summary ? (
-                  <p className="friends-muted">
-                    Nothing shared yet — they need to open their Habits page once.
-                  </p>
-                ) : friend.summary.totalCount === 0 ? (
-                  <p className="friends-muted">No habits tracked yet.</p>
-                ) : (
-                  <>
-                    <p className="friends-muted">
-                      {friend.summary.doneCount} of {friend.summary.totalCount} done this window
-                    </p>
-                    <div className="friend-habit-list">
-                      {friend.summary.habits.map((habit) => (
-                        <HabitRow key={habit.id} habit={habit} />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </section>
-            ))}
+            <div className="friends-share-row">
+              <span className="friends-muted">Invite link</span>
+              <code className="friends-code friends-code-link">{inviteLink}</code>
+              <button
+                type="button"
+                className="button-secondary friends-copy"
+                onClick={shareInvite}
+              >
+                <FiShare2 /> Share
+              </button>
+            </div>
           </div>
-        )}
+        ) : null}
       </article>
-
-      {status ? <p className="friends-status">{status}</p> : null}
     </section>
   );
 }
