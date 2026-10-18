@@ -3647,84 +3647,190 @@ body.is-focusing { overflow: hidden; }
 .focus-screen {
   position: fixed;
   inset: 0;
+  height: 100dvh;
   z-index: 200;
   display: flex;
   flex-direction: column;
-  padding: calc(var(--s-4) + env(safe-area-inset-top, 0px)) calc(var(--s-5) + env(safe-area-inset-right, 0px)) calc(var(--s-4) + env(safe-area-inset-bottom, 0px)) calc(var(--s-5) + env(safe-area-inset-left, 0px));
+  gap: var(--s-3);
+  padding:
+    calc(var(--s-3) + env(safe-area-inset-top, 0px))
+    calc(var(--s-4) + env(safe-area-inset-right, 0px))
+    calc(var(--s-4) + env(safe-area-inset-bottom, 0px))
+    calc(var(--s-4) + env(safe-area-inset-left, 0px));
   background: var(--bg);
   color: var(--text);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
   animation: focus-in 0.28s var(--ease-out);
 }
 @keyframes focus-in { from { opacity: 0; transform: scale(0.985); } }
 
-.focus-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--s-3); }
-.focus-top .eyebrow { text-align: center; }
-.focus-icon-btn { width: var(--tap-target); height: var(--tap-target); display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 18px; }
+.focus-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--s-3); flex-shrink: 0; transition: opacity 0.5s var(--ease); }
+.focus-top-label { text-align: center; white-space: nowrap; }
+.focus-top-right { display: flex; justify-content: flex-end; align-items: center; gap: var(--s-2); }
+.focus-icon-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 17px; }
 .focus-icon-btn:hover { color: var(--text); }
 
 /* The 1 / 2 switch, the same idea as the theme toggle. */
 .focus-style { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: var(--r-pill); }
-.focus-style button { width: 34px; height: 30px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.focus-style button { width: 32px; height: 30px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .focus-style button.is-active { background: var(--text); color: var(--bg); }
 
-.focus-chip { display: inline-flex; align-items: center; gap: var(--s-2); padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--r-pill); font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* Style 1 — ring */
-.focus-a { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: var(--s-4); }
-.focus-a-dial { display: flex; flex-direction: column; align-items: center; gap: var(--s-4); }
-.focus-a-side { width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: var(--s-5); }
-.focus-ring { position: relative; width: min(72vw, 46vh, 380px); aspect-ratio: 1; display: grid; place-items: center; }
-.focus-ring-svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
-.focus-ring-track { fill: none; stroke: var(--border); stroke-width: 1.4; }
-.focus-ring-fill { fill: none; stroke: var(--text); stroke-width: 1.4; stroke-linecap: round; transition: stroke-dashoffset 0.3s linear; }
-.focus-ring-label { display: flex; flex-direction: column; align-items: center; gap: var(--s-1); }
-.focus-ring-label span { font-size: 12px; color: var(--text-muted); }
-.focus-time { font-size: clamp(48px, 15vw, 92px); font-weight: 300; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; line-height: 1; }
-.focus-controls { display: flex; align-items: center; gap: var(--s-6); }
-.focus-round { width: 50px; height: 50px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 18px; }
-.focus-round:hover { color: var(--text); border-color: var(--border-strong); }
-.focus-main { width: 76px; height: 76px; display: grid; place-items: center; border-radius: 50%; border: 0; background: var(--text); color: var(--bg); font-size: 26px; transition: transform var(--speed) var(--ease); }
-.focus-main:active { transform: scale(0.94); }
-.focus-stats { width: 100%; display: flex; align-items: flex-end; gap: var(--s-4); padding-top: var(--s-4); border-top: 1px solid var(--border); }
-.focus-stats small { display: block; font-size: 11px; color: var(--text-muted); }
-.focus-stats strong { font-size: 18px; font-variant-numeric: tabular-nums; }
-.focus-stats-right { text-align: right; }
-.focus-week { flex: 1; height: 36px; display: flex; align-items: flex-end; gap: 5px; }
-.focus-week span { flex: 1; border-radius: 2px; background: var(--text); opacity: 0.4; }
-.focus-week span.is-today { opacity: 1; }
-.focus-end { background: none; border: 0; color: var(--text-muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
-.focus-end:hover { color: var(--text); }
-
-/* Style 2 — big clock */
-.focus-line { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--border); }
-.focus-line span { display: block; height: 100%; background: var(--text); transition: width 0.3s linear; }
-.focus-b { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-3); background: transparent; border: 0; color: inherit; cursor: pointer; min-height: 0; }
-.focus-b-subject { font-size: 16px; color: var(--text-muted); max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.focus-b-time { font-size: min(28vw, 30vh); font-weight: 200; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; line-height: 1; margin: var(--s-4) 0; }
-.focus-b-hint { font-size: 12px; color: var(--text-muted); }
-.focus-b-foot { display: flex; justify-content: center; align-items: center; gap: var(--s-4); font-size: 12.5px; color: var(--text-muted); }
-
-/* Landscape — iPad on its side, or a phone turned. Style 1 goes side by
-   side; style 2's clock grows into the width. */
-@media (orientation: landscape) and (min-width: 640px) {
-  .focus-a { flex-direction: row; justify-content: center; gap: clamp(32px, 7vw, 120px); }
-  .focus-ring { width: min(40vw, 62vh, 460px); }
-  .focus-a-side { max-width: 380px; gap: var(--s-6); }
-  .focus-b-time { font-size: min(22vw, 48vh); }
+/* Cancel and Pause: round, labelled, with the thin outer ring of the
+   iPhone Clock timer's buttons. */
+.focus-buttons { width: min(100%, 340px); display: flex; justify-content: space-between; align-items: center; }
+.focus-btn {
+  --btn: 78px;
+  width: var(--btn);
+  height: var(--btn);
+  border-radius: 50%;
+  border: 0;
+  font-size: 15px;
+  font-weight: 550;
+  transition: transform var(--speed) var(--ease), opacity var(--speed) var(--ease);
 }
+.focus-btn:active { transform: scale(0.94); }
+.focus-btn-cancel { background: var(--surface-2); color: var(--text); box-shadow: 0 0 0 3px var(--bg), 0 0 0 4.5px var(--surface-2); }
+.focus-btn-main { background: var(--text); color: var(--bg); box-shadow: 0 0 0 3px var(--bg), 0 0 0 4.5px var(--text); }
+
+.focus-link { background: none; border: 0; color: var(--text-muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.focus-link:hover { color: var(--text); }
+
+/* ---- 1 · Timer ------------------------------------------------------- */
+.focus-a { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: var(--s-4); }
+.focus-ring {
+  position: relative;
+  width: min(80vw, calc(100dvh - 330px), 400px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  container-type: inline-size;
+  flex-shrink: 0;
+}
+.focus-ring-svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg) scaleY(-1); }
+.focus-ring-track { fill: none; stroke: var(--border); stroke-width: 1.6; }
+.focus-ring-fill { fill: none; stroke: var(--text); stroke-width: 1.6; stroke-linecap: round; transition: stroke-dashoffset 0.25s linear; }
+.focus-ring-label { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2cqi; max-width: 80%; }
+.focus-ring-subject { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; font-size: max(12px, 4.2cqi); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.focus-time { font-size: 23cqi; font-weight: 200; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; line-height: 1; }
+.focus-ends { display: inline-flex; align-items: center; gap: 6px; font-size: max(12px, 4.2cqi); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.focus-a-side { width: 100%; max-width: 380px; display: flex; flex-direction: column; align-items: center; gap: var(--s-4); }
+.focus-stats { width: 100%; display: flex; align-items: flex-end; gap: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--border); }
+.focus-stats small { display: block; font-size: 11px; color: var(--text-muted); }
+.focus-stats strong { font-size: 17px; font-variant-numeric: tabular-nums; }
+.focus-stats-right { text-align: right; }
+.focus-week { flex: 1; height: 34px; display: flex; align-items: flex-end; gap: 5px; }
+.focus-week span { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.focus-week i { display: block; width: 100%; border-radius: 2px; background: var(--text); opacity: 0.3; }
+.focus-week .is-today i { opacity: 1; }
+
+/* ---- 2 · Flip clock (StandBy) -------------------------------------- */
+.focus-top-left { display: flex; align-items: center; gap: var(--s-2); }
+
+/* Pause sits top right: small, but the one filled control on the screen. */
+.focus-pause-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 0; background: var(--text); color: var(--bg); font-size: 16px; box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--text); transition: transform var(--speed) var(--ease), opacity 0.5s var(--ease); }
+.focus-pause-btn:active { transform: scale(0.92); }
+
+.focus-b { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(10px, 3.2dvh, 34px); }
+.focus-b-line { margin: 0; font-size: 15px; color: var(--text-muted); max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity 0.5s var(--ease); }
+.focus-b-caps { text-transform: uppercase; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
+
+/* Portrait: the cards stack. Every size comes from one width. */
+.focus-flip {
+  --cw: min(76vw, calc((100dvh - 230px) / 2.12));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--cw) * 0.1);
+}
+.focus-flip.has-hours { --cw: min(64vw, calc((100dvh - 230px) / 3.2)); }
+
+.flip-card {
+  position: relative;
+  width: var(--cw);
+  height: var(--cw);
+  /* Tall, condensed figures like a real flap clock (bundled in fonts.css). */
+  font-family: "Bebas Neue", "DIN Condensed", "Arial Narrow", var(--font-sans);
+  font-size: calc(var(--cw) * 0.86);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  color: color-mix(in srgb, var(--text) 82%, transparent);
+  border-radius: calc(var(--cw) * 0.1);
+}
+.flip-half { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; background: var(--surface); }
+.flip-half > span { position: absolute; left: 0; right: 0; height: 200%; display: flex; align-items: center; justify-content: center; padding-top: calc(var(--cw) * 0.06); }
+.flip-top { top: 0; border-radius: calc(var(--cw) * 0.1) calc(var(--cw) * 0.1) 0 0; }
+.flip-top > span { top: 0; }
+.flip-bottom { bottom: 0; border-radius: 0 0 calc(var(--cw) * 0.1) calc(var(--cw) * 0.1); }
+.flip-bottom > span { bottom: 0; }
+/* The hinge: a dark hairline straight through the middle of the figures. */
+.flip-card::after {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: max(2px, calc(var(--cw) * 0.012));
+  transform: translateY(-50%);
+  background: var(--bg);
+}
+.flip-leaf { position: absolute; inset: 0; z-index: 3; perspective: calc(var(--cw) * 5); }
+.flip-leaf-front { transform-origin: 50% 100%; backface-visibility: hidden; animation: flip-fall 0.28s cubic-bezier(0.55, 0, 0.9, 0.4) forwards; }
+.flip-leaf-back { transform-origin: 50% 0%; transform: rotateX(90deg); backface-visibility: hidden; animation: flip-land 0.28s cubic-bezier(0.1, 0.6, 0.45, 1) 0.28s forwards; }
+@keyframes flip-fall { to { transform: rotateX(-90deg); filter: brightness(0.55); } }
+@keyframes flip-land { from { filter: brightness(1.35); } to { transform: rotateX(0deg); filter: brightness(1); } }
+
+/* StandBy: while the clock runs untouched, only the cards, the two quiet
+   lines and the Pause button stay. A touch brings the rest back. */
+.focus-screen.is-quiet .focus-top-left,
+.focus-screen.is-quiet .focus-top-label,
+.focus-screen.is-quiet .focus-top-right > :not(.focus-pause-btn) { opacity: 0; pointer-events: none; transition: opacity 0.5s var(--ease); }
+.focus-screen.is-quiet .focus-pause-btn { opacity: 0.55; }
+
+/* ---- Landscape: every phone, tablets and desktops --------------------- */
+@media (orientation: landscape) {
+  .focus-a { flex-direction: row; justify-content: center; gap: clamp(24px, 6vw, 120px); }
+  .focus-ring { width: min(46vw, calc(100dvh - 96px), 480px); }
+  .focus-a-side { max-width: 340px; gap: var(--s-3); }
+  .focus-flip { --cw: min(38vw, calc(100dvh - 190px)); flex-direction: row; gap: calc(var(--cw) * 0.12); }
+  .focus-flip.has-hours { --cw: min(27vw, calc(100dvh - 190px)); }
+}
+/* Short landscape — a phone on its side. */
 @media (orientation: landscape) and (max-height: 500px) {
-  .focus-screen { padding-top: var(--s-3); padding-bottom: var(--s-3); }
-  .focus-a-dial { gap: var(--s-2); }
-  .focus-ring { width: min(40vw, 64vh); }
-  .focus-time { font-size: min(9vw, 15vh); }
-  .focus-a-side { gap: var(--s-3); }
-  .focus-main { width: 60px; height: 60px; }
+  .focus-screen { gap: var(--s-2); padding-top: calc(var(--s-2) + env(safe-area-inset-top, 0px)); padding-bottom: calc(var(--s-2) + env(safe-area-inset-bottom, 0px)); }
+  .focus-icon-btn { width: 36px; height: 36px; }
+  .focus-ring { width: min(46vw, calc(100dvh - 72px)); }
+  .focus-btn { --btn: 62px; font-size: 13.5px; }
   .focus-stats { padding-top: var(--s-2); }
-  .focus-b-time { font-size: min(24vw, 52vh); margin: 0; }
+  .focus-week { height: 26px; }
+  .focus-flip { --cw: min(38vw, calc(100dvh - 130px)); }
+  .focus-flip.has-hours { --cw: min(27vw, calc(100dvh - 130px)); }
+  .focus-b-line { font-size: 13px; }
+}
+/* Very short portrait (small phones): give the ring room. */
+@media (orientation: portrait) and (max-height: 640px) {
+  .focus-ring { width: min(78vw, calc(100dvh - 300px)); }
+  .focus-btn { --btn: 68px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .focus-screen, .focus-pill { animation: none; }
   .focus-pill-dot { animation: none; }
-  .focus-ring-fill, .focus-line span { transition: none; }
+  .focus-ring-fill { transition: none; }
+  .flip-leaf { display: none; }
+  .focus-pause-btn { transition: none; }
+}
+
+/* Narrow phones: the flip clock's top bar carries five controls. */
+@media (max-width: 360px) {
+  .focus-style-2 .focus-top-label { display: none; }
+  .focus-style-2 .focus-top { grid-template-columns: auto 1fr; }
+  .focus-style-2 .focus-icon-btn,
+  .focus-style-2 .focus-pause-btn { width: 34px; height: 34px; font-size: 15px; }
+  .focus-style-2 .focus-style button { width: 28px; }
 }
