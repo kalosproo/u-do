@@ -3577,8 +3577,38 @@ h3, .panel-title { letter-spacing: -0.013em; }
 .focus-card-time { font-size: clamp(44px, 9vw, 60px); font-weight: 300; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; line-height: 1; }
 .focus-presets { display: flex; gap: var(--s-2); flex-wrap: wrap; }
 .focus-presets .chip.active { background: var(--text); border-color: var(--text); color: var(--bg); }
-.focus-card-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-.focus-card-start { width: 100%; }
+.focus-card-start { width: 100%; min-height: 46px; }
+.focus-card-today { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.focus-card-today strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.focus-card-today span { font-size: 11.5px; color: var(--text-muted); }
+.focus-card-setup { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-4); }
+.focus-card-week { display: flex; align-items: flex-end; gap: 4px; height: 40px; width: min(132px, 40%); }
+.focus-card-week span { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.focus-card-week i { display: block; width: 100%; border-radius: 2px; background: var(--text); opacity: 0.28; }
+.focus-card-week .is-today i { opacity: 1; }
+.focus-card-input { min-height: 44px; }
+
+/* Running: a live timer, not a row of buttons. */
+.focus-card.is-running { gap: var(--s-4); }
+.focus-card-live { display: flex; align-items: center; gap: var(--s-4); }
+.focus-card-live-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.focus-card-sub { font-size: 13px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.focus-card.is-running .focus-card-time { font-size: clamp(42px, 11vw, 56px); }
+.focus-mini-ring { position: relative; width: 76px; height: 76px; flex-shrink: 0; display: grid; place-items: center; }
+.focus-mini-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.focus-mini-ring .focus-ring-track,
+.focus-mini-ring .focus-ring-fill { stroke-width: 4; }
+.focus-mini-ring > span { display: grid; place-items: center; color: var(--text-muted); font-size: 18px; }
+.focus-mini-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text); animation: focus-breathe 2.4s ease-in-out infinite; }
+@keyframes focus-breathe { 50% { transform: scale(0.55); opacity: 0.5; } }
+.focus-card-bar { height: 2px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.focus-card-bar span { display: block; height: 100%; background: var(--text); transition: width 0.3s linear; }
+.focus-card-controls { display: flex; gap: var(--s-2); }
+.focus-card-open { flex: 1; min-height: 46px; }
+.focus-card-icon { width: 46px; height: 46px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 16px; transition: background var(--speed) var(--ease), border-color var(--speed) var(--ease); }
+.focus-card-icon:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.focus-card-icon:active { transform: scale(0.94); }
+@media (prefers-reduced-motion: reduce) { .focus-mini-dot { animation: none; } .focus-card-bar span { transition: none; } }
 
 .focus-pill {
   position: fixed;
