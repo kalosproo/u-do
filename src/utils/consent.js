@@ -9,6 +9,10 @@
 export const PRIVACY_POLICY_VERSION = 3;
 export const PRIVACY_POLICY_UPDATED = "12 October 2026";
 
+/** The Terms of Service. Shown on /terms; not yet a separate acceptance step. */
+export const TERMS_VERSION = 1;
+export const TERMS_UPDATED = "18 October 2026";
+
 /** True when this account has not accepted the version currently published. */
 export const needsConsent = (record) =>
   !record || Number(record.privacyVersion) !== PRIVACY_POLICY_VERSION;

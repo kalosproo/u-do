@@ -120,6 +120,7 @@ export { askAssistant } from "./ai/assistant.js";
 // Account deletion. Half of what has to go is unreachable by the person who
 // owns it, so this cannot be done from the client.
 export { deleteMyAccount } from "./account/delete.js";
+export { signOutEverywhere } from "./account/security.js";
 
 export { sendScheduledReminders } from "./notifications/digest.js";
 export { onFriendRequest, onFriendAdded } from "./notifications/friends.js";

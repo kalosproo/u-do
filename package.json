@@ -12,7 +12,7 @@
     "test:rules": "firebase emulators:exec --only firestore --project u-do-rules-test \"node firestore.rules.test.mjs\"",
     "lint:admin": "npm --prefix admin run lint",
     "build:admin": "npm --prefix admin run build",
-    "test:functions": "firebase emulators:exec --only firestore --project u-do-0 \"node functions/usage.it.mjs && node functions/errors.it.mjs && node functions/razorpay.it.mjs\""
+    "test:functions": "firebase emulators:exec --only firestore,auth --project u-do-0 \"node functions/usage.it.mjs && node functions/errors.it.mjs && node functions/razorpay.it.mjs && node functions/account.it.mjs\""
   },
   "dependencies": {
     "animejs": "^4.5.0",

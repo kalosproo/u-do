@@ -34,7 +34,7 @@ function Privacy() {
 
         <h2>Who runs U.Do</h2>
         <p>
-          U.Do is an independent project by Kalosproo. For any privacy question, or to
+          U.Do is an independent project by Kalosproo, and using it is covered by our <Link to="/terms">Terms of Service</Link>. For any privacy question, or to
           ask for your account to be deleted, email{" "}
           <a href="mailto:muttukururahul@gmail.com">muttukururahul@gmail.com</a>.
         </p>

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 /** Pages a search engine may list. Everything else is someone's private workspace. */
-const PUBLIC_PATHS = new Set(["/login", "/privacy"]);
+const PUBLIC_PATHS = new Set(["/login", "/privacy", "/terms"]);
 
 /**
  * Sets the robots meta tag per page.

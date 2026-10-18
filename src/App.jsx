@@ -13,6 +13,7 @@ const Habits = lazy(() => import("./pages/Habits"));
 const Friends = lazy(() => import("./pages/Friends"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
@@ -74,6 +75,7 @@ function AppRoutes() {
         {/* Readable signed out, and readable while the consent prompt is up:
             someone deciding whether to accept has to be able to read it. */}
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
 
         {/* Nothing to show a guest: every control on it needs an account. */}
         <Route

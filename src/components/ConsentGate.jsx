@@ -53,7 +53,7 @@ function ConsentGate() {
 
   // Never cover the policy itself. Someone who navigated here to read it before
   // deciding must not find the decision sitting on top of the document.
-  if (pathname === "/privacy") return null;
+  if (pathname === "/privacy" || pathname === "/terms") return null;
 
   /**
    * Accepting always lets the person through.
