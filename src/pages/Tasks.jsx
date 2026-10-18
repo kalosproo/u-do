@@ -285,13 +285,17 @@ function Tasks() {
             onChange={(e) => setDueDate(e.target.value)}
             aria-label="Due date"
           />
-          <input
-            type="time"
-            value={dueTime}
-            onChange={(e) => setDueTime(e.target.value)}
-            aria-label="Due time (optional)"
-            title="Optional. A task with a time stays quiet until then, and is reminded 30 minutes before."
-          />
+          <div className="time-input">
+            <input
+              type="time"
+              className={dueTime ? "" : "is-empty"}
+              value={dueTime}
+              onChange={(e) => setDueTime(e.target.value)}
+              aria-label="Due time (optional)"
+              title="Optional. A task with a time stays quiet until then, and is reminded 30 minutes before."
+            />
+            {dueTime ? null : <span className="time-input-hint" aria-hidden="true">00:00 · optional</span>}
+          </div>
           {/* Just the level. The row carries two more controls than it used
               to, and "Medium priority" no longer fits — the label says what
               the field is, so the option does not have to repeat it. */}

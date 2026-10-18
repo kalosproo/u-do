@@ -462,6 +462,7 @@ input[type="email"],
 input[type="password"],
 input[type="number"],
 input[type="date"],
+input[type="time"],
 input:not([type]),
 select,
 textarea,
@@ -488,6 +489,22 @@ select:focus,
 textarea:focus { border-color: var(--border-strong); outline: none; }
 
 select { cursor: pointer; }
+
+/* Chrome draws an empty time box as "--:--". Until a time is picked the box
+   shows a quiet hint instead; focusing it brings the real fields back. */
+.time-input { position: relative; min-width: 0; }
+.time-input input.is-empty:not(:focus) { color: transparent; }
+.time-input input.is-empty:not(:focus)::-webkit-datetime-edit { color: transparent; }
+.time-input-hint {
+  position: absolute;
+  inset: 0 auto 0 var(--s-3);
+  display: flex;
+  align-items: center;
+  font-size: 13.5px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.time-input input:focus + .time-input-hint { display: none; }
 
 .field { display: flex; flex-direction: column; gap: var(--s-1); }
 .field > span,
@@ -2906,7 +2923,12 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .chip,
   .friends-mode-pill { min-height: 36px; flex-shrink: 0; }
 
-  .week-grid { grid-template-columns: repeat(7, 82vw); }
+  /* One day under the next. Side by side at 82vw a phone showed a single day
+     at a time behind a sideways swipe, with the rest of the screen empty. */
+  .week-grid-wrap { overflow-x: visible; }
+  .week-grid { grid-template-columns: 1fr; }
+  .day-column { min-height: 0; }
+  .day-column .empty-day { padding: var(--s-2) 0; }
 
   /* Header row never stacks: the menu stays beside the title, top-right,
      far from the bottom-right capture button. */
@@ -3056,7 +3078,6 @@ h3, .panel-title { letter-spacing: -0.013em; }
 
 @media (max-width: 380px) {
   .stat-grid { grid-template-columns: 1fr; }
-  .week-grid { grid-template-columns: repeat(7, 88vw); }
 }
 
 /* Respect a reduced-motion preference. */
