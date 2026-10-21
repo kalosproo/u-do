@@ -1,7 +1,8 @@
 import { deleteField, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getMessaging, getToken, deleteToken, isSupported } from "firebase/messaging";
+import { httpsCallable } from "firebase/functions";
 
-import { app, db } from "./firebase";
+import { app, db, functions } from "./firebase";
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 const WORKER_PATH = "/firebase-messaging-sw.js";
@@ -116,6 +117,65 @@ export const enablePush = async (
   );
 
   return { ok: true, token };
+};
+
+/**
+ * Re-registers this device without asking anything, when permission was
+ * already given.
+ *
+ * Two things made reminders silently stop. Push is switched on per account
+ * but delivered per device, so turning it on from a laptop left the phone
+ * showing "on" with no token of its own. And FCM rotates tokens: the server
+ * prunes the dead one, and with nothing re-registering, the account ends up
+ * with no devices at all. Calling this on every visit fixes both — getToken
+ * returns the current token, and the merge adds it if it is new.
+ *
+ * Returns "registered", "needs-permission" or "unavailable".
+ */
+export const syncThisDevice = async (uid) => {
+  if (!uid || typeof Notification === "undefined") return "unavailable";
+  if (Notification.permission !== "granted") return "needs-permission";
+
+  try {
+    const registration = await registerMessagingWorker();
+    const token = await getToken(getMessaging(app), {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: registration,
+    });
+    if (!token) return "unavailable";
+
+    await setDoc(
+      subscriptionDoc(uid),
+      {
+        uid,
+        tokens: { [token]: true },
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+    return "registered";
+  } catch {
+    return "unavailable";
+  }
+};
+
+/**
+ * Asks the server to push a test notification to every registered device
+ * right now — the quickest way to see which link in the chain is broken.
+ */
+export const sendTestPush = async () => {
+  try {
+    const { data } = await httpsCallable(functions, "sendTestPush")({});
+    return { ok: true, ...data };
+  } catch (error) {
+    const code = String(error?.code || "");
+    if (code.includes("not-found") || code.includes("internal") || code.includes("unavailable")) {
+      return { ok: false, reason: "server" };
+    }
+    if (code.includes("resource-exhausted")) return { ok: false, reason: "too-soon" };
+    return { ok: false, reason: "unknown", message: error?.message };
+  }
 };
 
 /** Drops this device's token and stops the schedule for the account. */

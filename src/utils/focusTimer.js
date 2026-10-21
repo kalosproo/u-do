@@ -44,10 +44,13 @@ export const progressOf = (session, now = Date.now()) => {
 };
 
 /** Adds a finished focus stretch to the per-day log. Returns a new object. */
-export const addToLog = (log, minutes, date = new Date()) => {
+export const addToLog = (log, minutes, date = new Date(), subject = "") => {
   const key = toDateKey(date);
   const day = log?.[key] || { minutes: 0, sessions: 0 };
-  return { ...(log || {}), [key]: { minutes: day.minutes + minutes, sessions: day.sessions + 1 } };
+  const next = { ...day, minutes: day.minutes + minutes, sessions: day.sessions + 1 };
+  const name = String(subject || "").trim().slice(0, 40);
+  if (name) next.subjects = { ...(day.subjects || {}), [name]: (day.subjects?.[name] || 0) + minutes };
+  return { ...(log || {}), [key]: next };
 };
 
 /** The last `days` days, oldest first, each with its minutes — for the bar strip. */

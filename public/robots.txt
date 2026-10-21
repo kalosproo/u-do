@@ -1,4 +1,5 @@
 User-agent: *
+Allow: /$
 Allow: /login
 Allow: /privacy
 Allow: /terms

@@ -41,3 +41,11 @@ export const outgoingCollection = (uid) => collection(db, "profiles", uid, "outg
 export const outgoingDoc = (uid, toUid) => doc(db, "profiles", uid, "outgoing", toUid);
 export const usernameDoc = (username) => doc(db, "usernames", username);
 export const inviteCodeDoc = (code) => doc(db, "inviteCodes", code);
+
+// Focus-timer time, one document per day. Not part of WORKSPACE_COLLECTIONS:
+// it is a log the timer keeps, not something people create, import or export.
+export const focusCollection = (uid) => collection(db, "users", uid, "focus");
+export const focusDayDoc = (uid, dateKey) => doc(db, "users", uid, "focus", dateKey);
+
+// "Studying now", shared with friends alongside the habit summary.
+export const focusPresenceDoc = (uid) => doc(db, "profiles", uid, "shared", "focus");

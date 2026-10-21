@@ -4,7 +4,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
 } from "firebase/auth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandLogo from "../components/BrandLogo";
 import { auth, googleProvider } from "../services/firebase";
 import { recordConsent } from "../services/consent";
@@ -75,7 +75,9 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isSignup, setIsSignup] = useState(false);
+  const [searchParams] = useSearchParams();
+  // The landing page's "Get started" opens the signup tab directly.
+  const [isSignup, setIsSignup] = useState(() => searchParams.get("mode") === "signup");
   const [busy, setBusy] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [isReset, setIsReset] = useState(false);

@@ -1,4 +1,5 @@
 import { FiMaximize2, FiPause, FiPlay, FiSquare } from "react-icons/fi";
+import { Link, useLocation } from "react-router-dom";
 
 import { useFocus } from "../../hooks/useFocus";
 import { PRESETS, formatClock, formatMinutes, lastDays, progressOf } from "../../utils/focusTimer";
@@ -40,6 +41,7 @@ function WeekStrip({ log }) {
  */
 function FocusCard() {
   const focus = useFocus();
+  const { pathname } = useLocation();
   if (!focus) return null;
 
   const { session, setup } = focus;
@@ -100,7 +102,7 @@ function FocusCard() {
         </div>
         <div className="focus-card-today">
           <strong>{formatMinutes(today.minutes)}</strong>
-          <span>today</span>
+          {pathname === "/focus" ? <span>today</span> : <Link to="/focus" className="focus-card-stats">today · stats</Link>}
         </div>
       </div>
 

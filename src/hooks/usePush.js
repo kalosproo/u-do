@@ -8,10 +8,12 @@ import {
   pushAvailability,
   readWindow,
   savePushPreferences,
+  sendTestPush,
+  syncThisDevice,
 } from "../services/push";
 import { useAuth } from "./useAuth";
 
-const EMPTY = { uid: null, availability: null, subscription: null };
+const EMPTY = { uid: null, availability: null, subscription: null, device: null };
 
 /**
  * Everything the reminder controls need, in one place.
@@ -33,12 +35,19 @@ export function usePush() {
     let cancelled = false;
 
     Promise.all([pushAvailability(), fetchPushSubscription(user.uid)])
-      .then(([availability, subscription]) => {
-        if (!cancelled) setSettled({ uid: user.uid, availability, subscription });
+      .then(async ([availability, subscription]) => {
+        // On every visit, an account with reminders on re-registers this
+        // device if it already has permission, so a rotated token or a new
+        // phone never leaves reminders silently going nowhere.
+        const device =
+          availability === "available" && subscription?.enabled
+            ? await syncThisDevice(user.uid)
+            : null;
+        if (!cancelled) setSettled({ uid: user.uid, availability, subscription, device });
       })
       .catch(() => {
         if (!cancelled) {
-          setSettled({ uid: user.uid, availability: "unsupported", subscription: null });
+          setSettled({ uid: user.uid, availability: "unsupported", subscription: null, device: null });
         }
       });
 
@@ -82,6 +91,7 @@ export function usePush() {
         uid: user.uid,
         availability: current?.availability ?? "available",
         subscription: { ...(subscription || {}), enabled: true, start, end, types },
+        device: "registered",
       });
     } catch (cause) {
       setError(cause?.message || "Couldn't turn reminders on.");
@@ -102,6 +112,7 @@ export function usePush() {
         uid: user.uid,
         availability: current?.availability ?? "available",
         subscription: { ...(subscription || {}), enabled: false },
+        device: null,
       });
     } catch (cause) {
       setError(cause?.message || "Couldn't turn reminders off.");
@@ -119,6 +130,7 @@ export function usePush() {
         uid: user.uid,
         availability: current?.availability ?? "available",
         subscription: { ...(subscription || {}), ...next },
+        device: current?.device ?? null,
       });
 
       try {
@@ -130,8 +142,20 @@ export function usePush() {
     [user, start, end, types, subscription, current],
   );
 
+  const [test, setTest] = useState({ state: "idle", result: null });
+
+  const sendTest = useCallback(async () => {
+    setTest({ state: "sending", result: null });
+    setTest({ state: "done", result: await sendTestPush() });
+  }, []);
+
   return {
     loading: Boolean(user) && !current,
+    // "needs-permission": reminders are on for the account, but this device
+    // has never been allowed to show them.
+    device: current?.device ?? null,
+    test,
+    sendTest,
     availability: current?.availability ?? null,
     enabled,
     start,

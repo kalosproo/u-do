@@ -4,7 +4,7 @@
   "name": "U.Do — Tasks, Habits, Planning & Finance",
   "launcherName": "U.Do",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "default",
   "themeColor": "#0A0A0A",
   "themeColorDark": "#0A0A0A",
   "navigationColor": "#0A0A0A",

@@ -37,6 +37,7 @@ import {
 import { fetchHabits } from "../services/habits";
 import ClearDataButton from "../components/ClearDataButton";
 import PageMenu, { PageMenuLabel } from "../components/PageMenu";
+import FriendsFocusing from "../components/focus/FriendsFocusing";
 
 const SEARCH_MODES = [
   ["username", "By username"],
@@ -476,6 +477,8 @@ function Friends() {
           {status}
         </p>
       ) : null}
+
+      <FriendsFocusing compact />
 
       {/* Only when there is something to answer, and then first. */}
       {requests.length > 0 ? (
