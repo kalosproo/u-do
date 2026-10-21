@@ -342,6 +342,14 @@ await t("extra fields are refused", () => assertFails(setDoc(eprefs(alice, ALICE
 await t("a stranger cannot read someone's email settings", () => assertFails(getDoc(eprefs(mallory, ALICE))));
 await t("a stranger cannot sign someone up for emails", () => assertFails(setDoc(eprefs(mallory, ALICE), { uid: ALICE, daily: true })));
 
+console.log("\n=== exam countdowns ===");
+const exam = (patch = {}) => ({ title: "Physics final", date: "2026-11-12", subject: "Physics", createdAt: new Date(), ...patch });
+await t("owner adds an exam", () => assertSucceeds(setDoc(doc(alice, "users", ALICE, "exams", "e1"), exam())));
+await t("an exam needs a real date", () => assertFails(setDoc(doc(alice, "users", ALICE, "exams", "e2"), exam({ date: "next week" }))));
+await t("an exam needs a title", () => assertFails(setDoc(doc(alice, "users", ALICE, "exams", "e3"), exam({ title: "" }))));
+await t("extra fields are refused", () => assertFails(setDoc(doc(alice, "users", ALICE, "exams", "e4"), exam({ grade: "A" }))));
+await t("a stranger cannot read someone's exams", () => assertFails(getDoc(doc(mallory, "users", ALICE, "exams", "e1"))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

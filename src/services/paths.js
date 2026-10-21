@@ -49,3 +49,7 @@ export const focusDayDoc = (uid, dateKey) => doc(db, "users", uid, "focus", date
 
 // "Studying now", shared with friends alongside the habit summary.
 export const focusPresenceDoc = (uid) => doc(db, "profiles", uid, "shared", "focus");
+
+// Exam countdowns.
+export const examsCollection = (uid) => collection(db, "users", uid, "exams");
+export const examDoc = (uid, id) => doc(db, "users", uid, "exams", id);

@@ -21,6 +21,7 @@ import FriendStreaks from "../components/FriendStreaks";
 import WeeklyReview from "../components/WeeklyReview";
 import FocusCard from "../components/focus/FocusCard";
 import InstallCard from "../components/InstallCard";
+import ExamCountdowns from "../components/ExamCountdowns";
 import ChartPatterns from "../components/ChartPatterns";
 import { seriesFill } from "../utils/chartSeries";
 import { monthlyTotals } from "../utils/financeReport";
@@ -198,6 +199,8 @@ function Home() {
         {user ? <form className="today-add" onSubmit={(event) => { event.preventDefault(); addTodayTask(); }}><FiPlus aria-hidden="true" /><input value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} placeholder="Add a task for today" aria-label="Add a task for today" /><button type="submit" className="btn btn-primary btn-sm" disabled={savingTask || !newTaskTitle.trim()}>{savingTask ? "Adding…" : "Add task"}</button></form> : <Link to="/login" className="btn btn-primary">Sign in</Link>}
       </article>
       <FocusCard />
+
+      <ExamCountdowns />
 
       {isEmpty ? (
         <div className="panel">

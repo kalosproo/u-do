@@ -134,6 +134,13 @@ service cloud.firestore {
         || (kind == 'map' && data[field] is map);
     }
 
+    function validExam(data) {
+      return data.keys().hasOnly(['title', 'date', 'subject', 'createdAt', 'updatedAt'])
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 80
+        && data.date is string && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && label(data, 'subject', 40);
+    }
+
     function validFocusDay(dayKey, data) {
       return data.keys().hasOnly(['date', 'minutes', 'sessions', 'subjects', 'updatedAt'])
         && dayKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
@@ -209,6 +216,12 @@ service cloud.firestore {
       match /habits/{docId} {
         allow read, delete: if isOwner(uid);
         allow create, update: if isOwner(uid) && validHabit(request.resource.data);
+      }
+
+      // Exam countdowns: a title, a date, and the subject focus time counts toward.
+      match /exams/{examId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validExam(request.resource.data);
       }
 
       // One record per day of focus-timer time. Owner only, like the rest of

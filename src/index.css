@@ -4003,3 +4003,23 @@ body.is-focusing { overflow: hidden; }
 .install-step-add { font-size: 13px; font-weight: 700; color: var(--text); }
 .icon-btn { width: 32px; height: 32px; display: grid; place-items: center; flex-shrink: 0; border-radius: var(--r-sm); border: 1px solid var(--border); background: transparent; color: var(--text-muted); }
 .icon-btn:hover { color: var(--text); background: var(--surface-hover); }
+
+/* Exam countdowns */
+.exams-card { display: flex; flex-direction: column; gap: var(--s-3); }
+.exam-form { display: grid; grid-template-columns: 1fr 160px; gap: var(--s-2); }
+.exam-form > input:first-child { grid-column: 1 / -1; }
+.exam-form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: var(--s-2); }
+.exam-form .login-error { grid-column: 1 / -1; }
+.exam-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.exam-list li { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--border); }
+.exam-list li:first-child { border-top: 0; }
+.exam-flip { --cw: 52px; flex-shrink: 0; display: flex; }
+.exam-flip .flip-card { box-shadow: none; }
+.exam-days-plain { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 6px; background: var(--surface-2); font: 400 26px/1 "Bebas Neue", var(--font-sans); }
+.exam-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.exam-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exam-text small { color: var(--text-muted); font-size: 12.5px; }
+.exam-list li.is-close .exam-text small { color: var(--text); }
+@media (max-width: 480px) { .exam-form { grid-template-columns: 1fr; } }
+.exam-flip .flip-half { background: var(--bg); }
+.exam-flip .flip-card::after { background: var(--surface); }
