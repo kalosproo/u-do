@@ -19,6 +19,7 @@ import { useAuth } from "../hooks/useAuth";
 import { workspaceCollection } from "../services/paths";
 import FriendStreaks from "../components/FriendStreaks";
 import WeeklyReview from "../components/WeeklyReview";
+import MonthlyReport from "../components/MonthlyReport";
 import FocusCard from "../components/focus/FocusCard";
 import InstallCard from "../components/InstallCard";
 import ExamCountdowns from "../components/ExamCountdowns";
@@ -207,6 +208,8 @@ function Home() {
 
       <InstallCard />
       <AchievementWatcher stats={badgeStats} ready={Boolean(user) && !loading} />
+
+      {user && !loading ? <MonthlyReport uid={user.uid} tasks={tasks} habits={habits} plans={plans} expenses={expenses} /> : null}
 
       {user && !loading ? <WeeklyReview uid={user.uid} tasks={tasks} habits={habits} plans={plans} expenses={expenses} /> : null}
 

@@ -4060,3 +4060,6 @@ body.is-focusing { overflow: hidden; }
 .badge-toast-text strong { font-size: 16px; }
 .badge-toast-text span { font-size: 12.5px; color: var(--text-muted); }
 @media (prefers-reduced-motion: reduce) { .badge-toast { animation: none; } }
+.monthly-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.monthly-change { font-size: 11px; color: var(--text-muted); }
+@media (max-width: 860px) { .monthly-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

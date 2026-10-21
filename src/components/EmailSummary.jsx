@@ -13,7 +13,7 @@ const DEFAULT_TIME = "07:30";
  */
 function EmailSummary() {
   const { user } = useAuth();
-  const [state, setState] = useState({ uid: null, available: false, daily: false, time: DEFAULT_TIME });
+  const [state, setState] = useState({ uid: null, available: false, daily: false, monthly: false, time: DEFAULT_TIME });
   const [note, setNote] = useState("");
 
   useEffect(() => {
@@ -23,7 +23,7 @@ function EmailSummary() {
       const available = await emailAvailable();
       const prefs = available ? await readEmailPrefs(user.uid).catch(() => null) : null;
       if (!cancelled) {
-        setState({ uid: user.uid, available, daily: prefs?.daily === true, time: prefs?.time || DEFAULT_TIME });
+        setState({ uid: user.uid, available, daily: prefs?.daily === true, monthly: prefs?.monthly === true, time: prefs?.time || DEFAULT_TIME });
       }
     })();
     return () => {
@@ -43,6 +43,7 @@ function EmailSummary() {
     try {
       await saveEmailPrefs(user.uid, next);
       if (patch.daily === true) setNote(`Done. The first one arrives tomorrow around ${next.time}.`);
+      if (patch.monthly === true) setNote(`Done. The next one arrives on the 1st around ${next.time}.`);
     } catch {
       setNote("Couldn't save that. Try again.");
     }
@@ -70,7 +71,16 @@ function EmailSummary() {
               <span className="panel-note">Sent to {user.email}. Every email has a one-tap unsubscribe.</span>
             </span>
           </label>
-          {state.daily ? (
+          <label className="push-type">
+            <input type="checkbox" checked={state.monthly} onChange={(event) => save({ monthly: event.target.checked })} />
+            <span>
+              <strong>
+                <FiMail aria-hidden="true" /> Email me a monthly report
+              </strong>
+              <span className="panel-note">On the 1st: last month&apos;s tasks, focus time, habits and money.</span>
+            </span>
+          </label>
+          {state.daily || state.monthly ? (
             <div className="push-window">
               <span className="push-window-label">Send it at</span>
               <div className="push-window-times">

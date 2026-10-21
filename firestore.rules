@@ -388,9 +388,10 @@ service cloud.firestore {
       allow read: if isOwner(uid);
       allow delete: if isOwner(uid);
       allow create, update: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['uid', 'daily', 'time', 'timeZone', 'updatedAt', 'lastSentDay'])
+        && request.resource.data.keys().hasOnly(['uid', 'daily', 'monthly', 'time', 'timeZone', 'updatedAt', 'lastSentDay', 'lastMonthlySent'])
         && request.resource.data.uid == uid
         && request.resource.data.daily is bool
+        && (!('monthly' in request.resource.data) || request.resource.data.monthly is bool)
         && (!('time' in request.resource.data) || (request.resource.data.time is string && request.resource.data.time.matches('^[0-9]{2}:[0-9]{2}$')))
         && (!('timeZone' in request.resource.data) || (request.resource.data.timeZone is string && request.resource.data.timeZone.size() <= 64));
     }
