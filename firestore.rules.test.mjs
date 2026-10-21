@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import {
   initializeTestEnvironment, assertFails, assertSucceeds,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, increment, deleteDoc, collection, getDocs } from "firebase/firestore";
 
 const env = await initializeTestEnvironment({
   projectId: "u-do-rules-test",
@@ -317,6 +317,22 @@ await t("owner still writes habits", () => assertSucceeds(setDoc(doc(alice,"user
 await t("a collection nobody declared is refused", () =>
   assertFails(setDoc(doc(alice,"users",ALICE,"secrets","s1"),{anything:true})));
 await t("stranger CANNOT write someone's tasks", () => assertFails(setDoc(doc(mallory,"users",ALICE,"tasks","t2"),{title:"x"})));
+
+console.log("\n=== focus timer: daily records and 'studying now' ===");
+const fday = (id) => doc(alice, "users", ALICE, "focus", id);
+const day = (patch = {}) => ({ date: "2026-10-21", minutes: 25, sessions: 1, subjects: { Physics: 25 }, updatedAt: new Date(), ...patch });
+await t("owner records a focus day", () => assertSucceeds(setDoc(fday("2026-10-21"), day())));
+await t("a later session adds to it", () => assertSucceeds(setDoc(fday("2026-10-21"), { minutes: increment(50), sessions: increment(1), date: "2026-10-21" }, { merge: true })));
+await t("the record's date must match its id", () => assertFails(setDoc(fday("2026-10-22"), day())));
+await t("an id that isn't a date is refused", () => assertFails(setDoc(fday("hello"), day({ date: "hello" }))));
+await t("more than a day's minutes is refused", () => assertFails(setDoc(fday("2026-10-20"), day({ date: "2026-10-20", minutes: 2000 }))));
+await t("fractional minutes are refused", () => assertFails(setDoc(fday("2026-10-20"), day({ date: "2026-10-20", minutes: 2.5 }))));
+await t("extra fields are refused", () => assertFails(setDoc(fday("2026-10-20"), day({ date: "2026-10-20", note: "x" }))));
+await t("a stranger cannot read someone's focus days", () => assertFails(getDoc(doc(mallory, "users", ALICE, "focus", "2026-10-21"))));
+await t("a stranger cannot write someone's focus days", () => assertFails(setDoc(doc(mallory, "users", ALICE, "focus", "2026-10-21"), day())));
+await t("owner publishes 'studying now' for friends", () => assertSucceeds(setDoc(doc(alice, "profiles", ALICE, "shared", "focus"), { focusing: true, endsAt: Date.now() + 60000 })));
+await t("a stranger cannot see who is studying", () => assertFails(getDoc(doc(mallory, "profiles", ALICE, "shared", "focus"))));
+await t("a stranger cannot fake someone's 'studying now'", () => assertFails(setDoc(doc(mallory, "profiles", ALICE, "shared", "focus"), { focusing: true })));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

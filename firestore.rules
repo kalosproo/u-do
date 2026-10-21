@@ -134,6 +134,15 @@ service cloud.firestore {
         || (kind == 'map' && data[field] is map);
     }
 
+    function validFocusDay(dayKey, data) {
+      return data.keys().hasOnly(['date', 'minutes', 'sessions', 'subjects', 'updatedAt'])
+        && dayKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.date == dayKey
+        && data.minutes is int && data.minutes >= 0 && data.minutes <= 1440
+        && data.sessions is int && data.sessions >= 0 && data.sessions <= 200
+        && (!('subjects' in data) || (data.subjects is map && data.subjects.size() <= 30));
+    }
+
     function validTask(data) {
       return boundedDoc(data)
         && label(data, 'title', 500)
@@ -200,6 +209,13 @@ service cloud.firestore {
       match /habits/{docId} {
         allow read, delete: if isOwner(uid);
         allow create, update: if isOwner(uid) && validHabit(request.resource.data);
+      }
+
+      // One record per day of focus-timer time. Owner only, like the rest of
+      // the workspace; friends never see these.
+      match /focus/{dayKey} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validFocusDay(dayKey, request.resource.data);
       }
     }
 

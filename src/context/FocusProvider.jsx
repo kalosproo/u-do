@@ -10,6 +10,9 @@ import {
   remainingOf,
 } from "../utils/focusTimer";
 import { playAmbient, stopAmbient, unlockAudio } from "../utils/ambient";
+import { toDateKey } from "../utils/dateKeys";
+import { useAuth } from "../hooks/useAuth";
+import { importLocalDays, loadFocusDays, publishPresence, recordFocus } from "../services/focusSync";
 
 /**
  * The focus timer, app-wide.
@@ -30,7 +33,11 @@ const KEYS = {
   log: "u_do_focus_log",
   setup: "u_do_focus_setup",
   sound: "u_do_focus_sound",
+  share: "u_do_focus_share",
 };
+
+/** How far back the account's focus days are loaded. */
+const HISTORY_DAYS = 90;
 
 const read = (key, fallback) => {
   try {
@@ -86,11 +93,17 @@ const restore = () => {
 };
 
 export function FocusProvider({ children }) {
+  const { user } = useAuth();
+  const uid = user?.uid || null;
   const [initial] = useState(restore);
   const [session, setSession] = useState(initial.session);
   const [view, setView] = useState("mini");
   const [style, setStyleState] = useState(() => (read(KEYS.style, 1) === 2 ? 2 : 1));
-  const [log, setLog] = useState(initial.log);
+  // Signed out, focus time lives on this device. Signed in, it lives on the
+  // account (cloudLog) and follows the person across devices.
+  const [guestLog, setGuestLog] = useState(initial.log);
+  const [cloud, setCloud] = useState({ uid: null, log: {} });
+  const [shareFocus, setShareFocusState] = useState(() => read(KEYS.share, true) !== false);
   const [setup, setSetupState] = useState(() => ({ minutes: DEFAULT_MINUTES, subject: "", ...read(KEYS.setup, {}) }));
   const [now, setNow] = useState(() => Date.now());
   const [sound, setSoundState] = useState(() => ({ kind: "off", volume: 0.5, ...read(KEYS.sound, {}) }));
@@ -98,7 +111,49 @@ export function FocusProvider({ children }) {
 
   useEffect(() => write(KEYS.session, session), [session]);
   useEffect(() => write(KEYS.style, style), [style]);
-  useEffect(() => write(KEYS.log, log), [log]);
+  useEffect(() => write(KEYS.log, guestLog), [guestLog]);
+  useEffect(() => write(KEYS.share, shareFocus), [shareFocus]);
+
+  // Sign-in: move any device-only focus time into the account once, then
+  // load the account's recent days.
+  useEffect(() => {
+    if (!uid) return undefined;
+    let cancelled = false;
+    (async () => {
+      const local = read(KEYS.log, {});
+      if (Object.keys(local).length) {
+        try {
+          await importLocalDays(uid, local);
+          write(KEYS.log, {});
+          if (!cancelled) setGuestLog({});
+        } catch {
+          /* Kept on the device; tried again next time. */
+        }
+      }
+      try {
+        const since = toDateKey(new Date(Date.now() - HISTORY_DAYS * 86_400_000));
+        const days = await loadFocusDays(uid, since);
+        if (!cancelled) setCloud({ uid, log: days });
+      } catch {
+        if (!cancelled) setCloud({ uid, log: {} });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [uid]);
+
+  const log = useMemo(() => (uid ? (cloud.uid === uid ? cloud.log : {}) : guestLog), [uid, cloud, guestLog]);
+
+  // "Studying now" for friends: written on each change of state (start,
+  // pause, break, end), never on every tick.
+  const presenceKey = session ? `${session.phase}|${session.paused ? "p" : session.endsAt}` : "none";
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  useEffect(() => {
+    if (!uid) return;
+    publishPresence(uid, shareFocus ? sessionRef.current : null);
+  }, [uid, shareFocus, presenceKey]);
   useEffect(() => write(KEYS.setup, setup), [setup]);
   useEffect(() => write(KEYS.sound, sound), [sound]);
 
@@ -111,9 +166,19 @@ export function FocusProvider({ children }) {
   }, [soundOn, sound.kind, sound.volume]);
   useEffect(() => () => stopAmbient(), []);
 
-  const record = useCallback((minutes) => {
-    if (minutes >= 1) setLog((current) => pruneLog(addToLog(current, minutes)));
-  }, []);
+  const record = useCallback(
+    (minutes, subject) => {
+      if (!(minutes >= 1)) return;
+      const now = new Date();
+      if (uid) {
+        setCloud((current) => ({ uid, log: addToLog(current.uid === uid ? current.log : {}, minutes, now, subject) }));
+        recordFocus(uid, { dateKey: toDateKey(now), minutes, subject });
+      } else {
+        setGuestLog((current) => pruneLog(addToLog(current, minutes, now, subject)));
+      }
+    },
+    [uid]
+  );
 
   // Ticks only while something is counting down.
   useEffect(() => {
@@ -129,7 +194,7 @@ export function FocusProvider({ children }) {
 
     const timer = setTimeout(() => {
       if (session.phase === "focus") {
-        record(session.minutes);
+        record(session.minutes, session.subject);
         buzz([60, 80, 60]);
         notify("Focus done", `Nice — take ${breakMinutesFor(session.minutes)} minutes.`);
         const rest = breakMinutesFor(session.minutes);
@@ -207,7 +272,7 @@ export function FocusProvider({ children }) {
   const skip = useCallback(() => {
     if (!session) return;
     if (session.phase === "focus") {
-      record(elapsedMinutes(session, Date.now()));
+      record(elapsedMinutes(session, Date.now()), session.subject);
       const rest = breakMinutesFor(session.minutes);
       setSession({ ...session, phase: "break", count: (session.count || 0) + 1, endsAt: Date.now() + rest * 60_000, breakMinutes: rest, paused: false });
     } else {
@@ -218,7 +283,7 @@ export function FocusProvider({ children }) {
 
   /** Finishes the whole thing, logging any focus minutes spent. */
   const stop = useCallback(() => {
-    if (session) record(elapsedMinutes(session, Date.now()));
+    if (session) record(elapsedMinutes(session, Date.now()), session.subject);
     setSession(null);
     setView("mini");
   }, [session, record]);
@@ -245,6 +310,8 @@ export function FocusProvider({ children }) {
       setStyle,
       toggleStyle,
       log,
+      shareFocus,
+      setShareFocus: setShareFocusState,
       sound,
       setSound,
       setup,
@@ -257,7 +324,7 @@ export function FocusProvider({ children }) {
       skip,
       stop,
     }),
-    [session, now, view, style, setStyle, toggleStyle, log, sound, setSound, setup, setSetup, start, pause, resume, toggle, reset, skip, stop]
+    [session, now, view, style, setStyle, toggleStyle, log, shareFocus, sound, setSound, setup, setSetup, start, pause, resume, toggle, reset, skip, stop]
   );
 
   return <FocusContext.Provider value={value}>{children}</FocusContext.Provider>;

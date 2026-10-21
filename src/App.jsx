@@ -15,6 +15,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Landing = lazy(() => import("./pages/Landing"));
+const Focus = lazy(() => import("./pages/Focus"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
@@ -80,6 +81,7 @@ function AppRoutes() {
         <Route path="/planner" element={<Planner />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/habits" element={<Habits />} />
+        <Route path="/focus" element={<Focus />} />
         <Route path="/friends" element={<Friends />} />
 
         {/* Readable signed out, and readable while the consent prompt is up:

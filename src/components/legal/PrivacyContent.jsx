@@ -38,14 +38,21 @@ function PrivacyContent() {
         and finance entries including amounts, categories and whether each is income or
         an expense. This is the content of the app — it exists because you typed it.
       </p>
+      <p>
+        If you use the focus timer while signed in, how many minutes you focused each
+        day, how many sessions, and the subject you typed for them, so your study stats
+        follow you between devices.
+      </p>
 
       <h3>Your profile and friends</h3>
       <p>
         A display name, a username, an invite code and a profile picture, which other
         signed-in people can see so that search and invite links work. If you add
         friends, they can additionally see a summary of your habits: their names, your
-        streaks and your completion rates. They cannot see your tasks, your planner,
-        your finances, or anything else.
+        streaks and your completion rates. While you run a focus session they can also
+        see that you are focusing and how long is left — never what you are studying —
+        unless you turn that off on the Focus page. They cannot see your tasks, your
+        planner, your finances, or anything else.
       </p>
 
       <h3>How the service is used</h3>
@@ -69,8 +76,8 @@ function PrivacyContent() {
 
       <h3>On your device</h3>
       <p>
-        Your theme choice and a cached copy of your expenses and habits are kept in
-        your browser&apos;s local storage, so the app opens fast and survives a brief
+        Your theme choice, your focus-timer settings, a running session, and a cached
+        copy of your expenses and habits are kept in your browser&apos;s local storage, so the app opens fast and survives a brief
         loss of connection. Clearing your browser data removes it.
       </p>
 
