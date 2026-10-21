@@ -15,6 +15,7 @@ import DeleteAccount from "../components/DeleteAccount";
 import PlanCard from "../components/PlanCard";
 import SecurityCard from "../components/SecurityCard";
 import EmailSummary from "../components/EmailSummary";
+import AchievementsPanel from "../components/AchievementsPanel";
 
 const IMPORT_MODE_OPTIONS = [
   ["merge", "Keep newer", "Existing entries stay if they were changed more recently than the backup."],
@@ -176,6 +177,8 @@ function Profile() {
       </article>
 
       <PlanCard />
+
+      <AchievementsPanel />
 
       <SecurityCard />
 

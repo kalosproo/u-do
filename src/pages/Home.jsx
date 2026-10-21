@@ -22,6 +22,9 @@ import WeeklyReview from "../components/WeeklyReview";
 import FocusCard from "../components/focus/FocusCard";
 import InstallCard from "../components/InstallCard";
 import ExamCountdowns from "../components/ExamCountdowns";
+import AchievementWatcher from "../components/AchievementWatcher";
+import { useFocus } from "../hooks/useFocus";
+import { focusStats } from "../utils/focusStats";
 import ChartPatterns from "../components/ChartPatterns";
 import { seriesFill } from "../utils/chartSeries";
 import { monthlyTotals } from "../utils/financeReport";
@@ -140,6 +143,21 @@ function Home() {
   // Picked once per visit; quoteFor already keeps it steady for the whole day.
   const [quote] = useState(() => quoteFor());
   const [finishing, setFinishing] = useState(() => new Set());
+  const focus = useFocus();
+  // The numbers badges are earned from. One object, rebuilt only when they
+  // change, so the watcher checks once per change rather than every render.
+  const focusLog = focus?.log;
+  const badgeStats = useMemo(() => {
+    const summary = focusStats(focusLog || {});
+    const minutes = Object.values(focusLog || {}).reduce((sum, day) => sum + (day.minutes || 0), 0);
+    return {
+      tasksDone: tasksSummary.done,
+      habitStreak: habitsSummary.longestStreak,
+      focusSessions: summary.sessions,
+      focusHours: Math.floor(minutes / 60),
+      focusStreak: summary.streak,
+    };
+  }, [focusLog, tasksSummary.done, habitsSummary.longestStreak]);
   const greeting = firstName ? `${hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"}, ${firstName}.` : "Welcome back.";
 
   const addTodayTask = async () => {
@@ -188,6 +206,7 @@ function Home() {
       </header>
 
       <InstallCard />
+      <AchievementWatcher stats={badgeStats} ready={Boolean(user) && !loading} />
 
       {user && !loading ? <WeeklyReview uid={user.uid} tasks={tasks} habits={habits} plans={plans} expenses={expenses} /> : null}
 

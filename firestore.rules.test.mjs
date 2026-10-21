@@ -350,6 +350,11 @@ await t("an exam needs a title", () => assertFails(setDoc(doc(alice, "users", AL
 await t("extra fields are refused", () => assertFails(setDoc(doc(alice, "users", ALICE, "exams", "e4"), exam({ grade: "A" }))));
 await t("a stranger cannot read someone's exams", () => assertFails(getDoc(doc(mallory, "users", ALICE, "exams", "e1"))));
 
+console.log("\n=== achievements ===");
+await t("owner records earned badges", () => assertSucceeds(setDoc(doc(alice, "profiles", ALICE, "shared", "badges"), { badges: { "focus-first": "2026-10-21" } }, { merge: true })));
+await t("a stranger cannot see someone's badges", () => assertFails(getDoc(doc(mallory, "profiles", ALICE, "shared", "badges"))));
+await t("a stranger cannot award someone badges", () => assertFails(setDoc(doc(mallory, "profiles", ALICE, "shared", "badges"), { badges: { "tasks-500": "2026-10-21" } })));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

@@ -4023,3 +4023,40 @@ body.is-focusing { overflow: hidden; }
 @media (max-width: 480px) { .exam-form { grid-template-columns: 1fr; } }
 .exam-flip .flip-half { background: var(--bg); }
 .exam-flip .flip-card::after { background: var(--surface); }
+
+/* Achievements */
+.badge-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--s-2); }
+.badge-grid li { display: flex; flex-direction: column; gap: 4px; padding: var(--s-3); border: 1px dashed var(--border); border-radius: var(--r-md); opacity: 0.55; }
+.badge-grid li.is-earned { opacity: 1; border-style: solid; border-color: var(--border-strong); background: var(--surface-2); }
+.badge-grid strong { font-size: 13.5px; }
+.badge-grid small { font-size: 11.5px; color: var(--text-muted); }
+.badge-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-strong); font-size: 15px; margin-bottom: 4px; }
+.badge-grid li.is-earned .badge-icon { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+.badge-toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + var(--s-4));
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: fit-content;
+  max-width: calc(100vw - var(--s-6));
+  z-index: 190;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-5) var(--s-3) var(--s-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  transform-origin: 50% 0%;
+  animation: badge-flip 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes badge-flip { from { opacity: 0; transform: perspective(600px) rotateX(-80deg); } to { opacity: 1; transform: perspective(600px) rotateX(0); } }
+.badge-toast-icon { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 20px; flex-shrink: 0; }
+.badge-toast-text { display: flex; flex-direction: column; gap: 1px; }
+.badge-toast-text small { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.badge-toast-text strong { font-size: 16px; }
+.badge-toast-text span { font-size: 12.5px; color: var(--text-muted); }
+@media (prefers-reduced-motion: reduce) { .badge-toast { animation: none; } }

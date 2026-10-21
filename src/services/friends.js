@@ -6,6 +6,7 @@ import {
   inviteCodeDoc,
   outgoingCollection,
   outgoingDoc,
+  badgesDoc,
   profileDoc,
   requestDoc,
   requestsCollection,
@@ -525,9 +526,10 @@ export const listFriends = async (uid) => {
   return Promise.all(
     snap.docs.map(async (item) => {
       const friendUid = item.id;
-      const [profile, summary] = await Promise.all([
+      const [profile, summary, badges] = await Promise.all([
         readProfile(friendUid).catch(() => null),
         getFriendSummary(friendUid).catch(() => null),
+        getDoc(badgesDoc(friendUid)).then((snap) => (snap.exists() ? snap.data().badges || {} : {})).catch(() => ({})),
       ]);
 
       return {
@@ -536,6 +538,7 @@ export const listFriends = async (uid) => {
         displayName: profile?.displayName || "U.Do user",
         photoURL: profile?.photoURL || "",
         summary,
+        badgeCount: Object.keys(badges).length,
       };
     })
   );

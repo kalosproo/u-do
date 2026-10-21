@@ -53,3 +53,6 @@ export const focusPresenceDoc = (uid) => doc(db, "profiles", uid, "shared", "foc
 // Exam countdowns.
 export const examsCollection = (uid) => collection(db, "users", uid, "exams");
 export const examDoc = (uid, id) => doc(db, "users", uid, "exams", id);
+
+// Achievements, shared with friends next to the habit summary.
+export const badgesDoc = (uid) => doc(db, "profiles", uid, "shared", "badges");

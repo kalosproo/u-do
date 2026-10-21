@@ -589,6 +589,7 @@ function Friends() {
                         {summary && summary.totalCount > 0
                           ? ` · ${summary.doneCount}/${summary.totalCount} done`
                           : ""}
+                        {friend.badgeCount ? ` · ${friend.badgeCount} ${friend.badgeCount === 1 ? "badge" : "badges"}` : ""}
                       </small>
                     </span>
                     {summary ? (
