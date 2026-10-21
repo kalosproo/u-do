@@ -6,6 +6,7 @@ import { useFocus } from "../../hooks/useFocus";
 import { formatClock, formatMinutes, lastDays, progressOf } from "../../utils/focusTimer";
 import { toDateKey } from "../../utils/dateKeys";
 import FlipCard from "./FlipCard";
+import SoundPicker from "./SoundPicker";
 
 const STYLES = [
   [1, "Timer"],
@@ -191,6 +192,7 @@ function FocusScreen() {
               {session.paused ? <FiPlay /> : <FiPause />}
             </button>
           ) : null}
+          <SoundPicker />
           {canFullscreen() ? (
             <button type="button" className="focus-icon-btn" onClick={toggleFullscreen} aria-label={isFull ? "Exit full screen" : "Full screen"} title={isFull ? "Exit full screen" : "Full screen"}>
               {isFull ? <FiMinimize /> : <FiMaximize />}

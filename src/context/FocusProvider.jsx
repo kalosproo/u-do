@@ -9,6 +9,7 @@ import {
   pruneLog,
   remainingOf,
 } from "../utils/focusTimer";
+import { playAmbient, stopAmbient, unlockAudio } from "../utils/ambient";
 
 /**
  * The focus timer, app-wide.
@@ -28,6 +29,7 @@ const KEYS = {
   style: "u_do_focus_style",
   log: "u_do_focus_log",
   setup: "u_do_focus_setup",
+  sound: "u_do_focus_sound",
 };
 
 const read = (key, fallback) => {
@@ -91,12 +93,23 @@ export function FocusProvider({ children }) {
   const [log, setLog] = useState(initial.log);
   const [setup, setSetupState] = useState(() => ({ minutes: DEFAULT_MINUTES, subject: "", ...read(KEYS.setup, {}) }));
   const [now, setNow] = useState(() => Date.now());
+  const [sound, setSoundState] = useState(() => ({ kind: "off", volume: 0.5, ...read(KEYS.sound, {}) }));
   const titleRef = useRef(null);
 
   useEffect(() => write(KEYS.session, session), [session]);
   useEffect(() => write(KEYS.style, style), [style]);
   useEffect(() => write(KEYS.log, log), [log]);
   useEffect(() => write(KEYS.setup, setup), [setup]);
+  useEffect(() => write(KEYS.sound, sound), [sound]);
+
+  // Sound plays only while focus is actually running: not on a break, not
+  // paused, and never after the session ends.
+  const soundOn = Boolean(session && !session.paused && session.phase === "focus" && sound.kind !== "off");
+  useEffect(() => {
+    if (soundOn) playAmbient(sound.kind, sound.volume);
+    else stopAmbient();
+  }, [soundOn, sound.kind, sound.volume]);
+  useEffect(() => () => stopAmbient(), []);
 
   const record = useCallback((minutes) => {
     if (minutes >= 1) setLog((current) => pruneLog(addToLog(current, minutes)));
@@ -161,6 +174,7 @@ export function FocusProvider({ children }) {
   }, [view, session]);
 
   const start = useCallback((minutes = setup.minutes, subject = setup.subject) => {
+    unlockAudio();
     const clean = String(subject || "").trim().slice(0, 80);
     setSetupState({ minutes, subject: clean });
     setSession({ phase: "focus", minutes, subject: clean, count: 0, endsAt: Date.now() + minutes * 60_000, paused: false });
@@ -173,6 +187,7 @@ export function FocusProvider({ children }) {
   }, []);
 
   const resume = useCallback(() => {
+    unlockAudio();
     setSession((current) => (current?.paused ? { ...current, paused: false, endsAt: Date.now() + current.remainingMs } : current));
     setNow(Date.now());
   }, []);
@@ -208,6 +223,12 @@ export function FocusProvider({ children }) {
     setView("mini");
   }, [session, record]);
 
+  /** Called from a tap, so it can also wake the audio context on iOS. */
+  const setSound = useCallback((patch) => {
+    unlockAudio();
+    setSoundState((current) => ({ ...current, ...patch }));
+  }, []);
+
   const setSetup = useCallback((patch) => setSetupState((current) => ({ ...current, ...patch })), []);
   const setStyle = useCallback((next) => setStyleState(next === 2 ? 2 : 1), []);
   const toggleStyle = useCallback(() => setStyleState((current) => (current === 1 ? 2 : 1)), []);
@@ -224,6 +245,8 @@ export function FocusProvider({ children }) {
       setStyle,
       toggleStyle,
       log,
+      sound,
+      setSound,
       setup,
       setSetup,
       start,
@@ -234,7 +257,7 @@ export function FocusProvider({ children }) {
       skip,
       stop,
     }),
-    [session, now, view, style, setStyle, toggleStyle, log, setup, setSetup, start, pause, resume, toggle, reset, skip, stop]
+    [session, now, view, style, setStyle, toggleStyle, log, sound, setSound, setup, setSetup, start, pause, resume, toggle, reset, skip, stop]
   );
 
   return <FocusContext.Provider value={value}>{children}</FocusContext.Provider>;
