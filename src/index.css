@@ -3868,3 +3868,67 @@ body.is-focusing { overflow: hidden; }
 .focus-sound-volume { display: flex; align-items: center; gap: var(--s-3); font-size: 12.5px; color: var(--text-muted); }
 .focus-sound-volume input { flex: 1; accent-color: var(--text); min-height: 0; padding: 0; border: 0; background: transparent; }
 .focus-screen.is-quiet .focus-sound-panel { display: none; }
+
+/* =========================================================================
+   LANDING — what a signed-out visitor sees at /
+   ========================================================================= */
+.landing { min-height: 100dvh; max-width: 1120px; margin: 0 auto; padding: 0 var(--s-5); display: flex; flex-direction: column; }
+.landing-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-5) 0; }
+.landing-nav .brand { padding: 0; }
+.landing-nav-links { display: flex; align-items: center; gap: var(--s-4); }
+.landing-link { font-size: 14px; font-weight: 550; color: var(--text-muted); }
+.landing-link:hover { color: var(--text); }
+
+.landing-hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); align-items: center; gap: clamp(32px, 6vw, 80px); padding: clamp(32px, 8vh, 96px) 0 clamp(40px, 8vh, 88px); }
+.landing-hero-copy { display: flex; flex-direction: column; gap: var(--s-4); }
+.landing-title { font-size: clamp(38px, 6vw, 64px); font-weight: 700; letter-spacing: -0.045em; line-height: 1.02; }
+.landing-sub { font-size: clamp(15px, 1.6vw, 18px); line-height: 1.6; color: var(--text-muted); max-width: 52ch; }
+.landing-cta { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-2); }
+.landing-cta .btn { min-height: 48px; padding: 0 var(--s-5); font-size: 15px; }
+.landing-cta-main { gap: var(--s-2); }
+
+/* The hero picture is the real flip clock, in a phone outline. */
+.landing-device { justify-self: center; width: min(100%, 300px); aspect-ratio: 9 / 18.5; padding: 10px; border: 1px solid var(--border-strong); border-radius: 44px; background: var(--bg); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+.landing-device-screen { height: 100%; border-radius: 34px; background: var(--bg); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+.landing-device-label { font-size: 12px; color: var(--text-muted); }
+.landing-caps { text-transform: uppercase; letter-spacing: 0.08em; }
+.landing-flip { --cw: min(170px, 46vw); display: flex; flex-direction: column; gap: calc(var(--cw) * 0.1); }
+
+.landing-features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3); padding: var(--s-6) 0; border-top: 1px solid var(--border); }
+.landing-feature { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
+.landing-feature-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-strong); font-size: 17px; margin-bottom: var(--s-1); }
+.landing-feature h2 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+.landing-feature p { font-size: 14px; line-height: 1.55; color: var(--text-muted); }
+
+.landing-trust { display: flex; gap: var(--s-4); align-items: flex-start; padding: var(--s-6); margin: var(--s-4) 0; border: 1px solid var(--border); border-radius: var(--r-lg); }
+.landing-trust > svg { font-size: 22px; flex-shrink: 0; margin-top: 3px; }
+.landing-trust h2 { font-size: 20px; font-weight: 650; letter-spacing: -0.02em; margin-bottom: var(--s-2); }
+.landing-trust p { color: var(--text-muted); line-height: 1.6; max-width: 70ch; }
+.landing-trust a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+
+.landing-quote { margin: var(--s-6) auto; max-width: 62ch; text-align: center; }
+.landing-quote blockquote { font-size: clamp(18px, 2.4vw, 24px); font-style: italic; line-height: 1.45; letter-spacing: -0.01em; }
+.landing-quote figcaption { margin-top: var(--s-2); font-size: 13px; color: var(--text-muted); }
+.landing-quote figcaption::before { content: "— "; }
+
+.landing-final { display: flex; flex-direction: column; align-items: center; gap: var(--s-4); padding: var(--s-6) 0 var(--s-7, 56px); text-align: center; }
+.landing-final h2 { font-size: clamp(26px, 4vw, 40px); font-weight: 700; letter-spacing: -0.035em; line-height: 1.1; max-width: 20ch; }
+.landing-final .btn { min-height: 50px; padding: 0 var(--s-6); font-size: 15px; }
+
+.landing-footer { margin-top: auto; display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s-3); padding: var(--s-5) 0 calc(var(--s-5) + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-muted); }
+.landing-footer nav { display: flex; gap: var(--s-4); }
+.landing-footer a:hover { color: var(--text); }
+
+@media (max-width: 860px) {
+  .landing-hero { grid-template-columns: 1fr; text-align: left; }
+  .landing-device { width: min(78vw, 280px); }
+  .landing-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .landing { padding: 0 var(--s-4); }
+  .landing-nav-links { gap: var(--s-3); }
+  .landing-features { grid-template-columns: 1fr; }
+  .landing-cta .btn { flex: 1 1 100%; }
+  .landing-trust { flex-direction: column; padding: var(--s-5); }
+  .landing-footer { flex-direction: column; }
+}

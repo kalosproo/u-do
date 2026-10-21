@@ -14,6 +14,7 @@ const Friends = lazy(() => import("./pages/Friends"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
+const Landing = lazy(() => import("./pages/Landing"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
@@ -67,10 +68,14 @@ function AppRoutes() {
       {/* Already signed in? The login form has nothing to offer. */}
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
 
+      {/* Signed out, / is the landing page: what U.Do is and a way in.
+          Signed in, it is Home inside the app shell. */}
+      {user ? null : <Route path="/" element={<Landing />} />}
+
       <Route element={<AppLayout />}>
         {/* Browsable signed out: a guest sees the page and is sent to login
             only when they try to change something. */}
-        <Route path="/" element={<Home />} />
+        {user ? <Route path="/" element={<Home />} /> : null}
         <Route path="/finance" element={<Finance />} />
         <Route path="/planner" element={<Planner />} />
         <Route path="/tasks" element={<Tasks />} />
