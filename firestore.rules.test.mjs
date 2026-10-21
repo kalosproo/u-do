@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import {
   initializeTestEnvironment, assertFails, assertSucceeds,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, increment, deleteDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, increment, deleteDoc, collection, getDocs, updateDoc } from "firebase/firestore";
 
 const env = await initializeTestEnvironment({
   projectId: "u-do-rules-test",
@@ -354,6 +354,39 @@ console.log("\n=== achievements ===");
 await t("owner records earned badges", () => assertSucceeds(setDoc(doc(alice, "profiles", ALICE, "shared", "badges"), { badges: { "focus-first": "2026-10-21" } }, { merge: true })));
 await t("a stranger cannot see someone's badges", () => assertFails(getDoc(doc(mallory, "profiles", ALICE, "shared", "badges"))));
 await t("a stranger cannot award someone badges", () => assertFails(setDoc(doc(mallory, "profiles", ALICE, "shared", "badges"), { badges: { "tasks-500": "2026-10-21" } })));
+
+console.log("\n=== group study rooms ===");
+// Bob lists Alice as a friend, so Alice may invite Bob. Mallory is nobody's friend.
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "profiles", BOB, "friends", ALICE), { uid: ALICE }));
+await env.withSecurityRulesDisabled((ctx) => deleteDoc(doc(ctx.firestore(), "profiles", MALLORY, "friends", ALICE)));
+const room = (patch = {}) => ({ host: ALICE, hostName: "Alice", invited: [], state: "idle", endsAt: null, left: null, minutes: 25, createdAt: new Date(), updatedAt: new Date(), ...patch });
+const invite = (patch = {}) => ({ host: ALICE, hostName: "Alice", createdAt: new Date(), ...patch });
+const member = (uid, patch = {}) => ({ uid, name: "Someone", joinedAt: new Date(), ...patch });
+await t("host opens a room", () => assertSucceeds(setDoc(doc(alice, "rooms", "r1"), room())));
+await t("nobody can open a room as someone else", () => assertFails(setDoc(doc(mallory, "rooms", "r2"), room())));
+await t("a room cannot carry extra fields", () => assertFails(setDoc(doc(alice, "rooms", "r3"), room({ subject: "Physics" }))));
+await t("a room's length is capped", () => assertFails(setDoc(doc(alice, "rooms", "r3"), room({ minutes: 600 }))));
+await t("host joins their own room", () => assertSucceeds(setDoc(doc(alice, "rooms", "r1", "members", ALICE), member(ALICE))));
+await t("host invites a friend", () => assertSucceeds(setDoc(doc(alice, "profiles", BOB, "studyInvites", "r1"), invite())));
+await t("host cannot invite a stranger", () => assertFails(setDoc(doc(alice, "profiles", MALLORY, "studyInvites", "r1"), invite())));
+await t("nobody can invite on the host's behalf", () => assertFails(setDoc(doc(mallory, "profiles", BOB, "studyInvites", "r1"), invite({ host: MALLORY }))));
+await t("an invite must point at a room you host", () => assertFails(setDoc(doc(alice, "profiles", BOB, "studyInvites", "nope"), invite())));
+await t("the invitee reads the room", () => assertSucceeds(getDoc(doc(bob, "rooms", "r1"))));
+await t("a stranger cannot read the room", () => assertFails(getDoc(doc(mallory, "rooms", "r1"))));
+await t("the invitee joins", () => assertSucceeds(setDoc(doc(bob, "rooms", "r1", "members", BOB), member(BOB))));
+await t("the invitee sees who is in", () => assertSucceeds(getDocs(collection(bob, "rooms", "r1", "members"))));
+await t("a stranger cannot join", () => assertFails(setDoc(doc(mallory, "rooms", "r1", "members", MALLORY), member(MALLORY))));
+await t("a stranger cannot see who is in", () => assertFails(getDocs(collection(mallory, "rooms", "r1", "members"))));
+await t("nobody can add someone else as a member", () => assertFails(setDoc(doc(bob, "rooms", "r1", "members", MALLORY), member(MALLORY))));
+await t("host starts the timer", () => assertSucceeds(updateDoc(doc(alice, "rooms", "r1"), { state: "focus", endsAt: Date.now() + 1500000, invited: [BOB] })));
+await t("a member cannot run the timer", () => assertFails(updateDoc(doc(bob, "rooms", "r1"), { state: "paused" })));
+await t("a member cannot close the room", () => assertFails(deleteDoc(doc(bob, "rooms", "r1"))));
+await t("a member leaves", () => assertSucceeds(deleteDoc(doc(bob, "rooms", "r1", "members", BOB))));
+await t("the invitee declines", () => assertSucceeds(deleteDoc(doc(bob, "profiles", BOB, "studyInvites", "r1"))));
+await t("after declining, the room is hidden again", () => assertFails(getDoc(doc(bob, "rooms", "r1"))));
+await t("host invites again", () => assertSucceeds(setDoc(doc(alice, "profiles", BOB, "studyInvites", "r1"), invite())));
+await t("host withdraws the invite", () => assertSucceeds(deleteDoc(doc(alice, "profiles", BOB, "studyInvites", "r1"))));
+await t("host clears members and closes", () => assertSucceeds(deleteDoc(doc(alice, "rooms", "r1", "members", ALICE)).then(() => deleteDoc(doc(alice, "rooms", "r1")))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

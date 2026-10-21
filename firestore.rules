@@ -272,6 +272,23 @@ service cloud.firestore {
         allow delete: if isOwner(uid) || isOwner(toUid);
       }
 
+      /**
+       * Study room invites. Only a friend may invite you, only to a room they
+       * host, and only as themselves. You decline by deleting it; the host
+       * withdraws it when the room closes.
+       */
+      match /studyInvites/{roomId} {
+        allow read: if isOwner(uid);
+        allow create: if isSignedIn()
+          && request.auth.uid != uid
+          && isFriendOf(uid)
+          && request.resource.data.keys().hasOnly(['host', 'hostName', 'createdAt'])
+          && request.resource.data.host == request.auth.uid
+          && request.resource.data.hostName is string && request.resource.data.hostName.size() <= 60
+          && hostsRoom(roomId);
+        allow delete: if isOwner(uid) || (isSignedIn() && resource.data.host == request.auth.uid);
+      }
+
       match /friends/{friendUid} {
         allow read: if isOwner(uid) || isOwner(friendUid);
 
@@ -394,6 +411,56 @@ service cloud.firestore {
         && (!('monthly' in request.resource.data) || request.resource.data.monthly is bool)
         && (!('time' in request.resource.data) || (request.resource.data.time is string && request.resource.data.time.matches('^[0-9]{2}:[0-9]{2}$')))
         && (!('timeZone' in request.resource.data) || (request.resource.data.timeZone is string && request.resource.data.timeZone.size() <= 64));
+    }
+
+    /**
+     * Group study rooms. The host invites friends; everyone in the room runs
+     * the host's timer. A room holds the timer, the host's name and who was
+     * invited — never what anyone is studying. An invite, written under the
+     * invitee's profile, is what lets them see the room.
+     */
+    function roomPath(roomId) {
+      return /databases/$(database)/documents/rooms/$(roomId);
+    }
+
+    function hostsRoom(roomId) {
+      return isSignedIn() && get(roomPath(roomId)).data.host == request.auth.uid;
+    }
+
+    function invitedTo(roomId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/profiles/$(request.auth.uid)/studyInvites/$(roomId));
+    }
+
+    function validRoom() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['host', 'hostName', 'invited', 'state', 'endsAt', 'left', 'minutes', 'createdAt', 'updatedAt'])
+        && d.host == request.auth.uid
+        && d.hostName is string && d.hostName.size() <= 60
+        && d.invited is list && d.invited.size() <= 10
+        && d.state in ['idle', 'focus', 'paused']
+        && d.minutes is int && d.minutes >= 1 && d.minutes <= 180
+        && (d.endsAt == null || d.endsAt is int)
+        && (d.left == null || d.left is int);
+    }
+
+    match /rooms/{roomId} {
+      allow read: if isSignedIn() && (resource.data.host == request.auth.uid || invitedTo(roomId));
+      allow create: if isSignedIn() && validRoom();
+      allow update: if isSignedIn() && resource.data.host == request.auth.uid && validRoom();
+      allow delete: if isSignedIn() && resource.data.host == request.auth.uid;
+
+      // Who has joined. Each person adds and removes only themselves; the
+      // host clears everyone when the room closes.
+      match /members/{memberUid} {
+        allow read: if hostsRoom(roomId) || invitedTo(roomId);
+        allow create, update: if isOwner(memberUid)
+          && (hostsRoom(roomId) || invitedTo(roomId))
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'joinedAt'])
+          && request.resource.data.uid == memberUid
+          && request.resource.data.name is string && request.resource.data.name.size() <= 60;
+        allow delete: if isOwner(memberUid) || hostsRoom(roomId);
+      }
     }
 
     match /pushSubscriptions/{uid} {

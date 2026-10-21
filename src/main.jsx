@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { AuthProvider } from './context/AuthProvider.jsx'
 import { ThemeProvider } from './context/ThemeProvider.jsx'
 import { FocusProvider } from './context/FocusProvider.jsx'
+import { StudyRoomProvider } from './context/StudyRoomProvider.jsx'
 import { installGlobalErrorReporting } from './services/errorReporting'
 import './services/install'
 
@@ -15,7 +16,9 @@ createRoot(document.getElementById('root')).render(
     <ThemeProvider>
       <AuthProvider>
         <FocusProvider>
-          <App />
+          <StudyRoomProvider>
+            <App />
+          </StudyRoomProvider>
         </FocusProvider>
       </AuthProvider>
     </ThemeProvider>

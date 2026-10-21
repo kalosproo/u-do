@@ -7,6 +7,7 @@ import { sendTestPush } from "./src/notifications/test.js";
 import { db } from "./src/firebaseAdmin.js";
 import { emailUnsubscribe } from "./src/email/email.js";
 import { unsubscribeSignature } from "./src/email/emailCore.js";
+import { deleteMyAccount } from "./src/account/delete.js";
 const out = []; const check = (n, ok, d = "") => out.push({ n, ok: !!ok, d });
 
 let code = null;
@@ -41,11 +42,30 @@ const hit = (query) => new Promise((resolve) => {
   const res = { statusCode: 200, status(c) { this.statusCode = c; return this; }, send(b) { resolve({ status: this.statusCode, body: b }); }, set() { return this; }, setHeader() {}, getHeader() {} };
   emailUnsubscribe({ method: "GET", query, headers: {}, get: () => undefined, header: () => undefined }, res);
 });
-await db.collection("emailPrefs").doc("em1").set({ uid: "em1", daily: true, time: "07:30" });
+await db.collection("emailPrefs").doc("em1").set({ uid: "em1", daily: true, monthly: true, time: "07:30" });
 let page = await hit({ u: "em1", s: "forged" });
 check("8. a forged unsubscribe link changes nothing", page.status === 400 && (await db.collection("emailPrefs").doc("em1").get()).data().daily === true, page.status);
 page = await hit({ u: "em1", s: unsubscribeSignature("em1", process.env.EMAIL_LINK_SECRET) });
-check("9. the signed link turns the summary off without signing in", page.status === 200 && (await db.collection("emailPrefs").doc("em1").get()).data().daily === false, page.status);
+const prefsAfter = (await db.collection("emailPrefs").doc("em1").get()).data();
+check("9. the signed link turns every email off without signing in", page.status === 200 && prefsAfter.daily === false && prefsAfter.monthly === false, page.status);
+
+// Deleting an account closes the rooms it hosts and leaves anyone else's.
+const host = await getAuth().createUser({ email: "host@example.com" });
+await db.collection("rooms").doc("room1").set({ host: host.uid, hostName: "Host", invited: ["friend1"], state: "idle", minutes: 25 });
+await db.collection("rooms").doc("room1").collection("members").doc(host.uid).set({ uid: host.uid, name: "Host" });
+await db.collection("profiles").doc("friend1").collection("studyInvites").doc("room1").set({ host: host.uid, hostName: "Host" });
+await db.collection("rooms").doc("room2").set({ host: "someoneElse", hostName: "Else", invited: [host.uid], state: "idle", minutes: 25 });
+await db.collection("rooms").doc("room2").collection("members").doc(host.uid).set({ uid: host.uid, name: "Host" });
+await db.collection("profiles").doc(host.uid).collection("studyInvites").doc("room2").set({ host: "someoneElse", hostName: "Else" });
+await deleteMyAccount.run({ auth: { uid: host.uid, token: { auth_time: Math.floor(Date.now() / 1000) } }, data: {}, rawRequest: {} });
+check("10. deleting an account closes the rooms it hosts",
+  !(await db.collection("rooms").doc("room1").get()).exists
+  && !(await db.collection("profiles").doc("friend1").collection("studyInvites").doc("room1").get()).exists
+  && (await db.collection("rooms").doc("room1").collection("members").get()).empty);
+check("11. ...and leaves other people's rooms, invites included",
+  (await db.collection("rooms").doc("room2").get()).exists
+  && !(await db.collection("rooms").doc("room2").collection("members").doc(host.uid).get()).exists
+  && !(await db.collection("profiles").doc(host.uid).collection("studyInvites").doc("room2").get()).exists);
 
 for (const r of out) console.log(`${r.ok ? "  PASS" : "  FAIL"}  ${r.n}${!r.ok && r.d ? "\n        " + r.d : ""}`);
 console.log(`\n${out.filter((r) => r.ok).length} passed, ${out.filter((r) => !r.ok).length} failed`);

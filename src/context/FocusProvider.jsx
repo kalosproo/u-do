@@ -288,6 +288,43 @@ export function FocusProvider({ children }) {
     setView("mini");
   }, [session, record]);
 
+  /**
+   * Puts the timer on a study room's clock: the host's end time, or paused
+   * where the host paused. Someone joining partway counts only what is left.
+   */
+  const follow = useCallback(({ room, minutes, endsAt, paused = false, remainingMs = 0 }) => {
+    setSession((current) => {
+      const same = current?.room === room;
+      const left = paused ? remainingMs : endsAt - Date.now();
+      if (left <= 0) return current;
+      if (same && current.phase === "focus" && Boolean(current.paused) === paused && (paused ? current.remainingMs === remainingMs : current.endsAt === endsAt)) {
+        return current;
+      }
+      // Pausing or resuming the same round keeps its length; anything else
+      // is a new round, counted from now.
+      const midRound = same && current.phase === "focus" && (paused || (current.paused && current.remainingMs < current.minutes * 60_000));
+      const counted = midRound ? current.minutes : Math.min(minutes, Math.max(1, Math.ceil(left / 60_000)));
+      return {
+        phase: "focus",
+        minutes: counted,
+        subject: same ? current.subject : setup.subject,
+        count: same ? current.count || 0 : 0,
+        endsAt: paused ? null : endsAt,
+        remainingMs: paused ? remainingMs : undefined,
+        paused,
+        room,
+      };
+    });
+    setNow(Date.now());
+  }, [setup.subject]);
+
+  /** Leaves a room's clock; the timer keeps going on its own. */
+  const unfollow = useCallback((room) => {
+    setSession((current) => (current?.room === room ? { ...current, room: undefined } : current));
+  }, []);
+
+  const open = useCallback(() => setView("full"), []);
+
   /** Called from a tap, so it can also wake the audio context on iOS. */
   const setSound = useCallback((patch) => {
     unlockAudio();
@@ -304,7 +341,7 @@ export function FocusProvider({ children }) {
       now,
       remaining: remainingOf(session, now),
       view,
-      open: () => setView("full"),
+      open,
       minimize: () => setView("mini"),
       style,
       setStyle,
@@ -323,8 +360,10 @@ export function FocusProvider({ children }) {
       reset,
       skip,
       stop,
+      follow,
+      unfollow,
     }),
-    [session, now, view, style, setStyle, toggleStyle, log, shareFocus, sound, setSound, setup, setSetup, start, pause, resume, toggle, reset, skip, stop]
+    [session, now, view, style, setStyle, toggleStyle, log, shareFocus, sound, setSound, setup, setSetup, start, pause, resume, toggle, reset, skip, stop, follow, unfollow, open]
   );
 
   return <FocusContext.Provider value={value}>{children}</FocusContext.Provider>;

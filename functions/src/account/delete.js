@@ -43,7 +43,7 @@ const OWNED_DOCS = [
 ];
 
 /** Subcollections hanging off the person's public profile. */
-const PROFILE_SUBS = ["shared", "requests", "outgoing", "friends"];
+const PROFILE_SUBS = ["shared", "requests", "outgoing", "friends", "studyInvites"];
 
 const deleteAll = async (query) => {
   const snap = await query.get();
@@ -98,6 +98,20 @@ const detachFromOthers = async (uid) => {
       await doc.ref.delete().then(() => { removed[name] += 1; }).catch(() => {});
     }
   }
+
+  // Study rooms: rooms I host close (their invites and members go with
+  // them), and I leave anyone else's room I was in.
+  removed.rooms = 0;
+  const hosted = await db.collection("rooms").where("host", "==", uid).get();
+  for (const room of hosted.docs) {
+    for (const friendUid of room.data().invited || []) {
+      await db.collection("profiles").doc(friendUid).collection("studyInvites").doc(room.id).delete().catch(() => {});
+    }
+    await deleteAll(room.ref.collection("members"));
+    await room.ref.delete().then(() => { removed.rooms += 1; }).catch(() => {});
+  }
+  const joined = await db.collectionGroup("members").where("uid", "==", uid).get();
+  for (const doc of joined.docs) await doc.ref.delete().catch(() => {});
 
   return removed;
 };

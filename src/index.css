@@ -4063,3 +4063,28 @@ body.is-focusing { overflow: hidden; }
 .monthly-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .monthly-change { font-size: 11px; color: var(--text-muted); }
 @media (max-width: 860px) { .monthly-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Group study room */
+.study-room { display: flex; flex-direction: column; gap: var(--s-3); }
+.study-room .panel-title { display: inline-flex; align-items: center; gap: 8px; }
+.study-room.is-live { border-color: var(--text); }
+.study-room-start { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); }
+.study-room-start .btn { display: inline-flex; align-items: center; gap: 6px; }
+.study-lengths { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 2px; }
+.study-lengths button { border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.study-lengths button.is-active { background: var(--text); color: var(--bg); }
+.study-members { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-3); }
+.study-members li { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 48px; }
+.study-members small { font-size: 11px; color: var(--text-muted); max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.study-invites, .study-invite-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.study-invites li, .study-invite-list li { display: flex; align-items: center; gap: var(--s-3); }
+.study-invites li { padding: var(--s-2) var(--s-3); border: 1px solid var(--border); border-radius: 12px; }
+.study-invite-text { flex: 1; min-width: 0; font-size: 14px; }
+.study-invite-actions { display: inline-flex; gap: 6px; flex-shrink: 0; }
+.study-invite-list li > span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.study-invite-list { display: flex; flex-direction: column; gap: var(--s-2); }
+.study-room .focus-link { align-self: flex-start; padding: 0; cursor: pointer; }
+
+/* Who's in the room, on the full-screen timer */
+.focus-room { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: 0.04em; color: var(--text-muted); white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; }
+.focus-room svg { flex-shrink: 0; }

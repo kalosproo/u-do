@@ -56,3 +56,12 @@ export const examDoc = (uid, id) => doc(db, "users", uid, "exams", id);
 
 // Achievements, shared with friends next to the habit summary.
 export const badgesDoc = (uid) => doc(db, "profiles", uid, "shared", "badges");
+
+// Group study rooms: the host's timer, who joined, and invites under each
+// invitee's profile. See firestore.rules.
+export const roomsCollection = () => collection(db, "rooms");
+export const roomDoc = (roomId) => doc(db, "rooms", roomId);
+export const roomMembersCollection = (roomId) => collection(db, "rooms", roomId, "members");
+export const roomMemberDoc = (roomId, uid) => doc(db, "rooms", roomId, "members", uid);
+export const studyInvitesCollection = (uid) => collection(db, "profiles", uid, "studyInvites");
+export const studyInviteDoc = (uid, roomId) => doc(db, "profiles", uid, "studyInvites", roomId);

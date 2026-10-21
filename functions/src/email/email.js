@@ -167,8 +167,8 @@ export const emailUnsubscribe = onRequest({ secrets: [EMAIL_LINK_SECRET] }, asyn
   }
 
   try {
-    await db.collection("emailPrefs").doc(uid).set({ daily: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    res.status(200).send(page("You're unsubscribed", "You won't get the daily summary any more. You can turn it back on in Profile → Reminders."));
+    await db.collection("emailPrefs").doc(uid).set({ daily: false, monthly: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    res.status(200).send(page("You're unsubscribed", "You won't get summary or report emails any more. You can turn them back on in Profile → Reminders."));
   } catch (error) {
     await logServerError("emailUnsubscribe", error);
     res.status(500).send(page("Something went wrong", "Please try the link again in a moment."));
