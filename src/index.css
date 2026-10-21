@@ -3963,3 +3963,28 @@ body.is-focusing { overflow: hidden; }
 .friends-focusing .panel-note a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .friends-focusing-dot { animation: none; } .focus-chart-bar i { transition: none; } }
 @media (max-width: 480px) { .focus-chart { gap: 3px; height: 140px; } .focus-chart-value { font-size: 9px; } }
+
+/* A policy update after the first acceptance: a notice, not a wall. */
+.policy-notice {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--s-4) + env(safe-area-inset-bottom, 0px));
+  margin: 0 auto;
+  width: fit-content;
+  max-width: calc(100vw - var(--s-6));
+  z-index: 75;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  animation: udo-rise 0.25s var(--ease-out);
+}
+.policy-notice-link { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 1024px) { .policy-notice { bottom: calc(62px + env(safe-area-inset-bottom, 0px) + var(--s-3)); } }

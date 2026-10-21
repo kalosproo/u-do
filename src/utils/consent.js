@@ -13,8 +13,15 @@ export const PRIVACY_POLICY_UPDATED = "21 October 2026";
 export const TERMS_VERSION = 1;
 export const TERMS_UPDATED = "18 October 2026";
 
-/** True when this account has not accepted the version currently published. */
+/**
+ * Accepting is asked once: an account that has never accepted anything gets
+ * the read-and-accept dialog. Later updates don't block anyone again.
+ */
 export const needsConsent = (record) =>
-  !record ||
-  Number(record.privacyVersion) !== PRIVACY_POLICY_VERSION ||
-  Number(record.termsVersion) !== TERMS_VERSION;
+  !record || (record.privacyVersion == null && record.termsVersion == null);
+
+/** True when the account accepted an older version: worth a quiet notice, not a wall. */
+export const consentOutdated = (record) =>
+  Boolean(record) &&
+  !needsConsent(record) &&
+  (Number(record.privacyVersion) !== PRIVACY_POLICY_VERSION || Number(record.termsVersion) !== TERMS_VERSION);

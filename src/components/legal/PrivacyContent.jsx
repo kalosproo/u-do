@@ -203,9 +203,8 @@ function PrivacyContent() {
 
       <h2>Changes</h2>
       <p>
-        If this policy changes in a way that affects you, the app will ask you to read
-        and accept the new version before you carry on. The version number at the top
-        is how you can tell.
+        If this policy changes in a way that affects you, the app shows a notice with a
+        link to the new version. The version number at the top is how you can tell.
       </p>
     </>
   );

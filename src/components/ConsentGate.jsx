@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { signOut } from "firebase/auth";
 
 import { auth } from "../services/firebase";
 import { fetchConsent, recordConsent, syncPendingConsent } from "../services/consent";
-import { needsConsent, PRIVACY_POLICY_VERSION, TERMS_VERSION } from "../utils/consent";
+import { consentOutdated, needsConsent, PRIVACY_POLICY_VERSION, TERMS_VERSION } from "../utils/consent";
 import AgreementReader from "./legal/AgreementReader";
 import { useAuth } from "../hooks/useAuth";
 
@@ -51,7 +51,25 @@ function ConsentGate() {
   // read. Rendering on an unsettled value would flash the dialog at people who
   // accepted long ago, every single load.
   const current = user && settled.uid === user.uid ? settled : null;
-  if (!current || !needsConsent(current.record)) return null;
+  if (!current) return null;
+
+  // Accepted an earlier version: a small notice with a link, never a wall.
+  // "Got it" records the current versions so it doesn't come back.
+  if (!needsConsent(current.record)) {
+    if (!consentOutdated(current.record) || pathname === "/privacy" || pathname === "/terms") return null;
+    const acknowledge = async () => {
+      setSettled({ uid: user.uid, record: { privacyVersion: PRIVACY_POLICY_VERSION, termsVersion: TERMS_VERSION } });
+      await recordConsent(user.uid, "notice");
+    };
+    return createPortal(
+      <div className="policy-notice" role="status">
+        <span>We&apos;ve updated our Terms and Privacy Policy.</span>
+        <Link to="/privacy" className="policy-notice-link">Read</Link>
+        <button type="button" className="btn btn-sm" onClick={acknowledge}>Got it</button>
+      </div>,
+      document.body,
+    );
+  }
 
   // Never cover the policy itself. Someone who navigated here to read it before
   // deciding must not find the decision sitting on top of the document.
@@ -91,13 +109,13 @@ function ConsentGate() {
       >
         <div className="modal-head">
           <h3 id="consent-title">
-            {current.record ? "Please review our updated terms" : "Before you carry on"}
+            Before you carry on
           </h3>
         </div>
 
         <p className="panel-note">
-          U.Do now has Terms of Service, and the Privacy Policy has been updated. Read
-          both to the end and accept them to keep using your account.
+          Read U.Do&apos;s Terms of Service and Privacy Policy to the end and accept them
+          to carry on. You&apos;ll only be asked this once.
         </p>
 
         <p className="panel-note">
