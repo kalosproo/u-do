@@ -20,6 +20,7 @@ import { workspaceCollection } from "../services/paths";
 import FriendStreaks from "../components/FriendStreaks";
 import WeeklyReview from "../components/WeeklyReview";
 import FocusCard from "../components/focus/FocusCard";
+import InstallCard from "../components/InstallCard";
 import ChartPatterns from "../components/ChartPatterns";
 import { seriesFill } from "../utils/chartSeries";
 import { monthlyTotals } from "../utils/financeReport";
@@ -184,6 +185,8 @@ function Home() {
           <figcaption>{quote.author}</figcaption>
         </figure>
       </header>
+
+      <InstallCard />
 
       {user && !loading ? <WeeklyReview uid={user.uid} tasks={tasks} habits={habits} plans={plans} expenses={expenses} /> : null}
 

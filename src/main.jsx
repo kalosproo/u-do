@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthProvider.jsx'
 import { ThemeProvider } from './context/ThemeProvider.jsx'
 import { FocusProvider } from './context/FocusProvider.jsx'
 import { installGlobalErrorReporting } from './services/errorReporting'
+import './services/install'
 
 installGlobalErrorReporting()
 

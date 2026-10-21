@@ -3988,3 +3988,18 @@ body.is-focusing { overflow: hidden; }
 }
 .policy-notice-link { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
 @media (max-width: 1024px) { .policy-notice { bottom: calc(62px + env(safe-area-inset-bottom, 0px) + var(--s-3)); } }
+
+/* Install U.Do */
+.install-card { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.install-card-icon { width: 48px; height: 48px; border-radius: 12px; border: 1px solid var(--border); flex-shrink: 0; }
+.install-card-copy { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 2px; }
+.install-card-actions { display: flex; align-items: center; gap: var(--s-2); }
+.install-inline { margin-top: var(--s-1); }
+.install-guide { gap: var(--s-4); }
+.install-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-4); }
+.install-steps li { display: flex; gap: var(--s-3); align-items: flex-start; }
+.install-steps li > span:last-child { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.install-step-icon { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; border: 1px solid var(--border-strong); font-size: 20px; color: var(--text); }
+.install-step-add { font-size: 13px; font-weight: 700; color: var(--text); }
+.icon-btn { width: 32px; height: 32px; display: grid; place-items: center; flex-shrink: 0; border-radius: var(--r-sm); border: 1px solid var(--border); background: transparent; color: var(--text-muted); }
+.icon-btn:hover { color: var(--text); background: var(--surface-hover); }
