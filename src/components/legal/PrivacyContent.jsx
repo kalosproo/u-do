@@ -41,7 +41,8 @@ function PrivacyContent() {
       <p>
         If you use the focus timer while signed in, how many minutes you focused each
         day, how many sessions, and the subject you typed for them, so your study stats
-        follow you between devices.
+        follow you between devices. Exam and deadline countdowns you add — a title, a
+        date and an optional subject — are kept the same way, readable only by you.
       </p>
 
       <h3>Your profile and friends</h3>
@@ -51,8 +52,15 @@ function PrivacyContent() {
         friends, they can additionally see a summary of your habits: their names, your
         streaks and your completion rates. While you run a focus session they can also
         see that you are focusing and how long is left — never what you are studying —
-        unless you turn that off on the Focus page. They cannot see your tasks, your
-        planner, your finances, or anything else.
+        unless you turn that off on the Focus page. They can see which achievement
+        badges you have earned and when. They cannot see your tasks, your planner, your
+        finances, your exams, or anything else.
+      </p>
+      <p>
+        If you open a study room, the friends you invite can see your display name,
+        who else has joined, and the room&apos;s timer. If you join one, the host and the
+        others in it see your display name. A room never holds what anyone is studying,
+        and it is deleted when the host closes it.
       </p>
 
       <h3>How the service is used</h3>
@@ -124,10 +132,12 @@ function PrivacyContent() {
 
       <h3>Resend (email)</h3>
       <p>
-        If you turn on the morning summary email, Resend sends it for us. It receives
-        your email address and that morning&apos;s summary — the titles of what&apos;s due,
-        planned and to tick — and nothing else. The summary is off unless you switch it
-        on, and every email has a one-tap unsubscribe.
+        If you turn on the morning summary or the monthly report email, Resend sends it
+        for us. It receives your email address and that email&apos;s content — for the
+        morning summary, the titles of what&apos;s due, planned and to tick; for the
+        monthly report, last month&apos;s totals for focus time, tasks, habits and
+        spending — and nothing else. Both are off unless you switch them on, and every
+        email has a one-tap unsubscribe.
       </p>
 
       <h3>Razorpay</h3>
@@ -203,9 +213,8 @@ function PrivacyContent() {
 
       <h2>Changes</h2>
       <p>
-        If this policy changes in a way that affects you, the app will ask you to read
-        and accept the new version before you carry on. The version number at the top
-        is how you can tell.
+        If this policy changes in a way that affects you, the app shows a notice with a
+        link to the new version. The version number at the top is how you can tell.
       </p>
     </>
   );

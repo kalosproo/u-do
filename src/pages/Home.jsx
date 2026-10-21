@@ -19,7 +19,14 @@ import { useAuth } from "../hooks/useAuth";
 import { workspaceCollection } from "../services/paths";
 import FriendStreaks from "../components/FriendStreaks";
 import WeeklyReview from "../components/WeeklyReview";
+import MonthlyReport from "../components/MonthlyReport";
 import FocusCard from "../components/focus/FocusCard";
+import StudyRoom from "../components/focus/StudyRoom";
+import InstallCard from "../components/InstallCard";
+import ExamCountdowns from "../components/ExamCountdowns";
+import AchievementWatcher from "../components/AchievementWatcher";
+import { useFocus } from "../hooks/useFocus";
+import { focusStats } from "../utils/focusStats";
 import ChartPatterns from "../components/ChartPatterns";
 import { seriesFill } from "../utils/chartSeries";
 import { monthlyTotals } from "../utils/financeReport";
@@ -138,6 +145,21 @@ function Home() {
   // Picked once per visit; quoteFor already keeps it steady for the whole day.
   const [quote] = useState(() => quoteFor());
   const [finishing, setFinishing] = useState(() => new Set());
+  const focus = useFocus();
+  // The numbers badges are earned from. One object, rebuilt only when they
+  // change, so the watcher checks once per change rather than every render.
+  const focusLog = focus?.log;
+  const badgeStats = useMemo(() => {
+    const summary = focusStats(focusLog || {});
+    const minutes = Object.values(focusLog || {}).reduce((sum, day) => sum + (day.minutes || 0), 0);
+    return {
+      tasksDone: tasksSummary.done,
+      habitStreak: habitsSummary.longestStreak,
+      focusSessions: summary.sessions,
+      focusHours: Math.floor(minutes / 60),
+      focusStreak: summary.streak,
+    };
+  }, [focusLog, tasksSummary.done, habitsSummary.longestStreak]);
   const greeting = firstName ? `${hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"}, ${firstName}.` : "Welcome back.";
 
   const addTodayTask = async () => {
@@ -185,6 +207,11 @@ function Home() {
         </figure>
       </header>
 
+      <InstallCard />
+      <AchievementWatcher stats={badgeStats} ready={Boolean(user) && !loading} />
+
+      {user && !loading ? <MonthlyReport uid={user.uid} tasks={tasks} habits={habits} plans={plans} expenses={expenses} /> : null}
+
       {user && !loading ? <WeeklyReview uid={user.uid} tasks={tasks} habits={habits} plans={plans} expenses={expenses} /> : null}
 
       {error ? <div className="page-error" role="alert"><div><strong>Something went wrong</strong><span>Your data is safe. We couldn't load this right now.</span></div><button type="button" className="btn btn-sm" onClick={loadDashboard}>Try again</button></div> : null}
@@ -195,6 +222,10 @@ function Home() {
         {user ? <form className="today-add" onSubmit={(event) => { event.preventDefault(); addTodayTask(); }}><FiPlus aria-hidden="true" /><input value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} placeholder="Add a task for today" aria-label="Add a task for today" /><button type="submit" className="btn btn-primary btn-sm" disabled={savingTask || !newTaskTitle.trim()}>{savingTask ? "Adding…" : "Add task"}</button></form> : <Link to="/login" className="btn btn-primary">Sign in</Link>}
       </article>
       <FocusCard />
+
+      <StudyRoom compact />
+
+      <ExamCountdowns />
 
       {isEmpty ? (
         <div className="panel">

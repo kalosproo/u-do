@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FiBell, FiBookOpen, FiChevronDown, FiMaximize, FiMinimize, FiPause, FiPlay, FiSquare } from "react-icons/fi";
+import { FiBell, FiBookOpen, FiChevronDown, FiMaximize, FiMinimize, FiPause, FiPlay, FiSquare, FiUsers } from "react-icons/fi";
 
+import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
+import { useStudyRoom } from "../../hooks/useStudyRoom";
 import { formatClock, formatMinutes, lastDays, progressOf } from "../../utils/focusTimer";
 import { toDateKey } from "../../utils/dateKeys";
 import FlipCard from "./FlipCard";
@@ -70,6 +72,8 @@ const endsAt = (ms) =>
  */
 function FocusScreen() {
   const focus = useFocus();
+  const study = useStudyRoom();
+  const { user } = useAuth();
   const { session, view, style } = focus || {};
   const visible = Boolean(focus && view === "full" && session);
   const [calm, setCalm] = useState(false);
@@ -140,6 +144,14 @@ function FocusScreen() {
   // Only the flip clock goes quiet, and only while it is actually running.
   const quiet = style === 2 && calm && !session.paused;
 
+  // In a study room the host's pause pauses everyone.
+  const inRoom = Boolean(session.room && study?.room?.id === session.room);
+  const toggle = inRoom && study.isHost && session.phase === "focus" ? study.toggle : focus.toggle;
+  const roomNames = inRoom ? study.members.filter((member) => member.uid !== user?.uid).map((member) => member.name.split(" ")[0]) : [];
+  const roomLine = roomNames.length
+    ? `With ${roomNames.slice(0, 3).join(", ")}${roomNames.length > 3 ? ` +${roomNames.length - 3}` : ""}`
+    : "Waiting for friends to join";
+
   const toggleFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     else document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
@@ -150,7 +162,7 @@ function FocusScreen() {
       <button type="button" className="focus-btn focus-btn-cancel" onClick={cancel}>
         Cancel
       </button>
-      <button type="button" className="focus-btn focus-btn-main" onClick={focus.toggle}>
+      <button type="button" className="focus-btn focus-btn-main" onClick={toggle}>
         {session.paused ? "Resume" : "Pause"}
       </button>
     </div>
@@ -185,7 +197,7 @@ function FocusScreen() {
             <button
               type="button"
               className="focus-pause-btn"
-              onClick={focus.toggle}
+              onClick={toggle}
               aria-label={session.paused ? "Resume" : "Pause"}
               title={session.paused ? "Resume" : "Pause"}
             >
@@ -258,6 +270,7 @@ function FocusScreen() {
           <p className="focus-b-line">
             {label}
             {session.paused ? " · Paused" : ""}
+            {inRoom ? ` · ${roomLine.charAt(0).toLowerCase()}${roomLine.slice(1)}` : ""}
           </p>
           <div
             className={`focus-flip ${cards.length === 3 ? "has-hours" : ""}`}
@@ -273,6 +286,13 @@ function FocusScreen() {
           </p>
         </div>
       )}
+
+      {inRoom && style === 1 ? (
+        <p className="focus-room">
+          <FiUsers aria-hidden="true" />
+          {roomLine}
+        </p>
+      ) : null}
     </div>,
     document.body
   );

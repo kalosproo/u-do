@@ -1,5 +1,5 @@
 import { getAuth } from "firebase-admin/auth";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { defineSecret, defineString } from "firebase-functions/params";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
@@ -8,6 +8,7 @@ import { db } from "../firebaseAdmin.js";
 import { logServerError } from "../errors/report.js";
 import { gatherWork, localDateKey, localMinutes } from "../notifications/digest.js";
 import { composeDigest, isSendTime, minutesOfTime, unsubscribeSignature, verifyUnsubscribe } from "./emailCore.js";
+import { composeMonthly, countMonth, previousMonth } from "./monthlyCore.js";
 
 /**
  * The opt-in morning summary email, sent through Resend.
@@ -55,6 +56,33 @@ const deliverable = (account) =>
   !account.disabled &&
   (account.emailVerified || (account.providerData || []).some((p) => p.providerId === "google.com"));
 
+/** Everything the monthly report counts, for one account and one month. */
+const gatherMonth = async (uid, month) => {
+  const workspace = db.collection("users").doc(uid);
+  const startMs = Date.parse(`${month.start}T00:00:00Z`) - 14 * 3600_000;
+  const endMs = Date.parse(`${month.end}T23:59:59Z`) + 14 * 3600_000;
+  const [tasks, habits, plans, expenses, focus] = await Promise.all([
+    workspace.collection("tasks")
+      .where("completedAt", ">=", Timestamp.fromMillis(startMs))
+      .where("completedAt", "<=", Timestamp.fromMillis(endMs))
+      .get(),
+    workspace.collection("habits").get(),
+    workspace.collection("planner").where("date", ">=", month.start).where("date", "<=", month.end).get(),
+    workspace.collection("expenses").where("date", ">=", month.start).where("date", "<=", month.end).get(),
+    workspace.collection("focus").where("date", ">=", month.start).where("date", "<=", month.end).get(),
+  ]);
+  return countMonth(
+    {
+      tasksDone: tasks.docs.filter((d) => d.data().status === "done" || d.data().completed === true).length,
+      habits: habits.docs.map((d) => d.data()),
+      plans: plans.docs.map((d) => d.data()),
+      expenses: expenses.docs.map((d) => d.data()),
+      focusDays: focus.docs.map((d) => d.data()),
+    },
+    month
+  );
+};
+
 export const sendEmailDigests = onSchedule(
   { schedule: "every 30 minutes", timeZone: "Etc/UTC", timeoutSeconds: 540, secrets: [RESEND_API_KEY, EMAIL_LINK_SECRET] },
   async () => {
@@ -64,32 +92,53 @@ export const sendEmailDigests = onSchedule(
     }
 
     const now = new Date();
-    const snapshot = await db.collection("emailPrefs").where("daily", "==", true).get();
+    // Anyone with either email on; the two queries can overlap.
+    const [daily, monthly] = await Promise.all([
+      db.collection("emailPrefs").where("daily", "==", true).get(),
+      db.collection("emailPrefs").where("monthly", "==", true).get(),
+    ]);
+    const entries = new Map();
+    [...daily.docs, ...monthly.docs].forEach((entry) => entries.set(entry.id, entry));
     let sent = 0;
 
-    for (const entry of snapshot.docs) {
+    for (const entry of entries.values()) {
       const uid = entry.id;
       const prefs = entry.data();
       const timeZone = prefs.timeZone || "Asia/Kolkata";
 
       try {
         const dayKey = localDateKey(now, timeZone);
-        if (prefs.lastSentDay === dayKey) continue;
         if (!isSendTime(localMinutes(now, timeZone), minutesOfTime(prefs.time))) continue;
+
+        const month = prefs.monthly === true ? previousMonth(dayKey) : null;
+        const wantDaily = prefs.daily === true && prefs.lastSentDay !== dayKey;
+        const wantMonthly = Boolean(month) && prefs.lastMonthlySent !== month.monthKey;
+        if (!wantDaily && !wantMonthly) continue;
 
         const account = await getAuth().getUser(uid).catch(() => null);
         if (!deliverable(account)) continue;
-
-        const work = await gatherWork(uid, dayKey, { tasks: true, habits: true, planner: true });
         const unsubscribe = unsubscribeUrl(uid);
-        const email = composeDigest({ name: account.displayName, ...work, unsubscribeUrl: unsubscribe });
 
-        // Marked even when there was nothing to say, so the next run doesn't look again.
-        await entry.ref.set({ lastSentDay: dayKey }, { merge: true });
-        if (!email) continue;
+        if (wantDaily) {
+          const work = await gatherWork(uid, dayKey, { tasks: true, habits: true, planner: true });
+          const email = composeDigest({ name: account.displayName, ...work, unsubscribeUrl: unsubscribe });
+          // Marked even when there was nothing to say, so the next run doesn't look again.
+          await entry.ref.set({ lastSentDay: dayKey }, { merge: true });
+          if (email) {
+            await sendEmail({ to: account.email, ...email, unsubscribe });
+            sent += 1;
+          }
+        }
 
-        await sendEmail({ to: account.email, ...email, unsubscribe });
-        sent += 1;
+        if (wantMonthly) {
+          const counts = await gatherMonth(uid, month);
+          const email = composeMonthly({ name: account.displayName, counts, label: month.label, unsubscribeUrl: unsubscribe });
+          await entry.ref.set({ lastMonthlySent: month.monthKey }, { merge: true });
+          if (email) {
+            await sendEmail({ to: account.email, ...email, unsubscribe });
+            sent += 1;
+          }
+        }
       } catch (error) {
         await logServerError("sendEmailDigests", error);
       }
@@ -118,8 +167,8 @@ export const emailUnsubscribe = onRequest({ secrets: [EMAIL_LINK_SECRET] }, asyn
   }
 
   try {
-    await db.collection("emailPrefs").doc(uid).set({ daily: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    res.status(200).send(page("You're unsubscribed", "You won't get the daily summary any more. You can turn it back on in Profile → Reminders."));
+    await db.collection("emailPrefs").doc(uid).set({ daily: false, monthly: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    res.status(200).send(page("You're unsubscribed", "You won't get summary or report emails any more. You can turn them back on in Profile → Reminders."));
   } catch (error) {
     await logServerError("emailUnsubscribe", error);
     res.status(500).send(page("Something went wrong", "Please try the link again in a moment."));

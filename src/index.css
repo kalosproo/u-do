@@ -3963,3 +3963,128 @@ body.is-focusing { overflow: hidden; }
 .friends-focusing .panel-note a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .friends-focusing-dot { animation: none; } .focus-chart-bar i { transition: none; } }
 @media (max-width: 480px) { .focus-chart { gap: 3px; height: 140px; } .focus-chart-value { font-size: 9px; } }
+
+/* A policy update after the first acceptance: a notice, not a wall. */
+.policy-notice {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--s-4) + env(safe-area-inset-bottom, 0px));
+  margin: 0 auto;
+  width: fit-content;
+  max-width: calc(100vw - var(--s-6));
+  z-index: 75;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  animation: udo-rise 0.25s var(--ease-out);
+}
+.policy-notice-link { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 1024px) { .policy-notice { bottom: calc(62px + env(safe-area-inset-bottom, 0px) + var(--s-3)); } }
+
+/* Install U.Do */
+.install-card { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.install-card-icon { width: 48px; height: 48px; border-radius: 12px; border: 1px solid var(--border); flex-shrink: 0; }
+.install-card-copy { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 2px; }
+.install-card-actions { display: flex; align-items: center; gap: var(--s-2); }
+.install-inline { margin-top: var(--s-1); }
+.install-guide { gap: var(--s-4); }
+.install-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-4); }
+.install-steps li { display: flex; gap: var(--s-3); align-items: flex-start; }
+.install-steps li > span:last-child { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.install-step-icon { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; border: 1px solid var(--border-strong); font-size: 20px; color: var(--text); }
+.install-step-add { font-size: 13px; font-weight: 700; color: var(--text); }
+.icon-btn { width: 32px; height: 32px; display: grid; place-items: center; flex-shrink: 0; border-radius: var(--r-sm); border: 1px solid var(--border); background: transparent; color: var(--text-muted); }
+.icon-btn:hover { color: var(--text); background: var(--surface-hover); }
+
+/* Exam countdowns */
+.exams-card { display: flex; flex-direction: column; gap: var(--s-3); }
+.exam-form { display: grid; grid-template-columns: 1fr 160px; gap: var(--s-2); }
+.exam-form > input:first-child { grid-column: 1 / -1; }
+.exam-form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: var(--s-2); }
+.exam-form .login-error { grid-column: 1 / -1; }
+.exam-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.exam-list li { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--border); }
+.exam-list li:first-child { border-top: 0; }
+.exam-flip { --cw: 52px; flex-shrink: 0; display: flex; }
+.exam-flip .flip-card { box-shadow: none; }
+.exam-days-plain { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 6px; background: var(--surface-2); font: 400 26px/1 "Bebas Neue", var(--font-sans); }
+.exam-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.exam-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exam-text small { color: var(--text-muted); font-size: 12.5px; }
+.exam-list li.is-close .exam-text small { color: var(--text); }
+@media (max-width: 480px) { .exam-form { grid-template-columns: 1fr; } }
+.exam-flip .flip-half { background: var(--bg); }
+.exam-flip .flip-card::after { background: var(--surface); }
+
+/* Achievements */
+.badge-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--s-2); }
+.badge-grid li { display: flex; flex-direction: column; gap: 4px; padding: var(--s-3); border: 1px dashed var(--border); border-radius: var(--r-md); opacity: 0.55; }
+.badge-grid li.is-earned { opacity: 1; border-style: solid; border-color: var(--border-strong); background: var(--surface-2); }
+.badge-grid strong { font-size: 13.5px; }
+.badge-grid small { font-size: 11.5px; color: var(--text-muted); }
+.badge-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-strong); font-size: 15px; margin-bottom: 4px; }
+.badge-grid li.is-earned .badge-icon { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+.badge-toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + var(--s-4));
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: fit-content;
+  max-width: calc(100vw - var(--s-6));
+  z-index: 190;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-5) var(--s-3) var(--s-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  transform-origin: 50% 0%;
+  animation: badge-flip 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes badge-flip { from { opacity: 0; transform: perspective(600px) rotateX(-80deg); } to { opacity: 1; transform: perspective(600px) rotateX(0); } }
+.badge-toast-icon { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 20px; flex-shrink: 0; }
+.badge-toast-text { display: flex; flex-direction: column; gap: 1px; }
+.badge-toast-text small { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.badge-toast-text strong { font-size: 16px; }
+.badge-toast-text span { font-size: 12.5px; color: var(--text-muted); }
+@media (prefers-reduced-motion: reduce) { .badge-toast { animation: none; } }
+.monthly-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.monthly-change { font-size: 11px; color: var(--text-muted); }
+@media (max-width: 860px) { .monthly-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Group study room */
+.study-room { display: flex; flex-direction: column; gap: var(--s-3); }
+.study-room .panel-title { display: inline-flex; align-items: center; gap: 8px; }
+.study-room.is-live { border-color: var(--text); }
+.study-room-start { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); }
+.study-room-start .btn { display: inline-flex; align-items: center; gap: 6px; }
+.study-lengths { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 2px; }
+.study-lengths button { border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.study-lengths button.is-active { background: var(--text); color: var(--bg); }
+.study-members { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-3); }
+.study-members li { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 48px; }
+.study-members small { font-size: 11px; color: var(--text-muted); max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.study-invites, .study-invite-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.study-invites li, .study-invite-list li { display: flex; align-items: center; gap: var(--s-3); }
+.study-invites li { padding: var(--s-2) var(--s-3); border: 1px solid var(--border); border-radius: 12px; }
+.study-invite-text { flex: 1; min-width: 0; font-size: 14px; }
+.study-invite-actions { display: inline-flex; gap: 6px; flex-shrink: 0; }
+.study-invite-list li > span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.study-invite-list { display: flex; flex-direction: column; gap: var(--s-2); }
+.study-room .focus-link { align-self: flex-start; padding: 0; cursor: pointer; }
+
+/* Who's in the room, on the full-screen timer */
+.focus-room { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: 0.04em; color: var(--text-muted); white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; }
+.focus-room svg { flex-shrink: 0; }

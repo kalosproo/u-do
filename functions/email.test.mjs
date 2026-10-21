@@ -55,3 +55,34 @@ test("it sends in the half hour after the chosen time, across midnight too", () 
   assert.equal(isSendTime(449, 450), false);
   assert.equal(isSendTime(5, minutesOfTime("23:50")), true);
 });
+
+import { composeMonthly, countMonth, previousMonth } from "./src/email/monthlyCore.js";
+
+test("the monthly report covers last month, on the 1st only", () => {
+  assert.deepEqual(previousMonth("2026-11-01"), { start: "2026-10-01", end: "2026-10-31", monthKey: "2026-10", label: "October 2026" });
+  assert.equal(previousMonth("2027-01-01").start, "2026-12-01");
+  assert.equal(previousMonth("2026-11-02"), null);
+});
+
+test("counts the month and writes it plainly", () => {
+  const range = previousMonth("2026-11-01");
+  const counts = countMonth({
+    tasksDone: 7,
+    habits: [{ logs: { "2026-10-02": true, "2026-09-30": true } }],
+    plans: [{ date: "2026-10-03", completed: true }, { date: "2026-10-04" }],
+    expenses: [{ date: "2026-10-05", type: "income", amountMinor: 500000 }, { date: "2026-10-06", amount: 249 }],
+    focusDays: [{ date: "2026-10-07", minutes: 150, subjects: { Physics: 120, Maths: 30 } }],
+  }, range);
+  assert.equal(counts.checkIns, 1);
+  assert.equal(counts.plansDone, 1);
+  assert.equal(counts.moneyOut, 24900);
+  assert.deepEqual(counts.topSubject, { name: "Physics", minutes: 120 });
+  const email = composeMonthly({ name: "Haneesh Varma", counts, label: range.label, unsubscribeUrl: "https://x/u" });
+  assert.equal(email.subject, "Your October 2026 on U.Do");
+  assert.match(email.text, /Focus time: 2h 30m — mostly Physics/);
+  assert.match(email.text, /₹5,000 · ₹249/);
+});
+
+test("an empty month sends nothing", () => {
+  assert.equal(composeMonthly({ counts: countMonth({}, previousMonth("2026-11-01")), label: "October 2026", unsubscribeUrl: "x" }), null);
+});

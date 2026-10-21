@@ -2,6 +2,8 @@ import { useMemo } from "react";
 
 import FocusCard from "../components/focus/FocusCard";
 import FriendsFocusing from "../components/focus/FriendsFocusing";
+import StudyRoom from "../components/focus/StudyRoom";
+import ExamCountdowns from "../components/ExamCountdowns";
 import { useAuth } from "../hooks/useAuth";
 import { useFocus } from "../hooks/useFocus";
 import { formatMinutes } from "../utils/focusTimer";
@@ -37,6 +39,10 @@ function Focus() {
       </header>
 
       <FocusCard />
+
+      {user ? <StudyRoom /> : null}
+
+      <ExamCountdowns />
 
       <div className="stat-grid">
         {[

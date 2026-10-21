@@ -1,6 +1,7 @@
 import { FiBell, FiBellOff, FiSend } from "react-icons/fi";
 
 import { usePush } from "../hooks/usePush";
+import InstallCard from "./InstallCard";
 
 /**
  * Each reminder has its own rhythm, and the copy says what it is.
@@ -155,7 +156,10 @@ function NotificationSettings() {
           ) : null}
         </>
       ) : (
-        <p className="profile-data-copy">{unavailableCopy(availability)}</p>
+        <>
+          <p className="profile-data-copy">{unavailableCopy(availability)}</p>
+          {availability === "ios-not-installed" ? <InstallCard inline /> : null}
+        </>
       )}
 
       {error ? <p className="login-error">{error}</p> : null}
