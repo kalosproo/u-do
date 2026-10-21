@@ -122,6 +122,14 @@ function PrivacyContent() {
         . We do not send your workspace content to AdSense.
       </p>
 
+      <h3>Resend (email)</h3>
+      <p>
+        If you turn on the morning summary email, Resend sends it for us. It receives
+        your email address and that morning&apos;s summary — the titles of what&apos;s due,
+        planned and to tick — and nothing else. The summary is off unless you switch it
+        on, and every email has a one-tap unsubscribe.
+      </p>
+
       <h3>Razorpay</h3>
       <p>
         If you buy Pro, the payment is handled by Razorpay. Your card, UPI or bank

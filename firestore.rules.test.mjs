@@ -334,6 +334,14 @@ await t("owner publishes 'studying now' for friends", () => assertSucceeds(setDo
 await t("a stranger cannot see who is studying", () => assertFails(getDoc(doc(mallory, "profiles", ALICE, "shared", "focus"))));
 await t("a stranger cannot fake someone's 'studying now'", () => assertFails(setDoc(doc(mallory, "profiles", ALICE, "shared", "focus"), { focusing: true })));
 
+console.log("\n=== daily summary email settings ===");
+const eprefs = (as, uid) => doc(as, "emailPrefs", uid);
+await t("owner turns the summary on", () => assertSucceeds(setDoc(eprefs(alice, ALICE), { uid: ALICE, daily: true, time: "07:30", timeZone: "Asia/Kolkata", updatedAt: new Date() })));
+await t("a badly formed time is refused", () => assertFails(setDoc(eprefs(alice, ALICE), { uid: ALICE, daily: true, time: "7am" })));
+await t("extra fields are refused", () => assertFails(setDoc(eprefs(alice, ALICE), { uid: ALICE, daily: true, email: "someone@else.com" })));
+await t("a stranger cannot read someone's email settings", () => assertFails(getDoc(eprefs(mallory, ALICE))));
+await t("a stranger cannot sign someone up for emails", () => assertFails(setDoc(eprefs(mallory, ALICE), { uid: ALICE, daily: true })));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

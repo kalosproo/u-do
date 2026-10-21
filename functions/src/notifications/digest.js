@@ -24,7 +24,7 @@ import { composeMessages, minutesOf, RUN_MINUTES, windowOffset } from "./cadence
 const OVERDUE_SCAN_LIMIT = 50;
 
 /** Minutes past local midnight, for a real instant in a named zone. */
-const localMinutes = (instant, timeZone) => {
+export const localMinutes = (instant, timeZone) => {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone,
     hour: "2-digit",
@@ -38,7 +38,7 @@ const localMinutes = (instant, timeZone) => {
 };
 
 /** The local calendar day, in the form the app writes on dueDate and date. */
-const localDateKey = (instant, timeZone) =>
+export const localDateKey = (instant, timeZone) =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
@@ -47,7 +47,7 @@ const localDateKey = (instant, timeZone) =>
   }).format(instant);
 
 /** Tasks due today or overdue, habits unticked today, plans for today. */
-const gatherWork = async (uid, dayKey, wanted) => {
+export const gatherWork = async (uid, dayKey, wanted) => {
   const workspace = db.collection("users").doc(uid);
 
   const [taskSnap, habitSnap, planSnap] = await Promise.all([

@@ -360,6 +360,28 @@ service cloud.firestore {
      * The server prunes dead tokens through the Admin SDK, which bypasses
      * these rules.
      */
+    /**
+     * The daily summary email: on or off, what time, which zone. Owner only.
+     * lastSentDay is written by the server so the summary goes once a day.
+     */
+    // Switches the owner flips in the console (e.g. appConfig/email once the
+    // email provider is set up). Readable so the app knows what to offer.
+    match /appConfig/{name} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /emailPrefs/{uid} {
+      allow read: if isOwner(uid);
+      allow delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'daily', 'time', 'timeZone', 'updatedAt', 'lastSentDay'])
+        && request.resource.data.uid == uid
+        && request.resource.data.daily is bool
+        && (!('time' in request.resource.data) || (request.resource.data.time is string && request.resource.data.time.matches('^[0-9]{2}:[0-9]{2}$')))
+        && (!('timeZone' in request.resource.data) || (request.resource.data.timeZone is string && request.resource.data.timeZone.size() <= 64));
+    }
+
     match /pushSubscriptions/{uid} {
       allow read: if isOwner(uid);
 
