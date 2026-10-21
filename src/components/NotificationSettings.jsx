@@ -1,4 +1,4 @@
-import { FiBell, FiBellOff } from "react-icons/fi";
+import { FiBell, FiBellOff, FiSend } from "react-icons/fi";
 
 import { usePush } from "../hooks/usePush";
 
@@ -45,6 +45,9 @@ function NotificationSettings() {
     enable,
     disable,
     update,
+    device,
+    test,
+    sendTest,
   } = usePush();
 
   if (loading) return null;
@@ -73,6 +76,36 @@ function NotificationSettings() {
               {busy ? "Working…" : enabled ? "Turn reminders off" : "Turn reminders on"}
             </button>
           </div>
+
+          {enabled && device === "needs-permission" ? (
+            <div className="push-device-note">
+              <p className="panel-note">
+                Reminders are on for your account, but this device hasn&apos;t been allowed to
+                show them yet.
+              </p>
+              <button type="button" className="btn btn-primary" onClick={enable} disabled={busy}>
+                <FiBell /> Turn on for this device
+              </button>
+            </div>
+          ) : null}
+
+          {enabled ? (
+            <div className="push-test">
+              <button
+                type="button"
+                className="btn"
+                onClick={sendTest}
+                disabled={test.state === "sending"}
+              >
+                <FiSend /> {test.state === "sending" ? "Sending…" : "Send a test notification"}
+              </button>
+              {test.state === "done" ? (
+                <p className={`panel-note ${test.result?.ok && test.result.sent > 0 ? "" : "push-test-problem"}`} role="status">
+                  {testCopy(test.result)}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           {enabled ? (
             <div className="push-settings">
@@ -128,6 +161,23 @@ function NotificationSettings() {
       {error ? <p className="login-error">{error}</p> : null}
     </article>
   );
+}
+
+function testCopy(result) {
+  if (!result) return "";
+  if (result.ok && result.sent > 0) {
+    const devices = result.sent === 1 ? "1 device" : `${result.sent} devices`;
+    return `Sent to ${devices}. It should appear within a minute. If it doesn't, check that notifications for U.Do (or your browser) are allowed in your phone's settings, and that Focus or Do Not Disturb is off.`;
+  }
+  if (result.ok && result.devices === 0) {
+    return "No device is registered for reminders. Turn reminders off, then on again on this device.";
+  }
+  if (result.ok) {
+    return "The devices on record no longer accept notifications, so they were removed. Turn reminders off, then on again on this device.";
+  }
+  if (result.reason === "too-soon") return "Give it a few seconds before sending another test.";
+  if (result.reason === "server") return "Couldn't reach U.Do's reminder service right now. Try again in a little while.";
+  return result.message || "The test couldn't be sent.";
 }
 
 function unavailableCopy(availability) {

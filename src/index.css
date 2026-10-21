@@ -3837,3 +3837,8 @@ body.is-focusing { overflow: hidden; }
   .focus-style-2 .focus-pause-btn { width: 34px; height: 34px; font-size: 15px; }
   .focus-style-2 .focus-style button { width: 28px; }
 }
+
+.push-device-note,
+.push-test { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2); }
+.push-device-note { padding: var(--s-3); border: 1px solid var(--border-strong); border-radius: var(--r-sm); }
+.push-test-problem { color: var(--text); }

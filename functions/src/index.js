@@ -124,6 +124,7 @@ export { signOutEverywhere } from "./account/security.js";
 
 export { sendScheduledReminders } from "./notifications/digest.js";
 export { onFriendRequest, onFriendAdded } from "./notifications/friends.js";
+export { sendTestPush } from "./notifications/test.js";
 
 // Usage and activity for the admin console. The console has read these since
 // it was built; until now nothing on the server wrote them.
