@@ -75,7 +75,10 @@ function PrivacyContent() {
         the devices, U.Do briefly stores the technical details needed to reach each
         other, including network addresses; these are deleted when the call ends. To
         find a route between devices, yours asks a public Google server for its own
-        network address, as video call apps do. Your browser asks your permission before U.Do can use the camera or microphone the
+        network address, as video call apps do. When two networks can&apos;t connect
+        directly, as often happens on mobile data, the call passes through Cloudflare&apos;s
+        relay instead; it stays encrypted end to end, so Cloudflare can&apos;t see or hear
+        it, and it isn&apos;t stored. Your browser asks your permission before U.Do can use the camera or microphone the
         first time.
       </p>
       <p>

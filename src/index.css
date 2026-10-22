@@ -4346,3 +4346,6 @@ body.is-focusing { overflow: hidden; }
 .study-room-link > svg { flex-shrink: 0; font-size: 18px; }
 .study-room-link > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .study-room-link small { color: var(--text-muted); font-size: 12.5px; }
+.call-tile-status { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.call-tile-status small { font-size: 11.5px; line-height: 1.35; color: rgba(255, 255, 255, 0.6); max-width: 30ch; }
+.call-tile-retry { border: 1px solid rgba(255, 255, 255, 0.4); background: none; color: #fff; font: inherit; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; cursor: pointer; }
