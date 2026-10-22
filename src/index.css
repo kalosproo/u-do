@@ -4124,3 +4124,26 @@ body.is-focusing { overflow: hidden; }
 .task-row.task-overdue { box-shadow: inset 3px 0 0 var(--text); padding-left: 10px; margin-left: -10px; }
 .task-row .task-delete { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; }
 .task-list-panel .empty-day { padding: var(--s-5) 0; font-size: 13.5px; }
+
+/* Daily focus goal */
+.focus-card-today-wrap { display: flex; align-items: center; gap: var(--s-2); }
+.focus-card-today strong { white-space: nowrap; }
+.focus-goal-ring { width: 40px; height: 40px; transform: rotate(-90deg); flex-shrink: 0; }
+.focus-goal-ring circle { fill: none; stroke-width: 5; }
+.focus-goal-ring .focus-ring-track { stroke: var(--border); }
+.focus-goal-ring .focus-ring-fill { stroke: var(--text); stroke-linecap: round; transition: stroke-dashoffset 0.6s var(--ease-out, ease); }
+.focus-goal-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.focus-goal-label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-right: var(--s-1); }
+
+/* Friends leaderboard */
+.leaderboard-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.leaderboard-list li { display: flex; align-items: center; gap: var(--s-3); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.leaderboard-list li:last-child { border-bottom: 0; }
+.leaderboard-rank { width: 20px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-muted); flex-shrink: 0; }
+.leaderboard-list li:first-child .leaderboard-rank { color: var(--text); }
+.leaderboard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.leaderboard-main strong { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leaderboard-bar { height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.leaderboard-bar i { display: block; height: 100%; background: var(--text); opacity: 0.35; border-radius: inherit; }
+.leaderboard-list li.is-me .leaderboard-bar i { opacity: 1; }
+.leaderboard-time { font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 64px; text-align: right; }

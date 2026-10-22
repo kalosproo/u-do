@@ -8,6 +8,7 @@ import { db } from "./src/firebaseAdmin.js";
 import { emailUnsubscribe } from "./src/email/email.js";
 import { unsubscribeSignature } from "./src/email/emailCore.js";
 import { deleteMyAccount } from "./src/account/delete.js";
+import { onStudyInvite } from "./src/notifications/friends.js";
 const out = []; const check = (n, ok, d = "") => out.push({ n, ok: !!ok, d });
 
 let code = null;
@@ -66,6 +67,17 @@ check("11. ...and leaves other people's rooms, invites included",
   (await db.collection("rooms").doc("room2").get()).exists
   && !(await db.collection("rooms").doc("room2").collection("members").doc(host.uid).get()).exists
   && !(await db.collection("profiles").doc(host.uid).collection("studyInvites").doc("room2").get()).exists);
+
+// A study room invite: no push set up means nothing is sent and nothing fails;
+// a device-less subscription is reached without error.
+const invite = (uid, host) => onStudyInvite.run({ params: { uid, roomId: "r9" }, data: { data: () => ({ host }) } });
+let threw = null;
+try { await invite("nopush", "hostA"); } catch (e) { threw = e; }
+check("12. a study invite to someone without push is a quiet no-op", threw === null, threw?.message);
+await db.collection("pushSubscriptions").doc("withpush").set({ uid: "withpush", enabled: true, tokens: {} });
+threw = null;
+try { await invite("withpush", "hostA"); } catch (e) { threw = e; }
+check("13. a study invite reaches the push sender without error", threw === null, threw?.message);
 
 for (const r of out) console.log(`${r.ok ? "  PASS" : "  FAIL"}  ${r.n}${!r.ok && r.d ? "\n        " + r.d : ""}`);
 console.log(`\n${out.filter((r) => r.ok).length} passed, ${out.filter((r) => !r.ok).length} failed`);

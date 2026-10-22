@@ -395,6 +395,13 @@ await t("...and ticked", () => assertSucceeds(updateDoc(doc(alice, "users", ALIC
 await t("a repeating task keeps its series id", () => assertSucceeds(setDoc(doc(alice, "users", ALICE, "tasks", "rep"), { ...oneOff, repeat: { kind: "daily", days: [] }, seriesId: "s123" })));
 await t("a series id still has to be text", () => assertFails(setDoc(doc(alice, "users", ALICE, "tasks", "bad"), { ...oneOff, seriesId: 42 })));
 
+console.log("\n=== focus leaderboard ===");
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "profiles", ALICE, "friends", BOB), { uid: BOB }));
+await t("owner publishes this week's focus total", () => assertSucceeds(setDoc(doc(alice, "profiles", ALICE, "shared", "focusWeek"), { week: "2026-10-19", minutes: 95 })));
+await t("a friend reads it", () => assertSucceeds(getDoc(doc(bob, "profiles", ALICE, "shared", "focusWeek"))));
+await t("a stranger cannot read it", () => assertFails(getDoc(doc(mallory, "profiles", ALICE, "shared", "focusWeek"))));
+await t("nobody can inflate someone else's total", () => assertFails(setDoc(doc(bob, "profiles", ALICE, "shared", "focusWeek"), { week: "2026-10-19", minutes: 9999 })));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

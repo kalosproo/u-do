@@ -11,8 +11,11 @@ import {
 } from "../utils/focusTimer";
 import { playAmbient, stopAmbient, unlockAudio } from "../utils/ambient";
 import { toDateKey } from "../utils/dateKeys";
+import { cleanGoal, crossesGoal, goalLabel } from "../utils/focusGoal";
 import { useAuth } from "../hooks/useAuth";
 import { importLocalDays, loadFocusDays, publishPresence, recordFocus } from "../services/focusSync";
+import { clearWeek, publishWeek } from "../services/leaderboard";
+import { weekKeyOf, weekMinutes } from "../utils/leaderboard";
 
 /**
  * The focus timer, app-wide.
@@ -34,6 +37,7 @@ const KEYS = {
   setup: "u_do_focus_setup",
   sound: "u_do_focus_sound",
   share: "u_do_focus_share",
+  goal: "u_do_focus_goal",
 };
 
 /** How far back the account's focus days are loaded. */
@@ -107,12 +111,14 @@ export function FocusProvider({ children }) {
   const [setup, setSetupState] = useState(() => ({ minutes: DEFAULT_MINUTES, subject: "", ...read(KEYS.setup, {}) }));
   const [now, setNow] = useState(() => Date.now());
   const [sound, setSoundState] = useState(() => ({ kind: "off", volume: 0.5, ...read(KEYS.sound, {}) }));
+  const [goal, setGoalState] = useState(() => cleanGoal(read(KEYS.goal, undefined)));
   const titleRef = useRef(null);
 
   useEffect(() => write(KEYS.session, session), [session]);
   useEffect(() => write(KEYS.style, style), [style]);
   useEffect(() => write(KEYS.log, guestLog), [guestLog]);
   useEffect(() => write(KEYS.share, shareFocus), [shareFocus]);
+  useEffect(() => write(KEYS.goal, goal), [goal]);
 
   // Sign-in: move any device-only focus time into the account once, then
   // load the account's recent days.
@@ -144,6 +150,30 @@ export function FocusProvider({ children }) {
   }, [uid]);
 
   const log = useMemo(() => (uid ? (cloud.uid === uid ? cloud.log : {}) : guestLog), [uid, cloud, guestLog]);
+  // This week's total for the friends leaderboard, written only when it
+  // changes, and only once the account's days have loaded — never a 0 that
+  // merely means "not loaded yet". Turning sharing off takes it down.
+  const published = useRef(null);
+  useEffect(() => {
+    if (!uid || cloud.uid !== uid) return;
+    if (!shareFocus) {
+      if (published.current !== "off") clearWeek(uid).catch(() => {});
+      published.current = "off";
+      return;
+    }
+    const week = weekKeyOf(new Date());
+    const minutes = Math.round(weekMinutes(cloud.log, new Date()));
+    const key = `${uid}|${week}|${minutes}`;
+    if (published.current === key) return;
+    published.current = key;
+    publishWeek(uid, { week, minutes }).catch(() => {});
+  }, [uid, cloud, shareFocus]);
+
+  // The goal check needs today's total before a stretch is added.
+  const logRef = useRef({});
+  useEffect(() => {
+    logRef.current = log;
+  }, [log]);
 
   // "Studying now" for friends: written on each change of state (start,
   // pause, break, end), never on every tick.
@@ -166,10 +196,20 @@ export function FocusProvider({ children }) {
   }, [soundOn, sound.kind, sound.volume]);
   useEffect(() => () => stopAmbient(), []);
 
+  const goalRef = useRef(goal);
+  useEffect(() => {
+    goalRef.current = goal;
+  }, [goal]);
+
   const record = useCallback(
     (minutes, subject) => {
       if (!(minutes >= 1)) return;
       const now = new Date();
+      const before = logRef.current[toDateKey(now)]?.minutes || 0;
+      if (crossesGoal(before, minutes, goalRef.current)) {
+        buzz([80, 60, 80, 60, 120]);
+        notify("Daily goal reached", `${goalLabel(goalRef.current)} of focus today. Well done.`);
+      }
       if (uid) {
         setCloud((current) => ({ uid, log: addToLog(current.uid === uid ? current.log : {}, minutes, now, subject) }));
         recordFocus(uid, { dateKey: toDateKey(now), minutes, subject });
@@ -333,6 +373,7 @@ export function FocusProvider({ children }) {
 
   const setSetup = useCallback((patch) => setSetupState((current) => ({ ...current, ...patch })), []);
   const setStyle = useCallback((next) => setStyleState(next === 2 ? 2 : 1), []);
+  const setGoal = useCallback((next) => setGoalState(cleanGoal(next)), []);
   const toggleStyle = useCallback(() => setStyleState((current) => (current === 1 ? 2 : 1)), []);
 
   const value = useMemo(
@@ -362,8 +403,10 @@ export function FocusProvider({ children }) {
       stop,
       follow,
       unfollow,
+      goal,
+      setGoal,
     }),
-    [session, now, view, style, setStyle, toggleStyle, log, shareFocus, sound, setSound, setup, setSetup, start, pause, resume, toggle, reset, skip, stop, follow, unfollow, open]
+    [session, now, view, style, setStyle, toggleStyle, log, shareFocus, sound, setSound, setup, setSetup, start, pause, resume, toggle, reset, skip, stop, follow, unfollow, open, goal, setGoal]
   );
 
   return <FocusContext.Provider value={value}>{children}</FocusContext.Provider>;

@@ -65,3 +65,6 @@ export const roomMembersCollection = (roomId) => collection(db, "rooms", roomId,
 export const roomMemberDoc = (roomId, uid) => doc(db, "rooms", roomId, "members", uid);
 export const studyInvitesCollection = (uid) => collection(db, "profiles", uid, "studyInvites");
 export const studyInviteDoc = (uid, roomId) => doc(db, "profiles", uid, "studyInvites", roomId);
+
+// This week's focus total, for the friends leaderboard.
+export const focusWeekDoc = (uid) => doc(db, "profiles", uid, "shared", "focusWeek");

@@ -65,3 +65,26 @@ export const onFriendAdded = onDocumentCreated(
     });
   },
 );
+
+/**
+ * A friend invited you to a study room. The invite carries the host's name,
+ * but the profile is read anyway so a renamed host shows their current name.
+ */
+export const onStudyInvite = onDocumentCreated(
+  "profiles/{uid}/studyInvites/{roomId}",
+  async (event) => {
+    const { uid, roomId } = event.params;
+    const host = event.data?.data()?.host;
+    if (!host || host === uid) return;
+
+    const subscription = await subscriptionFor(uid);
+    if (!wants(subscription)) return;
+
+    await sendToSubscription(subscription, {
+      title: "Study together?",
+      body: `${await nameOf(host)} invited you to their study room.`,
+      url: "/focus",
+      tag: `udo-room-${roomId}`,
+    });
+  },
+);
