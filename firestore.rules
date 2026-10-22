@@ -157,7 +157,8 @@ service cloud.firestore {
         && label(data, 'priority', 20)
         && label(data, 'dueDate', 10)
         && label(data, 'dueTime', 5)
-        && label(data, 'seriesId', 100)
+        // A one-off task has seriesId null; only a repeating one carries an id.
+        && (!('seriesId' in data) || data.seriesId == null || label(data, 'seriesId', 100))
         && optionalOf(data, 'completed', 'bool')
         && optionalOf(data, 'leadMinutes', 'number')
         && optionalOf(data, 'repeat', 'map')
