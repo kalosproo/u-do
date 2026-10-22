@@ -4147,3 +4147,8 @@ body.is-focusing { overflow: hidden; }
 .leaderboard-bar i { display: block; height: 100%; background: var(--text); opacity: 0.35; border-radius: inherit; }
 .leaderboard-list li.is-me .leaderboard-bar i { opacity: 1; }
 .leaderboard-time { font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 64px; text-align: right; }
+
+/* Holds the chart's height while the charts library loads, so nothing jumps. */
+.chart-loading { height: 220px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-2), var(--surface-hover), var(--surface-2)); background-size: 200% 100%; animation: chart-shimmer 1.4s ease-in-out infinite; opacity: 0.6; }
+@keyframes chart-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .chart-loading { animation: none; } }
