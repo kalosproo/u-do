@@ -3721,7 +3721,7 @@ body.is-focusing { overflow: hidden; }
 .focus-a { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: var(--s-4); }
 .focus-ring {
   position: relative;
-  width: min(80vw, calc(100dvh - 330px), 400px);
+  width: min(84vw, calc(100dvh - 330px), 560px);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -3758,7 +3758,7 @@ body.is-focusing { overflow: hidden; }
 
 /* Portrait: the cards stack. Every size comes from one width. */
 .focus-flip {
-  --cw: min(76vw, calc((100dvh - 230px) / 2.12));
+  --cw: min(84vw, calc((100dvh - 190px) / 2.1));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3814,10 +3814,15 @@ body.is-focusing { overflow: hidden; }
 /* ---- Landscape: every phone, tablets and desktops --------------------- */
 @media (orientation: landscape) {
   .focus-a { flex-direction: row; justify-content: center; gap: clamp(24px, 6vw, 120px); }
-  .focus-ring { width: min(46vw, calc(100dvh - 96px), 480px); }
+  .focus-ring { width: min(48vw, calc(100dvh - 96px), 640px); }
   .focus-a-side { max-width: 340px; gap: var(--s-3); }
-  .focus-flip { --cw: min(38vw, calc(100dvh - 190px)); flex-direction: row; gap: calc(var(--cw) * 0.12); }
-  .focus-flip.has-hours { --cw: min(27vw, calc(100dvh - 190px)); }
+  /* The flip clock fills the screen: the top bar floats over it instead of
+     taking a row, and the cards take the height that's left. */
+  .focus-style-2 .focus-top { position: absolute; top: calc(var(--s-2) + env(safe-area-inset-top, 0px)); left: calc(var(--s-4) + env(safe-area-inset-left, 0px)); right: calc(var(--s-4) + env(safe-area-inset-right, 0px)); z-index: 5; }
+  .focus-style-2 .focus-b { gap: clamp(6px, 2dvh, 20px); }
+  .focus-style-2 .focus-top-label { visibility: hidden; }
+  .focus-flip { --cw: min(44vw, calc(100dvh - 120px)); flex-direction: row; gap: calc(var(--cw) * 0.08); }
+  .focus-flip.has-hours { --cw: min(30vw, calc(100dvh - 120px)); }
 }
 /* Short landscape — a phone on its side. */
 @media (orientation: landscape) and (max-height: 500px) {
@@ -3827,8 +3832,8 @@ body.is-focusing { overflow: hidden; }
   .focus-btn { --btn: 62px; font-size: 13.5px; }
   .focus-stats { padding-top: var(--s-2); }
   .focus-week { height: 26px; }
-  .focus-flip { --cw: min(38vw, calc(100dvh - 130px)); }
-  .focus-flip.has-hours { --cw: min(27vw, calc(100dvh - 130px)); }
+  .focus-flip { --cw: min(44vw, calc(100dvh - 76px)); }
+  .focus-flip.has-hours { --cw: min(30vw, calc(100dvh - 76px)); }
   .focus-b-line { font-size: 13px; }
 }
 /* Very short portrait (small phones): give the ring room. */
@@ -4332,3 +4337,15 @@ body.is-focusing { overflow: hidden; }
 .study-member-remove { border: 0; background: none; padding: 2px 0 0; color: var(--text-muted); font: inherit; font-size: 11px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .study-room-exits { display: flex; flex-wrap: wrap; gap: 16px; }
 @media (min-width: 900px) { .call-grid.is-1 { max-width: 760px; margin: 0 auto; width: 100%; } }
+
+/* Focus page tabs, and the custom length box */
+.focus-tabs { display: inline-flex; align-self: flex-start; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; }
+.focus-tabs button { border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 600; padding: 8px 18px; border-radius: 999px; cursor: pointer; min-height: 38px; }
+.focus-tabs button.is-active { background: var(--text); color: var(--bg); }
+.focus-custom { display: inline-flex; align-items: center; gap: 4px; cursor: text; }
+.focus-custom input { width: 3.2ch; border: 0; background: transparent; color: inherit; font: inherit; text-align: right; padding: 0; outline: none; -moz-appearance: textfield; }
+.focus-custom input::-webkit-outer-spin-button, .focus-custom input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.study-room-link { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: var(--text); text-decoration: none; }
+.study-room-link > svg { flex-shrink: 0; font-size: 18px; }
+.study-room-link > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.study-room-link small { color: var(--text-muted); font-size: 12.5px; }

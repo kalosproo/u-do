@@ -30,6 +30,25 @@ import { HEARTBEAT_MS, MAX_ON_CALL, hostIsGone, nextHost, onCall } from "../util
 import RoomAudio from "../components/focus/RoomAudio";
 
 const KEY = "u_do_room";
+// The call session this device last joined with, so a reload can tidy it up.
+const CALL_KEY = "u_do_call_session";
+
+const rememberCall = (session) => {
+  try {
+    if (session) localStorage.setItem(CALL_KEY, session);
+    else localStorage.removeItem(CALL_KEY);
+  } catch {
+    /* Only used to tidy up after a reload. */
+  }
+};
+
+const lastCall = () => {
+  try {
+    return localStorage.getItem(CALL_KEY);
+  } catch {
+    return null;
+  }
+};
 const NONE = [];
 const NO_CALL = { local: { audio: false, video: null }, peers: [] };
 
@@ -193,6 +212,15 @@ export function StudyRoomProvider({ children }) {
   const callHere = Boolean(room && me?.session === SESSION);
   const callElsewhere = Boolean(room && me?.session && me.session !== SESSION);
 
+  // This device was on the call before a reload or a crash: that old seat
+  // on the call is gone, so take it down rather than leave a ghost behind.
+  const staleCall = Boolean(room && uid && me?.session && me.session !== SESSION && me.session === lastCall());
+  useEffect(() => {
+    if (!staleCall) return;
+    rememberCall(null);
+    setCallState(uid, room.id, { session: null, cam: false, mic: false }).catch(() => {});
+  }, [staleCall, uid, room?.id]);
+
   useEffect(() => {
     if (!callHere || !uid || !room?.id) return undefined;
     const roomKey = room.id;
@@ -300,10 +328,12 @@ export function StudyRoomProvider({ children }) {
         throw Object.assign(new Error(`The call is full — up to ${MAX_ON_CALL} people can be on it. The timer still works for you.`), { userFacing: true });
       }
       setNotice("");
+      rememberCall(SESSION);
       await setCallState(uid, room.id, { session: SESSION, cam: false, mic: false });
     }),
     leaveCall: () => room && run(async () => {
       engine.current?.close();
+      rememberCall(null);
       await setCallState(uid, room.id, { session: null, cam: false, mic: false });
     }),
     toggleMic: () => engine.current && run(async () => {

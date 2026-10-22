@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { FiPause, FiPlay, FiUsers } from "react-icons/fi";
+import { FiChevronRight, FiPause, FiPlay, FiUsers } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
@@ -51,8 +52,30 @@ function StudyRoom({ compact = false }) {
   }, [room]);
 
   if (!user || !study) return null;
-  // On Home it shows up only when there is something to act on.
-  if (compact && !room && study.invites.length === 0) return null;
+  // On Home it's only a pointer to the Study room tab, and only when there is
+  // something there: a room you're in, or an invite.
+  if (compact) {
+    if (!room && study.invites.length === 0) return null;
+    const onCall = study.onCall.length;
+    return (
+      <Link to="/focus?tab=room" className="panel study-room-link">
+        <FiUsers aria-hidden="true" />
+        <span>
+          <strong>
+            {room
+              ? isHost
+                ? "You're in your study room"
+                : `You're in ${room.hostName}'s room`
+              : study.invites.length === 1
+                ? `${study.invites[0].hostName} invited you to study`
+                : `${study.invites.length} study room invites`}
+          </strong>
+          <small>{room ? (onCall ? `${onCall} on the call` : "Open the Study room tab") : "Open to join or decline"}</small>
+        </span>
+        <FiChevronRight aria-hidden="true" />
+      </Link>
+    );
+  }
 
   const act = async (task) => {
     setBusy(true);
@@ -90,9 +113,7 @@ function StudyRoom({ compact = false }) {
           </ul>
         ) : null}
 
-        {compact ? null : (
-          <>
-        <p className="panel-note">Study in sync with friends. You run the timer; theirs starts, pauses and ends with yours.</p>
+        <p className="panel-note">Study in sync with friends, on video if you like. You run the timer; theirs starts, pauses and ends with yours.</p>
         <div className="study-room-start">
           <div className="study-lengths" role="group" aria-label="Round length">
             {LENGTHS.map((value) => (
@@ -105,8 +126,6 @@ function StudyRoom({ compact = false }) {
             Open a room
           </button>
         </div>
-          </>
-        )}
         {study.notice ? <p className="panel-note">{study.notice}</p> : null}
         {study.error ? <p className="login-error">{study.error}</p> : null}
       </section>

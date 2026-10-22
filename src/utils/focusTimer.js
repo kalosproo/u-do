@@ -8,6 +8,15 @@ import { toDateKey } from "./dateKeys.js";
 
 export const PRESETS = [25, 50, 90];
 export const DEFAULT_MINUTES = 25;
+export const MIN_MINUTES = 1;
+export const MAX_MINUTES = 180;
+
+/** A length someone typed, as whole minutes from 1 to 180, or null if it isn't one. */
+export const cleanMinutes = (value) => {
+  const number = Math.round(Number(String(value ?? "").trim()));
+  if (!Number.isFinite(number) || String(value ?? "").trim() === "") return null;
+  return Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, number));
+};
 
 /** A rest that scales with the stretch it follows. */
 /**
