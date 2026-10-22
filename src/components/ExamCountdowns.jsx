@@ -8,6 +8,7 @@ import { toDateKey } from "../utils/dateKeys";
 import { countdownLabel, daysUntil, minutesStudied, upcomingExams } from "../utils/exams";
 import { formatMinutes } from "../utils/focusTimer";
 import FlipCard from "./focus/FlipCard";
+import { friendlyError } from "../utils/friendlyError";
 
 const SHOWN = 4;
 
@@ -53,8 +54,8 @@ function ExamCountdowns() {
       setState((current) => ({ ...current, exams: [...current.exams.filter((e) => e.id !== saved.id), saved] }));
       setForm(null);
       setError("");
-    } catch {
-      setError("Couldn't save that. Try again.");
+    } catch (saveError) {
+      setError(friendlyError(saveError, "Couldn't save that. Try again."));
     }
   };
 

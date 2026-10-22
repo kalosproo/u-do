@@ -3,6 +3,7 @@ import { FiCalendar, FiCopy } from "react-icons/fi";
 
 import { useAuth } from "../hooks/useAuth";
 import { getCalendarFeedUrl, googleCalendarUrl, webcalUrl } from "../services/calendarFeed";
+import { friendlyError } from "../utils/friendlyError";
 
 /**
  * Calendar sync: one private link that Google Calendar or Apple Calendar
@@ -25,10 +26,13 @@ function CalendarSync() {
       setUrl(await getCalendarFeedUrl({ reset }));
       if (reset) setNote("New link made. The old one has stopped working — add the new one to your calendar.");
     } catch (error) {
+      // A server function that isn't deployed yet answers without CORS
+      // headers, which the SDK reports as "internal"; online, that means
+      // "not switched on yet", not a bad connection.
       setNote(
-        error?.code === "functions/failed-precondition"
-          ? "Calendar sync isn't switched on for U.Do yet."
-          : "Couldn't get your link. Check your connection and try again."
+        error?.code === "functions/internal" && navigator.onLine !== false
+          ? "Calendar sync isn't switched on yet. Try again later."
+          : friendlyError(error, "Couldn't get your link. Try again.")
       );
     }
     setBusy(false);

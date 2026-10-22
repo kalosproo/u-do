@@ -5,6 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 import { addGrade, deleteGrade, listGrades } from "../services/grades";
 import { toDateKey } from "../utils/dateKeys";
 import { gradeSummary, percentOf, validateGrade } from "../utils/grades";
+import { friendlyError } from "../utils/friendlyError";
 
 const EMPTY = { subject: "", title: "", score: "", outOf: "100" };
 const pct = (n) => `${Number.isInteger(n) ? n : n.toFixed(1)}%`;
@@ -48,7 +49,7 @@ function GradesCard() {
       setState({ uid: user.uid, grades: [...grades, created] });
       setForm((current) => ({ ...EMPTY, subject: current.subject, outOf: current.outOf }));
     } catch (saveError) {
-      setError(saveError?.message || "Couldn't save that mark.");
+      setError(friendlyError(saveError, "Couldn't save that mark."));
     }
   };
 
@@ -56,9 +57,9 @@ function GradesCard() {
     setState({ uid: user.uid, grades: grades.filter((item) => item.id !== grade.id) });
     try {
       await deleteGrade(user.uid, grade.id);
-    } catch {
+    } catch (removeError) {
       setState({ uid: user.uid, grades });
-      setError("Couldn't remove that mark.");
+      setError(friendlyError(removeError, "Couldn't remove that mark."));
     }
   };
 

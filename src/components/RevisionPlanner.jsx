@@ -5,6 +5,7 @@ import { listExams } from "../services/exams";
 import { createPlan } from "../services/planner";
 import { toDateKey } from "../utils/dateKeys";
 import { MAX_CHAPTERS, parseChapters, revisionPlan } from "../utils/revisionPlan";
+import { friendlyError } from "../utils/friendlyError";
 
 const formatDay = (key) =>
   new Date(`${key}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
@@ -61,7 +62,7 @@ function RevisionPlanner({ onClose, onAdded }) {
       onAdded?.(plan.items.length);
       onClose();
     } catch (error) {
-      setStatus(error?.message || "Couldn't add these to your planner. Try again.");
+      setStatus(friendlyError(error, "Couldn't add these to your planner. Try again."));
       setBusy(false);
     }
   };
