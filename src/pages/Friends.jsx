@@ -106,10 +106,11 @@ function Friends() {
   const [friendFilter, setFriendFilter] = useState("");
   const [toggled, setToggled] = useState(() => new Set());
 
-  // A deleted request waits UNDO_MS before it is really deleted, so a
-  // mis-tap can be taken back. The ref is what the timer and unmount read.
+  // A deleted request or removed friend waits UNDO_MS before it really goes,
+  // so a mis-tap can be taken back. The ref is what the timer and exits read.
   const [pendingDelete, setPendingDelete] = useState(null);
   const pendingRef = useRef(null);
+  const isPending = (kind, uid) => pendingRef.current?.kind === kind && pendingRef.current.person.uid === uid;
   const userRef = useRef(user);
   useEffect(() => {
     userRef.current = user;
@@ -139,10 +140,10 @@ function Friends() {
     ]);
 
     if (incoming.status === "fulfilled") {
-      setRequests(incoming.value.filter((item) => item.uid !== pendingRef.current?.request.uid));
+      setRequests(incoming.value.filter((item) => !isPending("request", item.uid)));
     }
     if (sent.status === "fulfilled") setOutgoing(sent.value);
-    if (mine.status === "fulfilled") setFriends(mine.value);
+    if (mine.status === "fulfilled") setFriends(mine.value.filter((item) => !isPending("friend", item.uid)));
 
     // Name what actually failed rather than blaming the whole page.
     const failed = [
@@ -348,7 +349,7 @@ function Friends() {
     }
   };
 
-  // Really deletes whatever is waiting. Safe to call twice.
+  // Really does whatever is waiting. Safe to call twice.
   const commitDelete = useCallback(() => {
     const pending = pendingRef.current;
     const currentUser = userRef.current;
@@ -356,9 +357,14 @@ function Friends() {
     setPendingDelete(null);
     if (!pending || !currentUser) return;
 
-    declineFriendRequest(currentUser, pending.request.uid).catch((error) => {
-      setStatus(error?.message || "Couldn't delete that request.");
-      setRequests((current) => [pending.request, ...current.filter((item) => item.uid !== pending.request.uid)]);
+    const isRequest = pending.kind === "request";
+    const work = isRequest
+      ? declineFriendRequest(currentUser, pending.person.uid)
+      : removeFriend(currentUser, pending.person.uid);
+    work.catch((error) => {
+      setStatus(error?.message || (isRequest ? "Couldn't delete that request." : "Couldn't remove that friend."));
+      const setList = isRequest ? setRequests : setFriends;
+      setList((current) => [pending.person, ...current.filter((item) => item.uid !== pending.person.uid)]);
     });
   }, []);
 
@@ -368,19 +374,39 @@ function Friends() {
     return () => clearTimeout(timer);
   }, [pendingDelete, commitDelete]);
 
-  // Leaving the page doesn't cancel a delete you meant.
-  useEffect(() => commitDelete, [commitDelete]);
+  // Leaving the page, closing the tab or switching away from the app doesn't
+  // cancel what you meant to do: it happens then instead of after the wait.
+  useEffect(() => {
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") commitDelete();
+    };
+    window.addEventListener("pagehide", commitDelete);
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      window.removeEventListener("pagehide", commitDelete);
+      document.removeEventListener("visibilitychange", onHidden);
+      commitDelete();
+    };
+  }, [commitDelete]);
+
+  const startPending = (kind, person, list, setList) => {
+    if (pendingRef.current) commitDelete();
+
+    const pending = { kind, person, index: list.findIndex((item) => item.uid === person.uid), id: Date.now() };
+    pendingRef.current = pending;
+    setPendingDelete(pending);
+    setList((current) => current.filter((item) => item.uid !== person.uid));
+    if (searchResult?.uid === person.uid) setSearchRelationship(RELATIONSHIP.NONE);
+  };
 
   const handleDecline = (request) => {
     if (!requireUser()) return;
-    if (pendingRef.current) commitDelete();
+    startPending("request", request, requests, setRequests);
+  };
 
-    const index = requests.findIndex((item) => item.uid === request.uid);
-    const pending = { request, index, id: Date.now() };
-    pendingRef.current = pending;
-    setPendingDelete(pending);
-    setRequests((current) => current.filter((item) => item.uid !== request.uid));
-    if (searchResult?.uid === request.uid) setSearchRelationship(RELATIONSHIP.NONE);
+  const handleRemove = (friend) => {
+    if (!requireUser()) return;
+    startPending("friend", friend, friends, setFriends);
   };
 
   const handleUndoDelete = () => {
@@ -389,28 +415,14 @@ function Friends() {
     setPendingDelete(null);
     if (!pending) return;
 
-    setRequests((current) => {
-      const rest = current.filter((item) => item.uid !== pending.request.uid);
-      rest.splice(Math.max(0, Math.min(pending.index, rest.length)), 0, pending.request);
+    const setList = pending.kind === "request" ? setRequests : setFriends;
+    setList((current) => {
+      const rest = current.filter((item) => item.uid !== pending.person.uid);
+      rest.splice(Math.max(0, Math.min(pending.index, rest.length)), 0, pending.person);
       return rest;
     });
-    if (searchResult?.uid === pending.request.uid) setSearchRelationship(RELATIONSHIP.INCOMING);
-  };
-
-  const handleRemove = async (friendUid, name) => {
-    const currentUser = requireUser();
-    if (!currentUser) return;
-    if (!window.confirm(`Remove ${name}? You'll both stop seeing each other's streaks.`)) return;
-
-    setBusyUid(friendUid);
-    try {
-      await removeFriend(currentUser, friendUid);
-      setFriends((current) => current.filter((item) => item.uid !== friendUid));
-      if (searchResult?.uid === friendUid) setSearchRelationship(RELATIONSHIP.NONE);
-    } catch (error) {
-      setStatus(error?.message || "Couldn't remove that friend.");
-    } finally {
-      setBusyUid("");
+    if (searchResult?.uid === pending.person.uid) {
+      setSearchRelationship(pending.kind === "request" ? RELATIONSHIP.INCOMING : RELATIONSHIP.FRIENDS);
     }
   };
 
@@ -676,10 +688,9 @@ function Friends() {
                         <button
                           type="button"
                           className="btn btn-sm"
-                          onClick={() => handleRemove(friend.uid, friend.displayName)}
-                          disabled={busyUid === friend.uid}
+                          onClick={() => handleRemove(friend)}
                         >
-                          {busyUid === friend.uid ? "Removing..." : "Remove"}
+                          Remove
                         </button>
                       </div>
                     </div>
@@ -890,9 +901,9 @@ function Friends() {
       {pendingDelete ? (
         <UndoToast
           key={pendingDelete.id}
-          leading={<Avatar person={pendingDelete.request} />}
-          title="Request deleted"
-          detail={pendingDelete.request.displayName || "U.Do user"}
+          leading={<Avatar person={pendingDelete.person} />}
+          title={pendingDelete.kind === "request" ? "Request deleted" : "Friend removed"}
+          detail={pendingDelete.person.displayName || "U.Do user"}
           duration={UNDO_MS}
           onUndo={handleUndoDelete}
         />
