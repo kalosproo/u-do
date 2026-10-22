@@ -44,7 +44,7 @@ const OWNED_DOCS = [
 ];
 
 /** Subcollections hanging off the person's public profile. */
-const PROFILE_SUBS = ["shared", "requests", "outgoing", "friends", "studyInvites", "followers", "following"];
+const PROFILE_SUBS = ["shared", "requests", "outgoing", "friends", "studyInvites"];
 
 const deleteAll = async (query) => {
   const snap = await query.get();
@@ -69,7 +69,7 @@ const deleteAll = async (query) => {
  * that resolves to nothing.
  */
 const detachFromOthers = async (uid) => {
-  const removed = { friends: 0, requests: 0, outgoing: 0, follows: 0 };
+  const removed = { friends: 0, requests: 0, outgoing: 0 };
 
   // The friendship is written on both sides, so the other half is found by
   // reading my own list and deleting the mirror of each entry.
@@ -79,21 +79,6 @@ const detachFromOthers = async (uid) => {
     await db.collection("profiles").doc(entry.id).collection("friends").doc(uid).delete()
       .then(() => { removed.friends += 1; })
       .catch(() => {});
-  }
-
-  // Following, both directions: my followers stop following me, and I leave
-  // the follower lists of everyone I followed.
-  const [followers, following] = await Promise.all([
-    db.collection("profiles").doc(uid).collection("followers").get(),
-    db.collection("profiles").doc(uid).collection("following").get(),
-  ]);
-  for (const entry of followers.docs) {
-    await db.collection("profiles").doc(entry.id).collection("following").doc(uid).delete()
-      .then(() => { removed.follows += 1; }).catch(() => {});
-  }
-  for (const entry of following.docs) {
-    await db.collection("profiles").doc(entry.id).collection("followers").doc(uid).delete()
-      .then(() => { removed.follows += 1; }).catch(() => {});
   }
 
   // A pending request or marker can sit on an account that never became a
@@ -190,7 +175,7 @@ export const deleteMyAccount = onCall({ timeoutSeconds: 300, secrets: [KEY_ID, K
     }
 
     // Before the profile's own lists go: detaching reads them to find the
-    // other half of every friendship and follow.
+    // other half of every friendship.
     Object.assign(removed, await detachFromOthers(uid));
 
     for (const name of PROFILE_SUBS) {

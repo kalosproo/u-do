@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../../hooks/useAuth";
-import { listMutuals } from "../../services/friends";
+import { listFriends } from "../../services/friends";
 import { readPresence } from "../../services/focusSync";
 
 const REFRESH_MS = 60_000;
@@ -25,7 +25,7 @@ function FriendsFocusing({ compact = false }) {
 
     const load = async () => {
       try {
-        const friends = await listMutuals(user.uid);
+        const friends = await listFriends(user.uid);
         const checked = await Promise.all(
           friends.map(async (friend) => ({ ...friend, presence: await readPresence(friend.uid) }))
         );

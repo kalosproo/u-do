@@ -1,10 +1,6 @@
 import { deleteDoc, getDoc, getDocs, runTransaction, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import {
-  followerDoc,
-  followersCollection,
-  followingCollection,
-  followingDoc,
   friendDoc,
   friendsCollection,
   inviteCodeDoc,
@@ -283,42 +279,49 @@ export const findUserByInviteCode = async (value) => {
   return readProfile(snap.data().uid);
 };
 
-const exists = (ref) => getDoc(ref).then((snap) => snap.exists()).catch(() => false);
+export const isFriend = async (uid, otherUid) =>
+  (await getDoc(friendDoc(uid, otherUid))).exists();
 
-/**
- * Where two accounts stand, Instagram-style. An older two-way friendship
- * counts as following both ways until it is carried over.
- */
-export const getRelationship = async (uid, targetUid) => {
-  const none = { self: false, following: false, followedBy: false, requested: false, incoming: false };
-  if (!uid || !targetUid) return none;
-  if (uid === targetUid) return { ...none, self: true };
-
-  const [following, followedBy, legacy, incoming, requested] = await Promise.all([
-    exists(followingDoc(uid, targetUid)),
-    exists(followerDoc(uid, targetUid)),
-    exists(friendDoc(uid, targetUid)),
-    exists(requestDoc(uid, targetUid)),
-    exists(outgoingDoc(uid, targetUid)),
-  ]);
-
-  return {
-    self: false,
-    following: following || legacy,
-    followedBy: followedBy || legacy,
-    // A stale marker for someone already followed is not a pending request.
-    requested: requested && !(following || legacy),
-    incoming: incoming && !(followedBy || legacy),
-  };
+/** Every state two accounts can be in, so the UI never has to guess. */
+export const RELATIONSHIP = {
+  SELF: "self",
+  FRIENDS: "friends",
+  OUTGOING: "outgoing",
+  INCOMING: "incoming",
+  NONE: "none",
 };
 
-export const isMutual = (relationship) => relationship.following && relationship.followedBy;
+/**
+ * What am I to this account right now?
+ *
+ * Checked in priority order: an existing friendship outranks a stale request
+ * left behind by a failed cleanup, and an incoming request outranks an
+ * outgoing one so the UI offers Accept rather than a second send.
+ */
+export const getRelationship = async (uid, targetUid) => {
+  if (!uid || !targetUid) return RELATIONSHIP.NONE;
+  if (uid === targetUid) return RELATIONSHIP.SELF;
+
+  const [friends, incoming, outgoing] = await Promise.all([
+    getDoc(friendDoc(uid, targetUid)).catch(() => null),
+    getDoc(requestDoc(uid, targetUid)).catch(() => null),
+    getDoc(outgoingDoc(uid, targetUid)).catch(() => null),
+  ]);
+
+  if (friends?.exists()) return RELATIONSHIP.FRIENDS;
+  if (incoming?.exists()) return RELATIONSHIP.INCOMING;
+  if (outgoing?.exists()) return RELATIONSHIP.OUTGOING;
+  return RELATIONSHIP.NONE;
+};
 
 /**
- * Asks to follow someone. Every account is private, so this is always a
- * request they accept; asking twice changes nothing.
+ * Asks to be friends.
+ *
+ * Returns what actually happened, because two cases are not a plain send:
+ * asking someone who already asked you is an accept, and asking someone twice
+ * is a no-op rather than an error that resets the original request's age.
  */
-export const sendFollowRequest = async (user, targetUid) => {
+export const sendFriendRequest = async (user, targetUid) => {
   if (targetUid === user.uid) throw new Error("That's your own profile.");
 
   const myProfile = await readProfile(user.uid);
@@ -327,7 +330,20 @@ export const sendFollowRequest = async (user, targetUid) => {
   }
 
   const relationship = await getRelationship(user.uid, targetUid);
-  if (relationship.following || relationship.requested) return relationship;
+
+  if (relationship === RELATIONSHIP.FRIENDS) {
+    throw new Error("You're already friends.");
+  }
+
+  // They asked first: the honest response to "add them" is to accept.
+  if (relationship === RELATIONSHIP.INCOMING) {
+    await acceptFriendRequest(user, targetUid);
+    return RELATIONSHIP.FRIENDS;
+  }
+
+  if (relationship === RELATIONSHIP.OUTGOING) {
+    return RELATIONSHIP.OUTGOING;
+  }
 
   await setDoc(requestDoc(targetUid, user.uid), {
     uid: user.uid,
@@ -337,8 +353,13 @@ export const sendFollowRequest = async (user, targetUid) => {
     createdAt: serverTimestamp(),
   });
 
-  // The sender's own copy, so "Requested" shows and can be withdrawn.
-  // Best-effort: the request itself already went through.
+  // The sender's own copy, written after the request so a failure here leaves
+  // a real request rather than a phantom "Pending" with nothing behind it.
+  //
+  // Best-effort on purpose: on a deployment whose rules predate this
+  // collection the write is denied, and the request itself has already
+  // succeeded. Throwing here would tell the user their request failed when
+  // the recipient can already see it.
   await setDoc(outgoingDoc(user.uid, targetUid), {
     uid: targetUid,
     createdAt: serverTimestamp(),
@@ -346,7 +367,7 @@ export const sendFollowRequest = async (user, targetUid) => {
     if (error?.code !== "permission-denied") throw error;
   });
 
-  return { ...relationship, requested: true };
+  return RELATIONSHIP.OUTGOING;
 };
 
 /** Withdraws a request. The rules let the sender delete the recipient's copy. */
@@ -388,7 +409,7 @@ export const listOutgoingRequests = async (uid) => {
       const targetUid = item.id;
       const [profile, alreadyFriends] = await Promise.all([
         readProfile(targetUid).catch(() => null),
-        exists(followingDoc(uid, targetUid)),
+        isFriend(uid, targetUid).catch(() => false),
       ]);
 
       if (alreadyFriends) {
@@ -409,71 +430,34 @@ export const listOutgoingRequests = async (uid) => {
 };
 
 /**
- * Approves someone's request to follow. Both records are written before the
- * request is cleared: the request is what lets the rules accept them.
+ * Both sides of the friendship are written before the request is cleared: the
+ * request doc is what proves to the security rules that the other person asked
+ * to be added, so deleting it first would lock out the second write.
  */
-export const acceptFollowRequest = async (user, requesterUid) => {
-  await setDoc(followerDoc(user.uid, requesterUid), { uid: requesterUid, since: serverTimestamp() });
-  await setDoc(followingDoc(requesterUid, user.uid), { uid: user.uid, since: serverTimestamp() });
+export const acceptFriendRequest = async (user, requesterUid) => {
+  await setDoc(friendDoc(user.uid, requesterUid), {
+    uid: requesterUid,
+    since: serverTimestamp(),
+  });
+  await setDoc(friendDoc(requesterUid, user.uid), {
+    uid: user.uid,
+    since: serverTimestamp(),
+  });
+  await deleteDoc(requestDoc(user.uid, requesterUid));
+
+  // Clear the sender's "Pending" marker. Best-effort: the friendship is
+  // already real, and listOutgoingRequests drops friends anyway.
+  await deleteDoc(outgoingDoc(requesterUid, user.uid)).catch(() => {});
+};
+
+export const declineFriendRequest = async (user, requesterUid) => {
   await deleteDoc(requestDoc(user.uid, requesterUid));
   await deleteDoc(outgoingDoc(requesterUid, user.uid)).catch(() => {});
 };
 
-export const declineFollowRequest = async (user, requesterUid) => {
-  await deleteDoc(requestDoc(user.uid, requesterUid));
-  await deleteDoc(outgoingDoc(requesterUid, user.uid)).catch(() => {});
-};
-
-/** Removes an older two-way friendship, both halves; either may already be gone. */
-const dropLegacy = (uid, otherUid) =>
-  Promise.all([
-    deleteDoc(friendDoc(uid, otherUid)).catch(() => {}),
-    deleteDoc(friendDoc(otherUid, uid)).catch(() => {}),
-  ]);
-
-/** Stops following someone. They keep following you if they did. */
-export const unfollow = async (user, targetUid) => {
-  const relationship = await getRelationship(user.uid, targetUid);
-  // An older friendship becomes "they follow you" before the unfollow, so
-  // unfollowing doesn't also cut them off from you.
-  if (await exists(friendDoc(user.uid, targetUid))) await carryOver(user.uid, targetUid);
-  await deleteDoc(followingDoc(user.uid, targetUid)).catch(() => {});
-  await deleteDoc(followerDoc(targetUid, user.uid)).catch(() => {});
-  return { ...relationship, following: false };
-};
-
-/** Removes a follower. You keep following them if you did. */
-export const removeFollower = async (user, followerUid) => {
-  if (await exists(friendDoc(user.uid, followerUid))) await carryOver(user.uid, followerUid);
-  await deleteDoc(followerDoc(user.uid, followerUid)).catch(() => {});
-  await deleteDoc(followingDoc(followerUid, user.uid)).catch(() => {});
-};
-
-/**
- * Turns an older two-way friendship into following both ways, then deletes
- * the old records. Only when both halves are there; a one-sided leftover is
- * left alone.
- */
-const carryOver = async (uid, otherUid) => {
-  const theirs = await exists(friendDoc(otherUid, uid));
-  if (!theirs) return false;
-  const stamp = { since: serverTimestamp(), legacy: true };
-  await setDoc(followerDoc(uid, otherUid), { uid: otherUid, ...stamp });
-  await setDoc(followingDoc(otherUid, uid), { uid, ...stamp });
-  await setDoc(followingDoc(uid, otherUid), { uid: otherUid, ...stamp });
-  await setDoc(followerDoc(otherUid, uid), { uid, ...stamp });
-  await dropLegacy(uid, otherUid);
-  return true;
-};
-
-/** Carries every older friendship over. Safe to run on every visit. */
-export const carryOverFriends = async (uid) => {
-  const snap = await getDocs(friendsCollection(uid)).catch(() => null);
-  let moved = 0;
-  for (const item of snap?.docs || []) {
-    if (await carryOver(uid, item.id).catch(() => false)) moved += 1;
-  }
-  return moved;
+export const removeFriend = async (user, friendUid) => {
+  await deleteDoc(friendDoc(user.uid, friendUid));
+  await deleteDoc(friendDoc(friendUid, user.uid));
 };
 
 /**
@@ -506,12 +490,10 @@ export const getFriendSummary = async (friendUid) => {
  * then take.
  */
 export const clearFriendGraph = async (uid) => {
-  const [friends, requests, outgoing, followers, following] = await Promise.all([
+  const [friends, requests, outgoing] = await Promise.all([
     getDocs(friendsCollection(uid)),
     getDocs(requestsCollection(uid)),
     getDocs(outgoingCollection(uid)),
-    getDocs(followersCollection(uid)),
-    getDocs(followingCollection(uid)),
   ]);
 
   await Promise.all([
@@ -519,14 +501,6 @@ export const clearFriendGraph = async (uid) => {
       await deleteDoc(friendDoc(uid, item.id));
       // The other side may already be gone; that is not a failure.
       await deleteDoc(friendDoc(item.id, uid)).catch(() => {});
-    }),
-    ...followers.docs.map(async (item) => {
-      await deleteDoc(followerDoc(uid, item.id));
-      await deleteDoc(followingDoc(item.id, uid)).catch(() => {});
-    }),
-    ...following.docs.map(async (item) => {
-      await deleteDoc(followingDoc(uid, item.id));
-      await deleteDoc(followerDoc(item.id, uid)).catch(() => {});
     }),
     ...requests.docs.map(async (item) => {
       await deleteDoc(requestDoc(uid, item.id));
@@ -540,88 +514,55 @@ export const clearFriendGraph = async (uid) => {
     }),
   ]);
 
-  return {
-    friends: friends.size + followers.size + following.size,
-    requests: requests.size,
-    outgoing: outgoing.size,
-  };
+  return { friends: friends.size, requests: requests.size, outgoing: outgoing.size };
 };
 
 /** Removes the shared streak card so friends stop seeing habit data. */
 export const clearSharedSummary = (uid) => deleteDoc(sharedSummaryDoc(uid));
 
-const card = async (otherUid, { withSummary = false } = {}) => {
-  const [profile, summary, badges] = await Promise.all([
-    readProfile(otherUid).catch(() => null),
-    withSummary ? getFriendSummary(otherUid).catch(() => null) : null,
-    withSummary
-      ? getDoc(badgesDoc(otherUid)).then((snap) => (snap.exists() ? snap.data().badges || {} : {})).catch(() => ({}))
-      : {},
-  ]);
-  return {
-    uid: otherUid,
-    username: profile?.username || "",
-    displayName: profile?.displayName || "U.Do user",
-    photoURL: profile?.photoURL || "",
-    summary,
-    badgeCount: Object.keys(badges || {}).length,
-  };
-};
+export const listFriends = async (uid) => {
+  const snap = await getDocs(friendsCollection(uid));
 
-const idsOf = async (ref) => (await getDocs(ref)).docs.map((item) => item.id);
-
-/** Who this account follows and who follows it, older friendships counted both ways. */
-const graphOf = async (uid) => {
-  const [following, followers, legacy] = await Promise.all([
-    idsOf(followingCollection(uid)).catch(() => []),
-    idsOf(followersCollection(uid)).catch(() => []),
-    idsOf(friendsCollection(uid)).catch(() => []),
-  ]);
-  return {
-    following: new Set([...following, ...legacy]),
-    followers: new Set([...followers, ...legacy]),
-  };
-};
-
-/** People this account follows, with their streaks and badges (followers may see those). */
-export const listFollowing = async (uid) => {
-  const { following, followers } = await graphOf(uid);
   return Promise.all(
-    [...following].map(async (id) => ({ ...(await card(id, { withSummary: true })), mutual: followers.has(id) }))
+    snap.docs.map(async (item) => {
+      const friendUid = item.id;
+      const [profile, summary, badges] = await Promise.all([
+        readProfile(friendUid).catch(() => null),
+        getFriendSummary(friendUid).catch(() => null),
+        getDoc(badgesDoc(friendUid)).then((snap) => (snap.exists() ? snap.data().badges || {} : {})).catch(() => ({})),
+      ]);
+
+      return {
+        uid: friendUid,
+        username: profile?.username || "",
+        displayName: profile?.displayName || "U.Do user",
+        photoURL: profile?.photoURL || "",
+        summary,
+        badgeCount: Object.keys(badges).length,
+      };
+    })
   );
 };
-
-/** People who follow this account. */
-export const listFollowers = async (uid) => {
-  const { following, followers } = await graphOf(uid);
-  return Promise.all([...followers].map(async (id) => ({ ...(await card(id)), mutual: following.has(id) })));
-};
-
-/** Mutuals: study rooms, the leaderboard and "studying now" are for them. */
-export const listMutuals = async (uid) => {
-  const { following, followers } = await graphOf(uid);
-  const ids = [...following].filter((id) => followers.has(id));
-  return Promise.all(ids.map((id) => card(id, { withSummary: true })));
-};
-
-/** Streak cards: everyone you follow. Kept under its old name for callers. */
-export const listFriends = listFollowing;
 
 /**
- * "Followed by asha and 2 others": people you follow who follow them. Read
- * through your own following's lists, which you can see because you follow
- * them — never through the other person's private list.
+ * Friends you share with someone you looked up. Each check reads one of your
+ * friends' lists, which the rules allow only because they are your friend —
+ * so this can never reveal anything about a stranger's friends.
  */
-export const mutualFollowersOf = async (uid, targetUid, limit = 30) => {
-  const { following } = await graphOf(uid);
-  following.delete(targetUid);
-  const checks = await Promise.all(
-    [...following].slice(0, limit).map(async (id) => ((await exists(followingDoc(id, targetUid))) ? id : null))
+export const mutualFriendsWith = async (uid, targetUid, limit = 30) => {
+  if (!uid || !targetUid || uid === targetUid) return { count: 0, names: [] };
+
+  const mine = (await getDocs(friendsCollection(uid))).docs.map((item) => item.id).filter((id) => id !== targetUid).slice(0, limit);
+  const shared = (
+    await Promise.all(
+      mine.map(async (friendUid) =>
+        (await getDoc(friendDoc(friendUid, targetUid)).catch(() => null))?.exists() ? friendUid : null
+      )
+    )
+  ).filter(Boolean);
+
+  const names = await Promise.all(
+    shared.slice(0, 2).map(async (friendUid) => (await readProfile(friendUid).catch(() => null))?.displayName || "a friend")
   );
-  const ids = checks.filter(Boolean);
-  const named = await Promise.all(ids.slice(0, 2).map((id) => readProfile(id).catch(() => null)));
-  return {
-    count: ids.length,
-    names: named.map((profile) => profile?.username || profile?.displayName).filter(Boolean),
-  };
+  return { count: shared.length, names };
 };

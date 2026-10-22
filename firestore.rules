@@ -66,36 +66,11 @@ service cloud.firestore {
       );
     }
 
-    function profilePath(ownerId, sub, otherId) {
-      return /databases/$(database)/documents/profiles/$(ownerId)/$(sub)/$(otherId);
-    }
-
-    /**
-     * Following works like a private Instagram account: you ask, they
-     * accept. The owner's followers/{me} is their approval; following/{me} is
-     * them following me back. Both together make us mutuals.
-     *
-     * friends/{me} is the older, two-way friendship. It still counts as
-     * mutual, so nobody loses access while the app carries it over.
-     */
-    function isFollowerOf(ownerId) {
-      return isSignedIn()
-        && (exists(profilePath(ownerId, 'followers', request.auth.uid))
-            || exists(profilePath(ownerId, 'friends', request.auth.uid)));
-    }
-
-    // Mutuals: study rooms, the leaderboard and "studying now".
+    // A friendship is recorded on both sides. Someone may read an owner's
+    // shared card only while the owner's own friend list names them.
     function isFriendOf(ownerId) {
       return isSignedIn()
-        && (exists(profilePath(ownerId, 'friends', request.auth.uid))
-            || (exists(profilePath(ownerId, 'followers', request.auth.uid))
-                && exists(profilePath(ownerId, 'following', request.auth.uid))));
-    }
-
-    function validFollow(otherId) {
-      return request.resource.data.keys().hasOnly(['uid', 'since', 'legacy'])
-        && request.resource.data.uid == otherId
-        && (!('legacy' in request.resource.data) || request.resource.data.legacy is bool);
+        && exists(/databases/$(database)/documents/profiles/$(ownerId)/friends/$(request.auth.uid));
     }
 
     /**
@@ -300,43 +275,9 @@ service cloud.firestore {
       allow write: if isOwner(uid) && cardMatchesLedger(uid);
 
       // Habit names, streaks and completion rates. Friends only.
-      // Followers see the habit summary and badges; "studying now" and the
-      // weekly focus total are for mutuals only.
       match /shared/{docId} {
-        allow read: if isOwner(uid)
-          || (docId in ['summary', 'badges'] && isFollowerOf(uid))
-          || isFriendOf(uid);
+        allow read: if isOwner(uid) || isFriendOf(uid);
         allow write: if isOwner(uid);
-      }
-
-      /**
-       * Who follows this account. The owner approves a follower only while
-       * that person's request is waiting, or to carry over an older
-       * friendship. Either side can end it.
-       */
-      match /followers/{followerUid} {
-        allow read: if isOwner(uid) || isOwner(followerUid) || isFollowerOf(uid);
-        allow create: if validFollow(followerUid) && (
-          (isOwner(uid) && (exists(profilePath(uid, 'requests', followerUid)) || exists(profilePath(uid, 'friends', followerUid))))
-          // Carrying over an older friendship the owner had made.
-          || (isOwner(followerUid) && exists(profilePath(uid, 'friends', followerUid)))
-        );
-        allow delete: if isOwner(uid) || isOwner(followerUid);
-      }
-
-      /**
-       * Who this account follows. Written by the person being followed as
-       * they accept (the request proves it was asked for), by the follower
-       * once approved, or while carrying over an older friendship.
-       */
-      match /following/{targetUid} {
-        allow read: if isOwner(uid) || isOwner(targetUid) || isFollowerOf(uid);
-        allow create: if validFollow(targetUid) && (
-          (isOwner(targetUid) && exists(profilePath(targetUid, 'requests', uid)))
-          || (isOwner(uid) && exists(profilePath(targetUid, 'followers', uid)))
-          || ((isOwner(uid) || isOwner(targetUid)) && exists(profilePath(targetUid, 'friends', uid)))
-        );
-        allow delete: if isOwner(uid) || isOwner(targetUid);
       }
 
       match /requests/{fromUid} {
@@ -383,7 +324,9 @@ service cloud.firestore {
       }
 
       match /friends/{friendUid} {
-        allow read: if isOwner(uid) || isOwner(friendUid);
+        // Your friends may see who else you're friends with, which is what
+        // lets the app show mutual friends. Strangers still cannot.
+        allow read: if isOwner(uid) || isOwner(friendUid) || isFriendOf(uid);
 
         // Adding someone to your own list only ever widens who may see your
         // card, so you may do it freely.

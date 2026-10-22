@@ -4269,10 +4269,4 @@ body.is-focusing { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .coach-mark { animation: none; } }
 .focus-card-today span { white-space: nowrap; }
 
-/* Following / Followers */
-.friends-tabs { display: inline-flex; gap: 4px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; }
-.friends-tabs button { border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; cursor: pointer; display: inline-flex; gap: 6px; align-items: baseline; }
-.friends-tabs button span { font-size: 12px; font-variant-numeric: tabular-nums; opacity: 0.75; }
-.friends-tabs button.is-active { background: var(--text); color: var(--bg); }
-.friends-result-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
-.friends-mutuals { color: var(--text-muted); font-size: 12px; }
+.friends-mutuals { display: block; color: var(--text-muted); font-size: 12px; }

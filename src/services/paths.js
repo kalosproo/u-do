@@ -74,10 +74,3 @@ export const classesCollection = (uid) => collection(db, "users", uid, "classes"
 export const classDoc = (uid, id) => doc(db, "users", uid, "classes", id);
 export const gradesCollection = (uid) => collection(db, "users", uid, "grades");
 export const gradeDoc = (uid, id) => doc(db, "users", uid, "grades", id);
-
-// Following, Instagram-style: followers are approved, following is who this
-// account follows. Mutuals follow each other.
-export const followersCollection = (uid) => collection(db, "profiles", uid, "followers");
-export const followerDoc = (uid, followerUid) => doc(db, "profiles", uid, "followers", followerUid);
-export const followingCollection = (uid) => collection(db, "profiles", uid, "following");
-export const followingDoc = (uid, targetUid) => doc(db, "profiles", uid, "following", targetUid);

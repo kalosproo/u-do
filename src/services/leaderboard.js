@@ -1,7 +1,7 @@
-import { deleteDoc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { deleteDoc, getDoc, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
 
-import { listMutuals } from "./friends";
-import { focusWeekDoc } from "./paths";
+import { getPublicProfile } from "./friends";
+import { focusWeekDoc, friendsCollection } from "./paths";
 
 /**
  * The friends leaderboard. Each person publishes one number — this week's
@@ -13,16 +13,19 @@ export const publishWeek = (uid, { week, minutes }) =>
 
 export const clearWeek = (uid) => deleteDoc(focusWeekDoc(uid));
 
-/** Mutuals with their published week, as { uid, name, photoURL, week, minutes }. */
+/** Friends with their published week, as { uid, name, photoURL, week, minutes }. */
 export const loadFriendWeeks = async (uid) => {
-  const mutuals = await listMutuals(uid);
+  const friends = await getDocs(friendsCollection(uid));
   return Promise.all(
-    mutuals.map(async (person) => {
-      const week = await getDoc(focusWeekDoc(person.uid)).then((snap) => (snap.exists() ? snap.data() : null)).catch(() => null);
+    friends.docs.map(async (item) => {
+      const [profile, week] = await Promise.all([
+        getPublicProfile(item.id).catch(() => null),
+        getDoc(focusWeekDoc(item.id)).then((snap) => (snap.exists() ? snap.data() : null)).catch(() => null),
+      ]);
       return {
-        uid: person.uid,
-        name: person.displayName || (person.username ? `@${person.username}` : "A friend"),
-        photoURL: person.photoURL || "",
+        uid: item.id,
+        name: profile?.displayName || (profile?.username ? `@${profile.username}` : "A friend"),
+        photoURL: profile?.photoURL || "",
         week: week?.week || "",
         minutes: Number(week?.minutes) || 0,
       };

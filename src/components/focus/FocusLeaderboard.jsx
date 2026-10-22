@@ -73,7 +73,7 @@ function FocusLeaderboard() {
         </ol>
       ) : (
         <p className="panel-note">
-          You&apos;ve focused {formatMinutes(mine)} this week. <Link to="/friends">Follow your friends</Link> — once they follow you back, you'll see who studies most.
+          You&apos;ve focused {formatMinutes(mine)} this week. <Link to="/friends">Add friends</Link> to see who studies most.
         </p>
       )}
 

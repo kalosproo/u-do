@@ -46,25 +46,22 @@ function PrivacyContent() {
         are your class timetable and the marks you add to the grade tracker.
       </p>
 
-      <h3>Your profile, followers and mutuals</h3>
+      <h3>Your profile and friends</h3>
       <p>
         A display name, a username, an invite code and a profile picture, which other
-        signed-in people can see so that search and invite links work. Every account
-        is private: someone can follow you only after you accept their request, and
-        you can remove a follower at any time.
+        signed-in people can see so that search and invite links work. If you add
+        friends, they can additionally see a summary of your habits: their names, your
+        streaks and your completion rates. While you run a focus session they can also
+        see that you are focusing and how long is left, and the leaderboard shows them
+        your total focus time this week. They never see what you are studying, and you
+        can turn both off on the Focus page. They can see which achievement
+        badges you have earned and when, and who else they share as friends with you,
+        so the app can show mutual friends. Nobody becomes your friend unless you
+        accept their request, and you can remove a friend at any time. They cannot see
+        your tasks, your planner, your finances, your exams, or anything else.
       </p>
       <p>
-        People you have accepted as followers can see a summary of your habits (their
-        names, your streaks and completion rates), which achievement badges you have
-        earned and when, and who else follows you and whom you follow. Mutuals — people
-        you follow who also follow you — can additionally see when you are focusing and
-        how long is left, and your total focus time this week on the leaderboard, and
-        can invite you to study rooms. Nobody ever sees what you are studying, and you
-        can turn the focus sharing off on the Focus page. Followers cannot see your
-        tasks, your planner, your finances, your exams, or anything else.
-      </p>
-      <p>
-        If you open a study room, the mutuals you invite can see your display name,
+        If you open a study room, the friends you invite can see your display name,
         who else has joined, and the room&apos;s timer. If you join one, the host and the
         others in it see your display name. A room never holds what anyone is studying,
         and it is deleted when the host closes it.
@@ -79,7 +76,7 @@ function PrivacyContent() {
       <h3>How the service is used</h3>
       <p>
         To run U.Do we keep counts of what each account has — how many active tasks,
-        habits and people you follow, and how many transactions, plans and assistant requests
+        habits and friends, and how many transactions, plans and assistant requests
         this month — and when it was last active. We also keep a log of what kind of
         thing happened and when, such as &quot;added a transaction&quot; or
         &quot;completed a task&quot;. Neither ever includes what you wrote: not a title,
@@ -188,7 +185,7 @@ function PrivacyContent() {
         <strong>Delete account</strong> at the bottom of Profile permanently removes
         the account itself and everything attached to it: your tasks, habits, planner
         and transactions, your profile and handle, your billing and reminder records,
-        and your place in anyone else&apos;s followers or following. It asks you to sign in again
+        and your place in anyone else&apos;s friends list. It asks you to sign in again
         first, because an unattended laptop should not be two clicks from destroying
         an account. It cannot be undone and we cannot recover it for you.
       </p>

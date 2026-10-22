@@ -30,8 +30,8 @@ export const onFriendRequest = onDocumentCreated(
     if (!wants(subscription)) return;
 
     await sendToSubscription(subscription, {
-      title: "New follow request",
-      body: `${await nameOf(fromUid)} wants to follow you on U.Do.`,
+      title: "New friend request",
+      body: `${await nameOf(fromUid)} wants to be friends on U.Do.`,
       url: "/friends",
       tag: `udo-request-${fromUid}`,
     });
@@ -85,28 +85,6 @@ export const onStudyInvite = onDocumentCreated(
       body: `${await nameOf(host)} invited you to their study room.`,
       url: "/focus",
       tag: `udo-room-${roomId}`,
-    });
-  },
-);
-
-/**
- * Someone accepted your request to follow them. Carried-over friendships are
- * marked legacy and say nothing — nobody did anything new.
- */
-export const onFollowAccepted = onDocumentCreated(
-  "profiles/{uid}/following/{targetUid}",
-  async (event) => {
-    const { uid, targetUid } = event.params;
-    if (uid === targetUid || event.data?.data()?.legacy === true) return;
-
-    const subscription = await subscriptionFor(uid);
-    if (!wants(subscription)) return;
-
-    await sendToSubscription(subscription, {
-      title: "Request accepted",
-      body: `${await nameOf(targetUid)} accepted your follow request.`,
-      url: "/friends",
-      tag: `udo-follow-${targetUid}`,
     });
   },
 );

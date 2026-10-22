@@ -98,6 +98,10 @@ await env.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(ctx.firestore(),"profiles",BOB,"friends",ALICE),{uid:ALICE});
 });
 await t("bob reads alice's summary while friends", () => assertSucceeds(getDoc(doc(bob,"profiles",ALICE,"shared","summary"))));
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(),"profiles",ALICE,"friends","carl_uid"),{uid:"carl_uid"}));
+await t("bob (a friend) can see alice is friends with carl — mutual friends", () => assertSucceeds(getDoc(doc(bob,"profiles",ALICE,"friends","carl_uid"))));
+await t("mallory (a stranger) CANNOT read alice's friend list", () => assertFails(getDoc(doc(mallory,"profiles",ALICE,"friends","carl_uid"))));
+await t("mallory CANNOT list alice's friends either", () => assertFails(getDocs(collection(mallory,"profiles",ALICE,"friends"))));
 await t("alice removes bob from her list", () => assertSucceeds(deleteDoc(doc(alice,"profiles",ALICE,"friends",BOB))));
 await t("bob can no longer read alice's summary", () => assertFails(getDoc(doc(bob,"profiles",ALICE,"shared","summary"))));
 await t("alice can remove herself from bob's list too", () => assertSucceeds(deleteDoc(doc(alice,"profiles",BOB,"friends",ALICE))));
@@ -430,59 +434,6 @@ await t("a score cannot exceed the total", () => assertFails(setDoc(doc(alice, "
 await t("a total must be positive", () => assertFails(setDoc(doc(alice, "users", ALICE, "grades", "g3"), grade({ outOf: 0 }))));
 await t("extra fields are refused", () => assertFails(setDoc(doc(alice, "users", ALICE, "grades", "g4"), grade({ teacherComment: "x" }))));
 await t("a stranger cannot read someone's grades", () => assertFails(getDoc(doc(mallory, "users", ALICE, "grades", "g1"))));
-
-console.log("\n=== following (private accounts) ===");
-const CARL = "carl_uid", DANA = "dana_uid", EVE = "eve_uid";
-const carl = env.authenticatedContext(CARL).firestore();
-const dana = env.authenticatedContext(DANA).firestore();
-const eve = env.authenticatedContext(EVE).firestore();
-const f = (uid) => ({ uid, since: new Date() });
-await env.withSecurityRulesDisabled(async (ctx) => {
-  const db0 = ctx.firestore();
-  await setDoc(doc(db0, "profiles", DANA, "shared", "summary"), { habits: [] });
-  await setDoc(doc(db0, "profiles", DANA, "shared", "focusWeek"), { week: "2026-10-19", minutes: 30 });
-});
-await t("nobody can approve themselves as a follower", () => assertFails(setDoc(doc(carl, "profiles", DANA, "followers", CARL), f(CARL))));
-await t("nobody can add a follower who never asked", () => assertFails(setDoc(doc(dana, "profiles", DANA, "followers", EVE), f(EVE))));
-await t("carl asks to follow dana", () => assertSucceeds(setDoc(doc(carl, "profiles", DANA, "requests", CARL), { uid: CARL })));
-await t("before accepting, carl can't see dana's streaks", () => assertFails(getDoc(doc(carl, "profiles", DANA, "shared", "summary"))));
-await t("dana accepts: approves carl as a follower", () => assertSucceeds(setDoc(doc(dana, "profiles", DANA, "followers", CARL), f(CARL))));
-await t("...and records it on carl's following list", () => assertSucceeds(setDoc(doc(dana, "profiles", CARL, "following", DANA), f(DANA))));
-await t("...then clears the request", () => assertSucceeds(deleteDoc(doc(dana, "profiles", DANA, "requests", CARL))));
-await t("a follower sees the habit summary", () => assertSucceeds(getDoc(doc(carl, "profiles", DANA, "shared", "summary"))));
-await t("but not the weekly focus total (mutuals only)", () => assertFails(getDoc(doc(carl, "profiles", DANA, "shared", "focusWeek"))));
-await t("a follower sees who else follows her", () => assertSucceeds(getDocs(collection(carl, "profiles", DANA, "followers"))));
-await t("a stranger can't see her followers", () => assertFails(getDocs(collection(eve, "profiles", DANA, "followers"))));
-await t("dana can't be made to follow carl without asking", () => assertFails(setDoc(doc(carl, "profiles", DANA, "following", CARL), f(CARL))));
-await t("dana asks to follow carl back", () => assertSucceeds(setDoc(doc(dana, "profiles", CARL, "requests", DANA), { uid: DANA })));
-await t("carl accepts", () => assertSucceeds(setDoc(doc(carl, "profiles", CARL, "followers", DANA), f(DANA))
-  .then(() => setDoc(doc(carl, "profiles", DANA, "following", CARL), f(CARL)))
-  .then(() => deleteDoc(doc(carl, "profiles", CARL, "requests", DANA)))));
-await t("mutuals see the weekly focus total", () => assertSucceeds(getDoc(doc(carl, "profiles", DANA, "shared", "focusWeek"))));
-await t("carl unfollows dana (both sides)", () => assertSucceeds(deleteDoc(doc(carl, "profiles", CARL, "following", DANA))
-  .then(() => deleteDoc(doc(carl, "profiles", DANA, "followers", CARL)))));
-await t("after unfollowing, carl can't see her streaks", () => assertFails(getDoc(doc(carl, "profiles", DANA, "shared", "summary"))));
-await t("carl removes dana as a follower (both sides)", () => assertSucceeds(deleteDoc(doc(carl, "profiles", CARL, "followers", DANA))
-  .then(() => deleteDoc(doc(carl, "profiles", DANA, "following", CARL)))));
-await t("a stranger can't remove someone's followers", () => assertFails(deleteDoc(doc(eve, "profiles", DANA, "followers", CARL))));
-await t("follow records carry only uid and time", () => assertFails(setDoc(doc(dana, "profiles", DANA, "followers", CARL), { uid: CARL, note: "hi" })));
-
-console.log("\n=== older friendships carry over ===");
-await env.withSecurityRulesDisabled(async (ctx) => {
-  const db0 = ctx.firestore();
-  await setDoc(doc(db0, "profiles", CARL, "friends", EVE), { uid: EVE });
-  await setDoc(doc(db0, "profiles", EVE, "friends", CARL), { uid: CARL });
-  await setDoc(doc(db0, "profiles", EVE, "shared", "focusWeek"), { week: "2026-10-19", minutes: 10 });
-});
-await t("an old friend still counts as mutual", () => assertSucceeds(getDoc(doc(carl, "profiles", EVE, "shared", "focusWeek"))));
-await t("carl carries it over: eve follows carl", () => assertSucceeds(setDoc(doc(carl, "profiles", CARL, "followers", EVE), f(EVE))
-  .then(() => setDoc(doc(carl, "profiles", EVE, "following", CARL), { ...f(CARL), legacy: true }))));
-await t("...and carl follows eve", () => assertSucceeds(setDoc(doc(carl, "profiles", CARL, "following", EVE), { ...f(EVE), legacy: true })
-  .then(() => setDoc(doc(carl, "profiles", EVE, "followers", CARL), f(CARL)))));
-await t("then the old records go", () => assertSucceeds(deleteDoc(doc(carl, "profiles", CARL, "friends", EVE))
-  .then(() => deleteDoc(doc(carl, "profiles", EVE, "friends", CARL)))));
-await t("still mutual after carrying over", () => assertSucceeds(getDoc(doc(carl, "profiles", EVE, "shared", "focusWeek"))));
-await t("carrying over needs an old friendship", () => assertFails(setDoc(doc(eve, "profiles", DANA, "followers", EVE), f(EVE))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

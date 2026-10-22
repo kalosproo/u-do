@@ -4,7 +4,7 @@ import { FiPause, FiPlay, FiUsers } from "react-icons/fi";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
 import { useStudyRoom } from "../../hooks/useStudyRoom";
-import { listMutuals } from "../../services/friends";
+import { listFriends } from "../../services/friends";
 import { MAX_INVITES } from "../../services/studyRooms";
 import { formatClock } from "../../utils/focusTimer";
 import RoomReactions from "./RoomReactions";
@@ -33,7 +33,7 @@ function StudyRoom({ compact = false }) {
   useEffect(() => {
     if (!user || !isHost) return undefined;
     let cancelled = false;
-    listMutuals(user.uid)
+    listFriends(user.uid)
       .then((list) => !cancelled && setFriends(list))
       .catch(() => !cancelled && setFriends([]));
     return () => {
@@ -98,7 +98,7 @@ function StudyRoom({ compact = false }) {
               </button>
             ))}
           </div>
-          <button data-tip="room" type="button" className="btn btn-primary" disabled={busy} onClick={() => act(() => study.create(minutes))}>
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={() => act(() => study.create(minutes))}>
             Open a room
           </button>
         </div>
@@ -170,7 +170,7 @@ function StudyRoom({ compact = false }) {
             {friends === null ? (
               <p className="panel-note">Loading friends…</p>
             ) : friends.length === 0 ? (
-              <p className="panel-note">Only mutuals can join — people you follow who follow you back.</p>
+              <p className="panel-note">Add friends first, then invite them here.</p>
             ) : (
               <ul>
                 {friends.map((friend) => {

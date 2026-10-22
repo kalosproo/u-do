@@ -14,28 +14,25 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import {
   CLAIM_ERRORS,
-  acceptFollowRequest,
+  RELATIONSHIP,
+  acceptFriendRequest,
   cancelFriendRequest,
-  carryOverFriends,
   clearFriendGraph,
   buildInviteLink,
   claimUsername,
-  declineFollowRequest,
+  declineFriendRequest,
   findUserByInviteCode,
   findUserByUsername,
   getMyProfile,
   getRelationship,
-  isMutual,
-  listFollowers,
-  listFollowing,
+  mutualFriendsWith,
+  listFriends,
   listIncomingRequests,
   listOutgoingRequests,
-  mutualFollowersOf,
   normalizeInviteCode,
   normalizeUsername,
-  removeFollower,
-  sendFollowRequest,
-  unfollow,
+  removeFriend,
+  sendFriendRequest,
   validateUsername,
 } from "../services/friends";
 import { fetchHabits } from "../services/habits";
@@ -93,15 +90,13 @@ function Friends() {
   const [searchMode, setSearchMode] = useState("username");
   const [searchValue, setSearchValue] = useState("");
   const [searchResult, setSearchResult] = useState(null);
-  const [searchRelationship, setSearchRelationship] = useState(null);
+  const [searchRelationship, setSearchRelationship] = useState(RELATIONSHIP.NONE);
   const [searchMutuals, setSearchMutuals] = useState(null);
   const [searching, setSearching] = useState(false);
 
   const [requests, setRequests] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
   const [friends, setFriends] = useState([]);
-  const [followers, setFollowers] = useState([]);
-  const [tab, setTab] = useState("following");
   const [loading, setLoading] = useState(true);
   const [busyUid, setBusyUid] = useState("");
   const [status, setStatus] = useState("");
@@ -125,27 +120,21 @@ function Friends() {
     // failing must not blank the other two. A rejected Promise.all here meant
     // a permissions error on the sent-list wiped the incoming requests off the
     // page, so a request you could plainly reach by search never showed up.
-    // Older two-way friendships become following both ways, once.
-    await carryOverFriends(user.uid).catch(() => 0);
-
-    const [incoming, sent, mine, theirs] = await Promise.allSettled([
+    const [incoming, sent, mine] = await Promise.allSettled([
       listIncomingRequests(user.uid),
       listOutgoingRequests(user.uid),
-      listFollowing(user.uid),
-      listFollowers(user.uid),
+      listFriends(user.uid),
     ]);
 
     if (incoming.status === "fulfilled") setRequests(incoming.value);
     if (sent.status === "fulfilled") setOutgoing(sent.value);
     if (mine.status === "fulfilled") setFriends(mine.value);
-    if (theirs.status === "fulfilled") setFollowers(theirs.value);
 
     // Name what actually failed rather than blaming the whole page.
     const failed = [
       incoming.status === "rejected" && "incoming requests",
       sent.status === "rejected" && "sent requests",
-      mine.status === "rejected" && "who you follow",
-      theirs.status === "rejected" && "your followers",
+      mine.status === "rejected" && "your friends list",
     ].filter(Boolean);
 
     setStatus(
@@ -196,10 +185,12 @@ function Friends() {
 
         // Resolve what we already are to them, so the row offers the right
         // action instead of always offering to send.
-        const [relationship, mutuals] = await Promise.all([
-          user ? getRelationship(user.uid, found.uid) : null,
-          user && found.uid !== user.uid ? mutualFollowersOf(user.uid, found.uid).catch(() => null) : null,
-        ]);
+        const [relationship, mutuals] = user
+          ? await Promise.all([
+              getRelationship(user.uid, found.uid),
+              mutualFriendsWith(user.uid, found.uid).catch(() => null),
+            ])
+          : [RELATIONSHIP.NONE, null];
         setSearchRelationship(relationship);
         setSearchMutuals(mutuals);
         setSearchResult(found);
@@ -292,20 +283,22 @@ function Friends() {
     setStatus("");
 
     try {
-      const outcome = await sendFollowRequest(currentUser, targetUid);
-      setStatus(outcome.following ? "You already follow them." : "Requested. They'll see it on their Friends page.");
-      if (searchResult?.uid === targetUid) setSearchRelationship(outcome);
+      const outcome = await sendFriendRequest(currentUser, targetUid);
+
+      if (outcome === RELATIONSHIP.FRIENDS) {
+        // They had already asked us, so this became an accept.
+        setStatus("You're now friends — they'd already sent you a request.");
+      } else {
+        setStatus("Request sent. They'll see it on their Friends page.");
+      }
+
+      setSearchRelationship(outcome);
       await refresh();
     } catch (error) {
       setStatus(error?.message || "Couldn't send that request.");
     } finally {
       setBusyUid("");
     }
-  };
-
-  // Keeps the search row honest after any change to that person.
-  const recheck = async (otherUid) => {
-    if (user && searchResult?.uid === otherUid) setSearchRelationship(await getRelationship(user.uid, otherUid));
   };
 
   const handleCancelRequest = async (targetUid) => {
@@ -316,7 +309,7 @@ function Friends() {
     try {
       await cancelFriendRequest(currentUser, targetUid);
       setOutgoing((current) => current.filter((item) => item.uid !== targetUid));
-      await recheck(targetUid);
+      if (searchResult?.uid === targetUid) setSearchRelationship(RELATIONSHIP.NONE);
       setStatus("Request withdrawn.");
     } catch (error) {
       setStatus(error?.message || "Couldn't withdraw that request.");
@@ -331,10 +324,9 @@ function Friends() {
 
     setBusyUid(requesterUid);
     try {
-      await acceptFollowRequest(currentUser, requesterUid);
-      await recheck(requesterUid);
+      await acceptFriendRequest(currentUser, requesterUid);
+      if (searchResult?.uid === requesterUid) setSearchRelationship(RELATIONSHIP.FRIENDS);
       await refresh();
-      setStatus("Accepted. They now follow you — follow them back to become mutuals.");
     } catch (error) {
       setStatus(error?.message || "Couldn't accept that request.");
     } finally {
@@ -348,45 +340,28 @@ function Friends() {
 
     setBusyUid(requesterUid);
     try {
-      await declineFollowRequest(currentUser, requesterUid);
+      await declineFriendRequest(currentUser, requesterUid);
       setRequests((current) => current.filter((item) => item.uid !== requesterUid));
-      await recheck(requesterUid);
+      if (searchResult?.uid === requesterUid) setSearchRelationship(RELATIONSHIP.NONE);
     } catch (error) {
-      setStatus(error?.message || "Couldn't decline that request.");
+      setStatus(error?.message || "Couldn't delete that request.");
     } finally {
       setBusyUid("");
     }
   };
 
-  const handleUnfollow = async (targetUid, name) => {
+  const handleRemove = async (friendUid, name) => {
     const currentUser = requireUser();
     if (!currentUser) return;
-    if (!window.confirm(`Unfollow ${name}? You'll stop seeing their streaks. If they follow you, they still will.`)) return;
+    if (!window.confirm(`Remove ${name}? You'll both stop seeing each other's streaks.`)) return;
 
-    setBusyUid(targetUid);
+    setBusyUid(friendUid);
     try {
-      await unfollow(currentUser, targetUid);
-      await recheck(targetUid);
-      await refresh();
+      await removeFriend(currentUser, friendUid);
+      setFriends((current) => current.filter((item) => item.uid !== friendUid));
+      if (searchResult?.uid === friendUid) setSearchRelationship(RELATIONSHIP.NONE);
     } catch (error) {
-      setStatus(error?.message || "Couldn't unfollow.");
-    } finally {
-      setBusyUid("");
-    }
-  };
-
-  const handleRemoveFollower = async (followerUid, name) => {
-    const currentUser = requireUser();
-    if (!currentUser) return;
-    if (!window.confirm(`Remove ${name} as a follower? They won't be told, and they'll stop seeing your streaks.`)) return;
-
-    setBusyUid(followerUid);
-    try {
-      await removeFollower(currentUser, followerUid);
-      await recheck(followerUid);
-      await refresh();
-    } catch (error) {
-      setStatus(error?.message || "Couldn't remove that follower.");
+      setStatus(error?.message || "Couldn't remove that friend.");
     } finally {
       setBusyUid("");
     }
@@ -411,7 +386,7 @@ function Friends() {
       try {
         await navigator.share({
           title: "Join me on U.Do",
-          text: "Follow me on U.Do so we can keep each other's streaks going.",
+          text: "Add me on U.Do so we can keep each other's streaks going.",
           url: inviteLink,
         });
         return;
@@ -486,7 +461,7 @@ function Friends() {
           <div>
             <h1 className="page-title">Friends</h1>
             <p className="page-sub">
-              Followers see your habit streaks and badges. Mutuals — people who follow each other — can also study together.
+              Friends see your habit names, streaks and completion rates — nothing else.
             </p>
           </div>
 
@@ -518,7 +493,7 @@ function Friends() {
         <article className="wire-card friends-requests-card">
           <div className="panel-head">
             <h3>
-              {requests.length === 1 ? "1 follow request" : `${requests.length} follow requests`}
+              {requests.length === 1 ? "1 friend request" : `${requests.length} friend requests`}
             </h3>
           </div>
           <div className="friends-request-list is-scrollable">
@@ -542,9 +517,9 @@ function Friends() {
                   className="button-secondary"
                   onClick={() => handleDecline(request.uid)}
                   disabled={busyUid === request.uid}
-                  aria-label={`Decline ${request.displayName || "request"}`}
+                  aria-label={`Delete request from ${request.displayName || "them"}`}
                 >
-                  <FiX /> Decline
+                  <FiX /> Delete
                 </button>
               </div>
             ))}
@@ -554,14 +529,9 @@ function Friends() {
 
       <article className="wire-card">
         <div className="panel-head">
-          <div className="friends-tabs" role="tablist" aria-label="Friends">
-            <button type="button" role="tab" aria-selected={tab === "following"} className={tab === "following" ? "is-active" : ""} onClick={() => setTab("following")}>
-              Following <span>{friends.length}</span>
-            </button>
-            <button type="button" role="tab" aria-selected={tab === "followers"} className={tab === "followers" ? "is-active" : ""} onClick={() => setTab("followers")}>
-              Followers <span>{followers.length}</span>
-            </button>
-          </div>
+          <h3 className="panel-title">
+            Your friends{friends.length ? ` (${friends.length})` : ""}
+          </h3>
           <button
             type="button"
             className="btn btn-sm"
@@ -573,44 +543,15 @@ function Friends() {
           </button>
         </div>
 
-        {tab === "followers" ? (
-          followers.length === 0 ? (
-            <p className="friends-muted">No followers yet. Share your invite link — people you accept appear here.</p>
-          ) : (
-            <div className="friends-list is-scrollable">
-              {followers.map((person) => (
-                <div key={person.uid} className="friends-result-row">
-                  <Avatar person={person} />
-                  <div className="friends-result-meta">
-                    <strong>{person.displayName}</strong>
-                    <small>
-                      {person.username ? `@${person.username}` : "U.Do user"}
-                      {person.mutual ? " · Mutual" : ""}
-                    </small>
-                  </div>
-                  {person.mutual ? null : (
-                    <button type="button" className="button-primary" onClick={() => handleSendRequest(person.uid)} disabled={busyUid === person.uid}>
-                      <FiUserPlus /> Follow back
-                    </button>
-                  )}
-                  <button type="button" className="btn btn-sm" onClick={() => handleRemoveFollower(person.uid, person.displayName)} disabled={busyUid === person.uid}>
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          )
-        ) : (
-          <>
         {friends.length > 4 ? (
           <div className="friends-filter">
             <FiSearch aria-hidden="true" />
             <input
               className="friends-input"
-              placeholder="Search who you follow"
+              placeholder="Find a friend"
               value={friendFilter}
               onChange={(event) => setFriendFilter(event.target.value)}
-              aria-label="Search who you follow"
+              aria-label="Find a friend"
             />
           </div>
         ) : null}
@@ -620,7 +561,7 @@ function Friends() {
         ) : friends.length === 0 ? (
           <div className="friends-empty-state">
             <p className="friends-muted">
-              You don't follow anyone yet. Send your invite link, or find people by username.
+              No friends yet. Send someone your invite link, or add them by username.
             </p>
             <div className="friends-empty-actions">
               {inviteLink ? (
@@ -634,7 +575,7 @@ function Friends() {
             </div>
           </div>
         ) : shownFriends.length === 0 ? (
-          <p className="friends-muted">Nobody matches &ldquo;{friendFilter}&rdquo;.</p>
+          <p className="friends-muted">No friend matches &ldquo;{friendFilter}&rdquo;.</p>
         ) : (
           <div className="friends-list is-scrollable">
             {shownFriends.map((friend) => {
@@ -653,7 +594,6 @@ function Friends() {
                       <strong>{friend.displayName}</strong>
                       <small>
                         {friend.username ? `@${friend.username}` : "U.Do friend"}
-                        {friend.mutual ? " · Mutual" : ""}
                         {summary && summary.totalCount > 0
                           ? ` · ${summary.doneCount}/${summary.totalCount} done`
                           : ""}
@@ -689,10 +629,10 @@ function Friends() {
                         <button
                           type="button"
                           className="btn btn-sm"
-                          onClick={() => handleUnfollow(friend.uid, friend.displayName)}
+                          onClick={() => handleRemove(friend.uid, friend.displayName)}
                           disabled={busyUid === friend.uid}
                         >
-                          {busyUid === friend.uid ? "Unfollowing..." : "Unfollow"}
+                          {busyUid === friend.uid ? "Removing..." : "Remove"}
                         </button>
                       </div>
                     </div>
@@ -702,12 +642,10 @@ function Friends() {
             })}
           </div>
         )}
-          </>
-        )}
       </article>
 
       <article className="wire-card">
-        <h3>Find people</h3>
+        <h3>Add a friend</h3>
 
         <div className="friends-mode-row" role="tablist" aria-label="Search mode">
           {SEARCH_MODES.map(([value, label]) => (
@@ -767,37 +705,47 @@ function Friends() {
               {searchResult.username ? <small>@{searchResult.username}</small> : null}
               {searchMutuals?.count ? (
                 <small className="friends-mutuals">
-                  Followed by {searchMutuals.names.join(", ")}
-                  {searchMutuals.count > searchMutuals.names.length ? ` and ${searchMutuals.count - searchMutuals.names.length} more` : ""}
+                  {searchMutuals.count} mutual {searchMutuals.count === 1 ? "friend" : "friends"} · {searchMutuals.names.join(", ")}
+                  {searchMutuals.count > searchMutuals.names.length ? " and more" : ""}
                 </small>
               ) : null}
             </div>
 
             {/* The action follows the real relationship, so the row can never
                 offer to send a request that already exists. */}
-            {!searchRelationship ? null : searchRelationship.self ? (
+            {searchRelationship === RELATIONSHIP.SELF ? (
               <span className="friends-state-note">That's you</span>
+            ) : searchRelationship === RELATIONSHIP.FRIENDS ? (
+              <span className="friends-state-note is-friends">
+                <FiCheck /> Friends
+              </span>
+            ) : searchRelationship === RELATIONSHIP.OUTGOING ? (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => handleCancelRequest(searchResult.uid)}
+                disabled={busyUid === searchResult.uid}
+              >
+                <FiX /> {busyUid === searchResult.uid ? "Cancelling..." : "Cancel request"}
+              </button>
+            ) : searchRelationship === RELATIONSHIP.INCOMING ? (
+              <button
+                type="button"
+                className="button-primary"
+                onClick={() => handleAccept(searchResult.uid)}
+                disabled={busyUid === searchResult.uid}
+              >
+                <FiCheck /> {busyUid === searchResult.uid ? "Accepting..." : "Accept request"}
+              </button>
             ) : (
-              <div className="friends-result-actions">
-                {searchRelationship.incoming ? (
-                  <button type="button" className="button-primary" onClick={() => handleAccept(searchResult.uid)} disabled={busyUid === searchResult.uid}>
-                    <FiCheck /> Accept request
-                  </button>
-                ) : null}
-                {searchRelationship.following ? (
-                  <button type="button" className="btn" onClick={() => handleUnfollow(searchResult.uid, searchResult.displayName)} disabled={busyUid === searchResult.uid}>
-                    <FiCheck /> {isMutual(searchRelationship) ? "Mutual" : "Following"}
-                  </button>
-                ) : searchRelationship.requested ? (
-                  <button type="button" className="btn" onClick={() => handleCancelRequest(searchResult.uid)} disabled={busyUid === searchResult.uid}>
-                    <FiX /> Requested
-                  </button>
-                ) : (
-                  <button type="button" className="button-primary" onClick={() => handleSendRequest(searchResult.uid)} disabled={busyUid === searchResult.uid}>
-                    <FiUserPlus /> {searchRelationship.followedBy ? "Follow back" : "Follow"}
-                  </button>
-                )}
-              </div>
+              <button
+                type="button"
+                className="button-primary"
+                onClick={() => handleSendRequest(searchResult.uid)}
+                disabled={busyUid === searchResult.uid}
+              >
+                <FiUserPlus /> {busyUid === searchResult.uid ? "Sending..." : "Connect"}
+              </button>
             )}
           </div>
         ) : null}
@@ -805,9 +753,9 @@ function Friends() {
 
       {outgoing.length > 0 && (
         <article className="wire-card">
-          <h3>Requested ({outgoing.length})</h3>
+          <h3>Waiting on them ({outgoing.length})</h3>
           <p className="friends-muted">
-            Follow requests you sent. Withdrawing removes it from their page.
+            Requests you sent. Withdrawing removes it from their page.
           </p>
           <div className="friends-request-list is-scrollable">
             {outgoing.map((person) => (
