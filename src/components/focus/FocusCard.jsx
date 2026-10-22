@@ -37,12 +37,15 @@ function WeekStrip({ log }) {
   const days = lastDays(log, 7);
   const top = Math.max(25, ...days.map((day) => day.minutes));
   return (
-    <div className="focus-card-week" aria-hidden="true">
-      {days.map((day, i) => (
-        <span key={day.key} className={i === days.length - 1 ? "is-today" : ""}>
-          <i style={{ height: `${Math.max(8, (day.minutes / top) * 100)}%` }} />
-        </span>
-      ))}
+    <div className="focus-card-week-wrap">
+      <div className="focus-card-week" aria-hidden="true">
+        {days.map((day, i) => (
+          <span key={day.key} className={i === days.length - 1 ? "is-today" : ""}>
+            <i style={{ height: `${Math.max(8, (day.minutes / top) * 100)}%` }} />
+          </span>
+        ))}
+      </div>
+      <small className="focus-card-week-label">Last 7 days</small>
     </div>
   );
 }
@@ -117,12 +120,13 @@ function FocusCard() {
         <div className="focus-card-today-wrap">
           {focus.goal ? <GoalRing minutes={today.minutes} goal={focus.goal} /> : null}
           <div className="focus-card-today">
-            <strong>{formatMinutes(today.minutes)}</strong>
-            {pathname === "/focus" ? (
-              <span>{focus.goal ? `of ${goalLabel(focus.goal)} today` : "today"}</span>
-            ) : (
+            <strong>
+              {formatMinutes(today.minutes)} <small>today</small>
+            </strong>
+            {focus.goal ? <span>Daily goal {goalLabel(focus.goal)}</span> : null}
+            {pathname === "/focus" ? null : (
               <Link to="/focus" className="focus-card-stats">
-                {focus.goal ? `of ${goalLabel(focus.goal)} · stats` : "today · stats"}
+                See stats
               </Link>
             )}
           </div>

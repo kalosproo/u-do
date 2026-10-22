@@ -4249,3 +4249,9 @@ body.is-focusing { overflow: hidden; }
 .grades-marks li { display: flex; align-items: center; gap: var(--s-3); min-height: 38px; font-size: 13.5px; }
 .grades-marks li > span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .grades-score { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* Focus card labels: what the ring and the bars actually are. */
+.focus-card-today strong small { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.focus-card-week-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; width: min(132px, 40%); }
+.focus-card-week-wrap .focus-card-week { width: 100%; }
+.focus-card-week-label { font-size: 11px; color: var(--text-muted); }

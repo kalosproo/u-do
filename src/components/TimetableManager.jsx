@@ -4,6 +4,7 @@ import { FiTrash2 } from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
 import { addClass, deleteClass } from "../services/timetable";
 import { classesOn, validateClass, WEEKDAYS } from "../utils/timetable";
+import { friendlyError } from "../utils/friendlyError";
 
 const EMPTY = { subject: "", day: 1, start: "09:00", end: "10:00", room: "" };
 
@@ -32,7 +33,7 @@ function TimetableManager({ classes, onChange, onClose }) {
       // Keep the day and times: the next class is usually the same day.
       setForm((current) => ({ ...current, subject: "", room: "", start: current.end, end: nextHour(current.end) }));
     } catch (saveError) {
-      setError(saveError?.message || "Couldn't save that class.");
+      setError(friendlyError(saveError, "Couldn't save that class."));
     }
     setBusy(false);
   };
@@ -41,9 +42,9 @@ function TimetableManager({ classes, onChange, onClose }) {
     onChange(classes.filter((item) => item.id !== cls.id));
     try {
       await deleteClass(user.uid, cls.id);
-    } catch {
+    } catch (removeError) {
       onChange(classes);
-      setError("Couldn't remove that class.");
+      setError(friendlyError(removeError, "Couldn't remove that class."));
     }
   };
 

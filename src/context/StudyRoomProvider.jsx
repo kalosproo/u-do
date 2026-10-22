@@ -18,6 +18,7 @@ import {
   watchMembers,
   watchRoom,
 } from "../services/studyRooms";
+import { friendlyError } from "../utils/friendlyError";
 
 const KEY = "u_do_room";
 const NONE = [];
@@ -115,8 +116,8 @@ export function StudyRoomProvider({ children }) {
     setError("");
     try {
       return await task();
-    } catch {
-      setError("That didn't go through. Check your connection and try again.");
+    } catch (error) {
+      setError(friendlyError(error, "That didn't go through. Try again."));
       return null;
     }
   }, []);
