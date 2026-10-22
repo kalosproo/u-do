@@ -29,7 +29,7 @@ const save = (uid, state) => {
 const findTarget = (id) => {
   for (const element of document.querySelectorAll(`[data-tip="${id}"]`)) {
     const rect = element.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0 && rect.top >= 56 && rect.bottom <= window.innerHeight - 24) return element;
+    if (rect.width > 0 && rect.height > 0 && rect.top >= 56 && rect.bottom <= window.innerHeight) return element;
   }
   return null;
 };

@@ -39,6 +39,7 @@ import { fetchHabits } from "../services/habits";
 import ClearDataButton from "../components/ClearDataButton";
 import PageMenu, { PageMenuLabel } from "../components/PageMenu";
 import FriendsFocusing from "../components/focus/FriendsFocusing";
+import UndoToast from "../components/UndoToast";
 
 const SEARCH_MODES = [
   ["username", "By username"],
@@ -887,13 +888,14 @@ function Friends() {
         ) : null}
       </article>
       {pendingDelete ? (
-        <div className="undo-toast" role="status" key={pendingDelete.id}>
-          <span>Request from {pendingDelete.request.displayName || "U.Do user"} deleted</span>
-          <button type="button" onClick={handleUndoDelete}>
-            Undo
-          </button>
-          <i className="undo-toast-timer" style={{ animationDuration: `${UNDO_MS}ms` }} aria-hidden="true" />
-        </div>
+        <UndoToast
+          key={pendingDelete.id}
+          leading={<Avatar person={pendingDelete.request} />}
+          title="Request deleted"
+          detail={pendingDelete.request.displayName || "U.Do user"}
+          duration={UNDO_MS}
+          onUndo={handleUndoDelete}
+        />
       ) : null}
     </section>
   );
