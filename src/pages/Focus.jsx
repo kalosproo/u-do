@@ -5,6 +5,7 @@ import FriendsFocusing from "../components/focus/FriendsFocusing";
 import FocusLeaderboard from "../components/focus/FocusLeaderboard";
 import StudyRoom from "../components/focus/StudyRoom";
 import ExamCountdowns from "../components/ExamCountdowns";
+import GradesCard from "../components/GradesCard";
 import { useAuth } from "../hooks/useAuth";
 import { useFocus } from "../hooks/useFocus";
 import { formatMinutes } from "../utils/focusTimer";
@@ -45,6 +46,8 @@ function Focus() {
       {user ? <StudyRoom /> : null}
 
       <ExamCountdowns />
+
+      {user ? <GradesCard /> : null}
 
       <div className="stat-grid">
         {[

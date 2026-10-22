@@ -1,36 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { getDocs } from "firebase/firestore";
 import { Link } from "react-router-dom";
 import { FiCheck, FiPlus } from "react-icons/fi";
 import { createTask, setTaskStatus } from "../services/tasks";
 import { formatDayLabel, formatRelativeDay, todayKey } from "../utils/dateKeys";
 import { quoteFor } from "../utils/quotes";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { useAuth } from "../hooks/useAuth";
 import { workspaceCollection } from "../services/paths";
 import FriendStreaks from "../components/FriendStreaks";
+
+// The charts library is the heaviest thing Home uses and both charts sit
+// below the fold, so it loads after the page instead of before it.
+const CashFlowChart = lazy(() => import("../components/HomeCharts").then((m) => ({ default: m.CashFlowChart })));
+const TaskBreakdownChart = lazy(() => import("../components/HomeCharts").then((m) => ({ default: m.TaskBreakdownChart })));
 import WeeklyReview from "../components/WeeklyReview";
 import MonthlyReport from "../components/MonthlyReport";
 import FocusCard from "../components/focus/FocusCard";
 import StudyRoom from "../components/focus/StudyRoom";
+import NextClass from "../components/NextClass";
 import InstallCard from "../components/InstallCard";
 import ExamCountdowns from "../components/ExamCountdowns";
 import AchievementWatcher from "../components/AchievementWatcher";
 import { useFocus } from "../hooks/useFocus";
 import { focusStats } from "../utils/focusStats";
-import ChartPatterns from "../components/ChartPatterns";
-import { seriesFill } from "../utils/chartSeries";
 import { monthlyTotals } from "../utils/financeReport";
-import { compactMoney, formatMoney } from "../utils/money";
+import { formatMoney } from "../utils/money";
 import {
   activityByDay,
   activityWeekGrid,
@@ -51,21 +45,6 @@ import { celebrate } from "../utils/feedback";
  * rounding a figure is the job.
  */
 const money = (minor) => formatMoney(minor);
-
-function ChartTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-
-  return (
-    <div className="chart-tooltip">
-      {label ? <p className="chart-tooltip-label">{label}</p> : null}
-      {payload.map((row) => (
-        <p key={row.name} className="chart-tooltip-row">
-          {row.name}: <strong>{row.value}</strong>
-        </p>
-      ))}
-    </div>
-  );
-}
 
 function Home() {
   const { user } = useAuth();
@@ -221,6 +200,8 @@ function Home() {
         {user && todayTasks.length ? <div className="today-task-list">{todayTasks.map((task) => <div className={`today-task ${finishing.has(task.id) ? "is-finishing" : ""}`} key={task.id}><button type="button" className="today-check" onClick={() => completeTodayTask(task)} aria-label={`Complete ${task.title}`}><FiCheck /></button><span className="today-task-title">{task.title}</span>{task.dueDate ? <span className={`today-pill ${task.dueDate < today ? "is-overdue" : ""}`}>{task.dueDate < today ? "Overdue" : "Today"}</span> : null}{task.priority && task.priority !== "medium" ? <span className={`priority-tag priority-${task.priority}`}>{task.priority}</span> : null}</div>)}</div> : <div className="today-empty"><strong>{user ? "No tasks are pressing today." : "Your day is ready when you are."}</strong><span>{user ? "Start with one thing you want to get done today." : "Sign in to see your personal plan."}</span></div>}
         {user ? <form className="today-add" onSubmit={(event) => { event.preventDefault(); addTodayTask(); }}><FiPlus aria-hidden="true" /><input value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} placeholder="Add a task for today" aria-label="Add a task for today" /><button type="submit" className="btn btn-primary btn-sm" disabled={savingTask || !newTaskTitle.trim()}>{savingTask ? "Adding…" : "Add task"}</button></form> : <Link to="/login" className="btn btn-primary">Sign in</Link>}
       </article>
+      {user ? <NextClass /> : null}
+
       <FocusCard />
 
       <StudyRoom compact />
@@ -287,41 +268,9 @@ function Home() {
           </div>
 
           {finance.allTimeCount ? (
-            <div className="chart-shell">
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={cashSeries} barGap={4} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    width={52}
-                    tickMargin={6}
-                    tickFormatter={compactMoney}
-                  />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--accent-soft)" }} />
-                  <Bar
-                    dataKey="income"
-                    name="Income"
-                    fill="var(--chart-1)"
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={26}
-                    animationDuration={640}
-                    animationEasing="ease-out"
-                  />
-                  <Bar
-                    dataKey="spend"
-                    name="Spend"
-                    fill="var(--chart-4)"
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={26}
-                    animationDuration={640}
-                    animationEasing="ease-out"
-                    animationBegin={90}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <Suspense fallback={<div className="chart-shell chart-loading" aria-hidden="true" />}>
+              <CashFlowChart data={cashSeries} />
+            </Suspense>
           ) : (
             <p className="empty">
               No transactions yet. <Link to="/finance">Add one</Link>.
@@ -338,36 +287,9 @@ function Home() {
           </div>
 
           {tasksSummary.total ? (
-            <div className="chart-shell">
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={tasksSummary.byStatus} layout="vertical">
-                  <ChartPatterns scope="home-tasks" />
-                  <CartesianGrid horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="status"
-                    width={82}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--accent-soft)" }} />
-                  <Bar
-                    dataKey="count"
-                    name="Tasks"
-                    radius={[0, 3, 3, 0]}
-                    maxBarSize={30}
-                    background={{ fill: "var(--chart-track)", radius: 3 }}
-                    animationDuration={640}
-                    animationEasing="ease-out"
-                  >
-                    {tasksSummary.byStatus.map((row, index) => (
-                      <Cell key={row.status} fill={seriesFill("home-tasks", index * 2)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <Suspense fallback={<div className="chart-shell chart-loading" aria-hidden="true" />}>
+              <TaskBreakdownChart data={tasksSummary.byStatus} />
+            </Suspense>
           ) : (
             <p className="empty">
               No tasks yet. <Link to="/tasks">Add one</Link>.

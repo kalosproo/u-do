@@ -86,3 +86,44 @@ test("counts the month and writes it plainly", () => {
 test("an empty month sends nothing", () => {
   assert.equal(composeMonthly({ counts: countMonth({}, previousMonth("2026-11-01")), label: "October 2026", unsubscribeUrl: "x" }), null);
 });
+
+// ---------------------------------------------------------------- exam nudge
+import { composeExamNudge, daysBetween, shiftDay, subjectMinutes } from "./src/notifications/examNudge.js";
+
+test("exam nudge: days between date keys, across months", () => {
+  assert.equal(daysBetween("2026-10-29", "2026-11-01"), 3);
+  assert.equal(daysBetween("2026-10-22", "2026-10-22"), 0);
+  assert.equal(shiftDay("2026-11-01", -13), "2026-10-19");
+});
+
+test("exam nudge: subject time matches loosely", () => {
+  const days = [{ subjects: { Physics: 40, Maths: 10 } }, { subjects: { " physics ": 35 } }];
+  assert.equal(subjectMinutes(days, "PHYSICS"), 75);
+  assert.equal(subjectMinutes(days, ""), 0);
+});
+
+test("exam nudge: only on 7, 3, 2, 1 and 0 days out", () => {
+  const at = (date) => composeExamNudge({ exams: [{ title: "Physics final", date, subject: "Physics" }], focusDays: [], dayKey: "2026-10-22" });
+  assert.equal(at("2026-10-27"), null); // 5 days
+  assert.equal(at("2026-10-29").title, "Physics final is in 7 days");
+  assert.equal(at("2026-10-23").title, "Physics final is tomorrow");
+  assert.equal(at("2026-10-22").title, "Physics final is today");
+  assert.equal(at("2026-10-21"), null); // past
+});
+
+test("exam nudge: says how much was studied, and counts the rest", () => {
+  const message = composeExamNudge({
+    exams: [
+      { title: "Chem quiz", date: "2026-10-29", subject: "Chemistry" },
+      { title: "Physics final", date: "2026-10-25", subject: "Physics" },
+    ],
+    focusDays: [{ subjects: { Physics: 80 } }],
+    dayKey: "2026-10-22",
+  });
+  assert.equal(message.title, "Physics final is in 3 days");
+  assert.equal(message.body, "1h 20m on Physics in the last two weeks. Plus 1 more coming up.");
+  assert.equal(message.url, "/focus");
+
+  const none = composeExamNudge({ exams: [{ title: "Bio test", date: "2026-10-23", subject: "Biology" }], focusDays: [], dayKey: "2026-10-22" });
+  assert.equal(none.body, "No Biology focus time logged yet — start a session?");
+});

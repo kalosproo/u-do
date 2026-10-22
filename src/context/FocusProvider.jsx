@@ -5,6 +5,7 @@ import {
   DEFAULT_MINUTES,
   addToLog,
   breakMinutesFor,
+  isLongBreak,
   formatClock,
   pruneLog,
   remainingOf,
@@ -236,9 +237,13 @@ export function FocusProvider({ children }) {
       if (session.phase === "focus") {
         record(session.minutes, session.subject);
         buzz([60, 80, 60]);
-        notify("Focus done", `Nice — take ${breakMinutesFor(session.minutes)} minutes.`);
-        const rest = breakMinutesFor(session.minutes);
-        setSession({ ...session, phase: "break", count: (session.count || 0) + 1, endsAt: Date.now() + rest * 60_000, breakMinutes: rest, paused: false });
+        const completed = (session.count || 0) + 1;
+        const rest = breakMinutesFor(session.minutes, completed);
+        notify(
+          isLongBreak(completed) ? "Four in a row" : "Focus done",
+          isLongBreak(completed) ? `Great run — take a long ${rest}-minute break.` : `Nice — take ${rest} minutes.`
+        );
+        setSession({ ...session, phase: "break", count: completed, endsAt: Date.now() + rest * 60_000, breakMinutes: rest, longBreak: isLongBreak(completed), paused: false });
       } else {
         buzz([40, 60, 40]);
         notify("Break's over", "Ready for the next one?");
@@ -313,8 +318,9 @@ export function FocusProvider({ children }) {
     if (!session) return;
     if (session.phase === "focus") {
       record(elapsedMinutes(session, Date.now()), session.subject);
-      const rest = breakMinutesFor(session.minutes);
-      setSession({ ...session, phase: "break", count: (session.count || 0) + 1, endsAt: Date.now() + rest * 60_000, breakMinutes: rest, paused: false });
+      const completed = (session.count || 0) + 1;
+      const rest = breakMinutesFor(session.minutes, completed);
+      setSession({ ...session, phase: "break", count: completed, endsAt: Date.now() + rest * 60_000, breakMinutes: rest, longBreak: isLongBreak(completed), paused: false });
     } else {
       setSession({ ...session, phase: "focus", paused: true, remainingMs: session.minutes * 60_000 });
     }

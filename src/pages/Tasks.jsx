@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiChevronDown, FiPlus, FiTrash2, FiX } from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { fromDateKey, toDateKey } from "../utils/dateKeys";
@@ -9,8 +9,10 @@ import {
   createTask,
   deleteTask as deleteTaskDoc,
   fetchTasks,
+  setSubtasks,
   setTaskStatus,
 } from "../services/tasks";
+import { addSubtask, removeSubtask, subtaskProgress, toggleSubtask } from "../utils/subtasks";
 import { describeRepeat, EMPTY_REPEAT, WEEKDAYS } from "../utils/recurrence";
 import ClearDataButton from "../components/ClearDataButton";
 import PageMenu, { PageMenuLabel } from "../components/PageMenu";
@@ -90,6 +92,8 @@ function Tasks() {
     FILTERS.some(([key]) => key === requested) ? requested : "active"
   );
   const [error, setError] = useState("");
+  const [openId, setOpenId] = useState(null);
+  const [stepText, setStepText] = useState("");
   // A task due at 18:30 turns overdue at 18:30, not at midnight, so the
   // clock is re-read every minute.
   const [now, setNow] = useState(() => new Date());
@@ -171,6 +175,19 @@ function Tasks() {
       loadTasks();
     } catch (updateError) {
       setError(updateError?.message || "Couldn't update that task.");
+      loadTasks();
+    }
+  };
+
+  // Steps change on screen first, then save; a failed save reloads the truth.
+  const changeSteps = async (task, next) => {
+    const currentUser = requireUser();
+    if (!currentUser) return;
+    setTasks((current) => current.map((item) => (item.id === task.id ? { ...item, subtasks: next } : item)));
+    try {
+      await setSubtasks(currentUser.uid, task.id, next);
+    } catch (stepError) {
+      setError(stepError?.message || "Couldn't save that step.");
       loadTasks();
     }
   };
@@ -357,44 +374,108 @@ function Tasks() {
               const done = task.status === "done";
               const repeatLabel = describeRepeat(task.repeat);
 
-              return (
-                <li key={task.id} className={`task-row ${done ? "task-done" : ""} ${overdue ? "task-overdue" : ""}`}>
-                  <button
-                    type="button"
-                    className={`task-check ${done ? "checked" : ""}`}
-                    aria-label={done ? `Mark ${task.title} as not done` : `Mark ${task.title} done`}
-                    onClick={() => updateTaskStatus(task, done ? "todo" : "done")}
-                  >
-                    ✓
-                  </button>
+              const steps = subtaskProgress(task.subtasks);
+              const open = openId === task.id;
 
-                  <div className="task-body">
-                    <p className="task-title">{task.title}</p>
-                    {task.dueDate || repeatLabel || task.priority === "high" ? (
-                      <p className="task-sub">
-                        {task.priority === "high" ? <span className="task-flag">High</span> : null}
-                        {task.dueDate ? (
-                          <span className={overdue ? "due-overdue" : ""}>
-                            {overdue ? "Overdue · " : ""}
-                            {formatDueDate(task.dueDate)}
-                            {task.dueTime ? ` · ${formatDueTime(task.dueTime)}` : ""}
-                          </span>
-                        ) : null}
-                        {repeatLabel ? (
-                          <span title="Repeats — the next one appears when you tick this">{repeatLabel}</span>
-                        ) : null}
-                      </p>
-                    ) : null}
+              return (
+                <li key={task.id} className={`task-item ${open ? "is-open" : ""}`}>
+                  <div className={`task-row ${done ? "task-done" : ""} ${overdue ? "task-overdue" : ""}`}>
+                    <button
+                      type="button"
+                      className={`task-check ${done ? "checked" : ""}`}
+                      aria-label={done ? `Mark ${task.title} as not done` : `Mark ${task.title} done`}
+                      onClick={() => updateTaskStatus(task, done ? "todo" : "done")}
+                    >
+                      ✓
+                    </button>
+
+                    <button
+                      type="button"
+                      className="task-body"
+                      aria-expanded={open}
+                      aria-label={`${task.title}, ${open ? "hide" : "show"} steps`}
+                      onClick={() => {
+                        setOpenId(open ? null : task.id);
+                        setStepText("");
+                      }}
+                    >
+                      <span className="task-title">{task.title}</span>
+                      {task.dueDate || repeatLabel || task.priority === "high" || steps.total ? (
+                        <span className="task-sub">
+                          {task.priority === "high" ? <span className="task-flag">High</span> : null}
+                          {task.dueDate ? (
+                            <span className={overdue ? "due-overdue" : ""}>
+                              {overdue ? "Overdue · " : ""}
+                              {formatDueDate(task.dueDate)}
+                              {task.dueTime ? ` · ${formatDueTime(task.dueTime)}` : ""}
+                            </span>
+                          ) : null}
+                          {repeatLabel ? <span>{repeatLabel}</span> : null}
+                          {steps.total ? <span className="task-steps-count">{steps.done}/{steps.total} steps</span> : null}
+                        </span>
+                      ) : null}
+                    </button>
+
+                    <FiChevronDown className="task-expand" aria-hidden="true" />
+
+                    <button
+                      type="button"
+                      className="task-delete"
+                      aria-label={`Delete ${task.title}`}
+                      onClick={() => deleteTask(task.id)}
+                    >
+                      <FiTrash2 />
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    className="task-delete"
-                    aria-label={`Delete ${task.title}`}
-                    onClick={() => deleteTask(task.id)}
-                  >
-                    <FiTrash2 />
-                  </button>
+                  {open ? (
+                    <div className="task-steps">
+                      {task.subtasks?.length ? (
+                        <ul>
+                          {task.subtasks.map((step) => (
+                            <li key={step.id} className={step.done ? "is-done" : ""}>
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  checked={step.done}
+                                  onChange={() => changeSteps(task, toggleSubtask(task.subtasks, step.id))}
+                                />
+                                <span>{step.title}</span>
+                              </label>
+                              <button
+                                type="button"
+                                className="task-step-remove"
+                                aria-label={`Remove step ${step.title}`}
+                                onClick={() => changeSteps(task, removeSubtask(task.subtasks, step.id))}
+                              >
+                                <FiX />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      <form
+                        className="task-step-add"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          if (!stepText.trim()) return;
+                          changeSteps(task, addSubtask(task.subtasks, stepText));
+                          setStepText("");
+                        }}
+                      >
+                        <input
+                          value={stepText}
+                          maxLength={120}
+                          placeholder={task.subtasks?.length ? "Add another step" : "Break it into steps — add the first one"}
+                          onChange={(event) => setStepText(event.target.value)}
+                          aria-label={`New step for ${task.title}`}
+                        />
+                        <button type="submit" className="btn btn-sm" disabled={!stepText.trim() || (task.subtasks?.length || 0) >= 30}>
+                          Add
+                        </button>
+                      </form>
+                    </div>
+                  ) : null}
                 </li>
               );
             })}

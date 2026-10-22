@@ -2,6 +2,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 
 import { db } from "../firebaseAdmin.js";
 import { sendToSubscription } from "./send.js";
+import { composeExamNudge, shiftDay } from "./examNudge.js";
 import { composeMessages, minutesOf, RUN_MINUTES, windowOffset } from "./cadence.js";
 
 /**
@@ -83,6 +84,20 @@ export const gatherWork = async (uid, dayKey, wanted) => {
   return { tasks, habits, plans, dayKey };
 };
 
+/** Exams in the coming week and the last two weeks of focus, for the exam nudge. */
+export const gatherExams = async (uid, dayKey) => {
+  const workspace = db.collection("users").doc(uid);
+  const [examSnap, focusSnap] = await Promise.all([
+    workspace.collection("exams").where("date", ">=", dayKey).where("date", "<=", shiftDay(dayKey, 7)).get(),
+    workspace.collection("focus").where("date", ">=", shiftDay(dayKey, -13)).get(),
+  ]);
+  return {
+    exams: examSnap.docs.map((entry) => entry.data()),
+    focusDays: focusSnap.docs.map((entry) => entry.data()),
+    dayKey,
+  };
+};
+
 export const sendScheduledReminders = onSchedule(
   { schedule: "every 30 minutes", timeZone: "Etc/UTC", timeoutSeconds: 540 },
   async () => {
@@ -121,15 +136,25 @@ export const sendScheduledReminders = onSchedule(
         tasks: types.tasks !== false,
         habits: types.habits !== false,
         planner: types.planner !== false && offset < RUN_MINUTES,
+        // Once a day, with the window's first run, like the plan.
+        exams: types.exams !== false && offset < RUN_MINUTES,
       };
 
       // Nothing this person wants can fire on this run — skip the reads.
-      if (!wanted.tasks && !wanted.habits && !wanted.planner) continue;
+      if (!wanted.tasks && !wanted.habits && !wanted.planner && !wanted.exams) continue;
 
       try {
-        const work = await gatherWork(subscription.uid, localDateKey(now, timeZone), wanted);
+        const dayKey = localDateKey(now, timeZone);
+        const messages = [];
+        if (wanted.tasks || wanted.habits || wanted.planner) {
+          messages.push(...composeMessages(await gatherWork(subscription.uid, dayKey, wanted), types, offset, current));
+        }
+        if (wanted.exams) {
+          const nudge = composeExamNudge(await gatherExams(subscription.uid, dayKey));
+          if (nudge) messages.push(nudge);
+        }
 
-        for (const message of composeMessages(work, types, offset, current)) {
+        for (const message of messages) {
           const result = await sendToSubscription(subscription, message);
           sent += result.sent;
         }

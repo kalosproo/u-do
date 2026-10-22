@@ -7,6 +7,7 @@ import { useStudyRoom } from "../../hooks/useStudyRoom";
 import { listFriends } from "../../services/friends";
 import { MAX_INVITES } from "../../services/studyRooms";
 import { formatClock } from "../../utils/focusTimer";
+import RoomReactions from "./RoomReactions";
 
 const LENGTHS = [25, 50, 90];
 
@@ -136,6 +137,8 @@ function StudyRoom({ compact = false }) {
           </li>
         ))}
       </ul>
+
+      <RoomReactions />
 
       {isHost ? (
         <>

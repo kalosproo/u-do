@@ -26,9 +26,11 @@ export const taskStats = (tasks, today = new Date()) => {
     overdue,
     dueToday,
     rate: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
+    // Matches the Tasks page: a task is to do or done, and overdue is the
+    // part of "to do" that is late. "In progress" no longer exists.
     byStatus: [
-      { status: "To do", count: tasks.filter((t) => (t.status || "todo") === "todo").length },
-      { status: "In progress", count: tasks.filter((t) => t.status === "progress").length },
+      { status: "To do", count: tasks.length - done - overdue },
+      { status: "Overdue", count: overdue },
       { status: "Done", count: done },
     ],
   };

@@ -13,6 +13,7 @@ import { db } from "./firebase";
 import { taskDoc, tasksCollection } from "./paths";
 import { EMPTY_REPEAT, isRepeating, nextOccurrence, normalizeRepeat } from "../utils/recurrence";
 import { clipTitle } from "../utils/labels.js";
+import { cleanSubtasks, resetSubtasks } from "../utils/subtasks.js";
 
 /** Minutes of warning before a timed task is due. */
 export const DEFAULT_LEAD_MINUTES = 30;
@@ -38,6 +39,7 @@ export const normalizeTask = (rawTask) => {
     leadMinutes: cleanLead(rawTask.leadMinutes),
     repeat: normalizeRepeat(rawTask.repeat),
     seriesId: rawTask.seriesId || null,
+    subtasks: cleanSubtasks(rawTask.subtasks),
     priority: rawTask.priority || "medium",
     status,
     completed: status === "done",
@@ -131,6 +133,8 @@ const spawnNextOccurrence = async (uid, task) => {
     leadMinutes: cleanLead(task.leadMinutes),
     repeat: rule,
     seriesId,
+    // The next occurrence brings its checklist, unticked.
+    ...(task.subtasks?.length ? { subtasks: resetSubtasks(task.subtasks) } : {}),
     status: "todo",
     completed: false,
     createdAt: new Date(),
@@ -195,6 +199,9 @@ export const updateTask = (uid, taskId, changes) => {
 
   return updateDoc(taskDoc(uid, taskId), patch);
 };
+
+/** Replaces a task's checklist of steps. */
+export const setSubtasks = (uid, taskId, subtasks) => updateDoc(taskDoc(uid, taskId), { subtasks: cleanSubtasks(subtasks) });
 
 export const deleteTask = (uid, taskId) => deleteDoc(taskDoc(uid, taskId));
 

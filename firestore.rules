@@ -141,6 +141,26 @@ service cloud.firestore {
         && label(data, 'subject', 40);
     }
 
+    function validClass(data) {
+      return data.keys().hasOnly(['subject', 'day', 'start', 'end', 'room', 'createdAt', 'updatedAt'])
+        && data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 40
+        && data.day is int && data.day >= 0 && data.day <= 6
+        && data.start is string && data.start.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && data.end is string && data.end.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && data.end > data.start
+        && label(data, 'room', 30);
+    }
+
+    function validGrade(data) {
+      return data.keys().hasOnly(['subject', 'title', 'score', 'outOf', 'weight', 'date', 'createdAt', 'updatedAt'])
+        && data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 40
+        && label(data, 'title', 80)
+        && data.score is number && data.score >= 0
+        && data.outOf is number && data.outOf > 0 && data.outOf <= 1000 && data.score <= data.outOf
+        && (!('weight' in data) || (data.weight is number && data.weight > 0 && data.weight <= 100))
+        && (!('date' in data) || (data.date is string && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')));
+    }
+
     function validFocusDay(dayKey, data) {
       return data.keys().hasOnly(['date', 'minutes', 'sessions', 'subjects', 'updatedAt'])
         && dayKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
@@ -162,6 +182,7 @@ service cloud.firestore {
         && optionalOf(data, 'completed', 'bool')
         && optionalOf(data, 'leadMinutes', 'number')
         && optionalOf(data, 'repeat', 'map')
+        && (!('subtasks' in data) || (data.subtasks is list && data.subtasks.size() <= 30))
         && (!('repeat' in data) || data.repeat == null || data.repeat.size() <= 10);
     }
 
@@ -223,6 +244,18 @@ service cloud.firestore {
       match /exams/{examId} {
         allow read, delete: if isOwner(uid);
         allow create, update: if isOwner(uid) && validExam(request.resource.data);
+      }
+
+      // The weekly class timetable.
+      match /classes/{classId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validClass(request.resource.data);
+      }
+
+      // Marks per subject, for the grade tracker.
+      match /grades/{gradeId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validGrade(request.resource.data);
       }
 
       // One record per day of focus-timer time. Owner only, like the rest of
@@ -457,9 +490,12 @@ service cloud.firestore {
         allow read: if hostsRoom(roomId) || invitedTo(roomId);
         allow create, update: if isOwner(memberUid)
           && (hostsRoom(roomId) || invitedTo(roomId))
-          && request.resource.data.keys().hasOnly(['uid', 'name', 'joinedAt'])
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'joinedAt', 'reaction', 'reactedAt'])
           && request.resource.data.uid == memberUid
-          && request.resource.data.name is string && request.resource.data.name.size() <= 60;
+          && request.resource.data.name is string && request.resource.data.name.size() <= 60
+          // Reactions are one of a fixed few icons, never free text.
+          && (!('reaction' in request.resource.data)
+              || request.resource.data.reaction in ['thumbs', 'zap', 'coffee', 'star', 'heart', 'moon']);
         allow delete: if isOwner(memberUid) || hostsRoom(roomId);
       }
     }

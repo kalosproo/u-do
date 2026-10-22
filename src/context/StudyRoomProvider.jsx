@@ -11,6 +11,7 @@ import {
   joinRoom,
   leaveRoom,
   pauseRound,
+  react,
   resumeRound,
   startRound,
   watchInvites,
@@ -146,6 +147,7 @@ export function StudyRoomProvider({ children }) {
       enter(null);
     }),
     start: (minutes) => room && run(() => startRound(room.id, minutes)),
+    react: (reaction) => room && run(() => react(uid, room.id, reaction)),
     toggle: () => {
       if (!room) return null;
       if (room.state === "paused") return run(() => resumeRound(room));

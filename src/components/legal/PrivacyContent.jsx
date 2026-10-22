@@ -42,7 +42,8 @@ function PrivacyContent() {
         If you use the focus timer while signed in, how many minutes you focused each
         day, how many sessions, and the subject you typed for them, so your study stats
         follow you between devices. Exam and deadline countdowns you add — a title, a
-        date and an optional subject — are kept the same way, readable only by you.
+        date and an optional subject — are kept the same way, readable only by you, as
+        are your class timetable and the marks you add to the grade tracker.
       </p>
 
       <h3>Your profile and friends</h3>
@@ -62,6 +63,12 @@ function PrivacyContent() {
         who else has joined, and the room&apos;s timer. If you join one, the host and the
         others in it see your display name. A room never holds what anyone is studying,
         and it is deleted when the host closes it.
+      </p>
+      <p>
+        If you set up calendar sync, U.Do makes a private link that your calendar app
+        reads your exams and planner entries from. Anyone holding that link can see
+        them, so keep it to yourself; resetting it on your Profile stops the old link
+        working at once. Nobody gets a link unless you ask for one.
       </p>
 
       <h3>How the service is used</h3>

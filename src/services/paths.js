@@ -68,3 +68,9 @@ export const studyInviteDoc = (uid, roomId) => doc(db, "profiles", uid, "studyIn
 
 // This week's focus total, for the friends leaderboard.
 export const focusWeekDoc = (uid) => doc(db, "profiles", uid, "shared", "focusWeek");
+
+// The class timetable and the grade tracker.
+export const classesCollection = (uid) => collection(db, "users", uid, "classes");
+export const classDoc = (uid, id) => doc(db, "users", uid, "classes", id);
+export const gradesCollection = (uid) => collection(db, "users", uid, "grades");
+export const gradeDoc = (uid, id) => doc(db, "users", uid, "grades", id);
