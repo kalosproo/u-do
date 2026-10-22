@@ -414,6 +414,23 @@ await t("a member reacts with one of the set icons", () => assertSucceeds(update
 await t("a reaction cannot be free text", () => assertFails(updateDoc(doc(alice, "rooms", "r5", "members", ALICE), { reaction: "hello everyone" })));
 await t("nobody can react as someone else", () => assertFails(updateDoc(doc(bob, "rooms", "r5", "members", ALICE), { reaction: "heart", reactedAt: new Date() })));
 
+console.log("\n=== class timetable ===");
+const cls = (patch = {}) => ({ subject: "Physics", day: 4, start: "14:00", end: "15:00", room: "204", createdAt: new Date(), ...patch });
+await t("owner adds a class", () => assertSucceeds(setDoc(doc(alice, "users", ALICE, "classes", "c1"), cls())));
+await t("a class must end after it starts", () => assertFails(setDoc(doc(alice, "users", ALICE, "classes", "c2"), cls({ start: "15:00", end: "14:00" }))));
+await t("a class needs a real weekday", () => assertFails(setDoc(doc(alice, "users", ALICE, "classes", "c3"), cls({ day: 9 }))));
+await t("a class time must be HH:MM", () => assertFails(setDoc(doc(alice, "users", ALICE, "classes", "c4"), cls({ start: "2pm" }))));
+await t("extra fields are refused", () => assertFails(setDoc(doc(alice, "users", ALICE, "classes", "c5"), cls({ teacher: "Mr X" }))));
+await t("a stranger cannot read someone's timetable", () => assertFails(getDoc(doc(mallory, "users", ALICE, "classes", "c1"))));
+
+console.log("\n=== grades ===");
+const grade = (patch = {}) => ({ subject: "Physics", title: "Unit test 1", score: 42, outOf: 50, createdAt: new Date(), ...patch });
+await t("owner records a mark", () => assertSucceeds(setDoc(doc(alice, "users", ALICE, "grades", "g1"), grade({ weight: 20, date: "2026-10-20" }))));
+await t("a score cannot exceed the total", () => assertFails(setDoc(doc(alice, "users", ALICE, "grades", "g2"), grade({ score: 60 }))));
+await t("a total must be positive", () => assertFails(setDoc(doc(alice, "users", ALICE, "grades", "g3"), grade({ outOf: 0 }))));
+await t("extra fields are refused", () => assertFails(setDoc(doc(alice, "users", ALICE, "grades", "g4"), grade({ teacherComment: "x" }))));
+await t("a stranger cannot read someone's grades", () => assertFails(getDoc(doc(mallory, "users", ALICE, "grades", "g1"))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

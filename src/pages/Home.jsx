@@ -17,6 +17,7 @@ import WeeklyReview from "../components/WeeklyReview";
 import MonthlyReport from "../components/MonthlyReport";
 import FocusCard from "../components/focus/FocusCard";
 import StudyRoom from "../components/focus/StudyRoom";
+import NextClass from "../components/NextClass";
 import InstallCard from "../components/InstallCard";
 import ExamCountdowns from "../components/ExamCountdowns";
 import AchievementWatcher from "../components/AchievementWatcher";
@@ -199,6 +200,8 @@ function Home() {
         {user && todayTasks.length ? <div className="today-task-list">{todayTasks.map((task) => <div className={`today-task ${finishing.has(task.id) ? "is-finishing" : ""}`} key={task.id}><button type="button" className="today-check" onClick={() => completeTodayTask(task)} aria-label={`Complete ${task.title}`}><FiCheck /></button><span className="today-task-title">{task.title}</span>{task.dueDate ? <span className={`today-pill ${task.dueDate < today ? "is-overdue" : ""}`}>{task.dueDate < today ? "Overdue" : "Today"}</span> : null}{task.priority && task.priority !== "medium" ? <span className={`priority-tag priority-${task.priority}`}>{task.priority}</span> : null}</div>)}</div> : <div className="today-empty"><strong>{user ? "No tasks are pressing today." : "Your day is ready when you are."}</strong><span>{user ? "Start with one thing you want to get done today." : "Sign in to see your personal plan."}</span></div>}
         {user ? <form className="today-add" onSubmit={(event) => { event.preventDefault(); addTodayTask(); }}><FiPlus aria-hidden="true" /><input value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} placeholder="Add a task for today" aria-label="Add a task for today" /><button type="submit" className="btn btn-primary btn-sm" disabled={savingTask || !newTaskTitle.trim()}>{savingTask ? "Adding…" : "Add task"}</button></form> : <Link to="/login" className="btn btn-primary">Sign in</Link>}
       </article>
+      {user ? <NextClass /> : null}
+
       <FocusCard />
 
       <StudyRoom compact />

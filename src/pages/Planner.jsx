@@ -15,6 +15,9 @@ import {
 } from "../services/planner";
 import { celebrate } from "../utils/feedback";
 import RevisionPlanner from "../components/RevisionPlanner";
+import TimetableManager from "../components/TimetableManager";
+import { listClasses } from "../services/timetable";
+import { classesOn } from "../utils/timetable";
 
 function sortPlans(list) {
   return [...list].sort((a, b) => {
@@ -121,6 +124,8 @@ function Planner() {
   const [dragTaskId, setDragTaskId] = useState(null);
   const [autoPlanOpen, setAutoPlanOpen] = useState(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  const [timetableOpen, setTimetableOpen] = useState(false);
+  const [classState, setClassState] = useState({ uid: null, list: [] });
   const [autoPlanLoading, setAutoPlanLoading] = useState(false);
   const [autoPlanApplying, setAutoPlanApplying] = useState(false);
   const [autoPlanSummary, setAutoPlanSummary] = useState("");
@@ -335,6 +340,19 @@ function Planner() {
     finally { setAutoPlanApplying(false); }
   };
 
+  // The timetable, shown in each day's column. Read once per account.
+  useEffect(() => {
+    if (!user) return undefined;
+    let cancelled = false;
+    listClasses(user.uid)
+      .then((list) => !cancelled && setClassState({ uid: user.uid, list }))
+      .catch(() => !cancelled && setClassState({ uid: user.uid, list: [] }));
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+  const classes = user && classState.uid === user.uid ? classState.list : [];
+
   return (
     <section className="board-page">
       <div className="board-header">
@@ -348,6 +366,7 @@ function Planner() {
         <div className="week-nav" role="navigation" aria-label="Week navigation">
           <button type="button" className="autoplan-trigger" onClick={openAutoPlanner}>AI Auto-Plan Week</button>
           <button type="button" className="autoplan-trigger" onClick={() => { if (requireUser()) setRevisionOpen(true); }}>Plan revision</button>
+          <button type="button" className="autoplan-trigger" onClick={() => { if (requireUser()) setTimetableOpen(true); }}>Timetable</button>
           <button
             type="button"
             aria-label="Previous week"
@@ -420,6 +439,13 @@ function Planner() {
                 </div>
 
                 <div className="day-body is-scrollable">
+                  {classesOn(classes, date.getDay()).map((cls) => (
+                    <div key={cls.id} className="day-class" title={`${cls.subject} ${cls.start}–${cls.end}`}>
+                      <span>{cls.start}</span>
+                      <strong>{cls.subject}</strong>
+                      {cls.room ? <small>{cls.room}</small> : null}
+                    </div>
+                  ))}
                   {activePlans.map((plan) => (
                     <PlannerTaskCard
                       key={plan.id}
@@ -461,7 +487,7 @@ function Planner() {
                     </div>
                   )}
 
-                  {dayPlans.length === 0 && <div className="empty-day">No tasks yet</div>}
+                  {dayPlans.length === 0 && classesOn(classes, date.getDay()).length === 0 && <div className="empty-day">No tasks yet</div>}
                 </div>
 
                 {activeInputDate === dateKey ? (
@@ -497,6 +523,13 @@ function Planner() {
       </div>
       {autoPlanOpen && <div className="autoplan-overlay" role="dialog" aria-modal="true" aria-label="AI Auto-Plan Week"><section className="autoplan-popup"><div className="autoplan-header"><h4>AI Auto-Plan Week</h4><button type="button" className="autoplan-close" onClick={closeAutoPlanner} aria-label="Close">✕</button></div>
         {autoPlanLoading ? <p className="autoplan-muted">Reading your tasks and this week's planner...</p> : <>{autoPlanSummary && <p className="autoplan-summary">{autoPlanSummary}</p>}{autoPlanStatus && <p className="autoplan-status">{autoPlanStatus}</p>}{autoPlanItems.length ? <div className="autoplan-list">{autoPlanItems.map((item) => <div key={item.id} className="autoplan-item"><div><strong>{item.title}</strong><small>{item.date} · {item.priority}</small></div><button type="button" className="autoplan-remove" onClick={() => setAutoPlanItems((items) => items.filter((current) => current.id !== item.id))} aria-label={`Remove ${item.title}`}>✕</button></div>)}</div> : !autoPlanStatus && <p className="autoplan-muted">Nothing new to schedule right now.</p>}{autoPlanItems.length ? <div className="autoplan-cta-row"><button type="button" className="autoplan-primary" onClick={applyAutoPlan} disabled={autoPlanApplying}>{autoPlanApplying ? "Adding..." : `Add ${autoPlanItems.length} to Planner`}</button><button type="button" className="autoplan-secondary" onClick={closeAutoPlanner} disabled={autoPlanApplying}>Cancel</button></div> : null}</>}</section></div>}
+      {timetableOpen ? (
+        <TimetableManager
+          classes={classes}
+          onChange={(list) => setClassState({ uid: user?.uid, list })}
+          onClose={() => setTimetableOpen(false)}
+        />
+      ) : null}
       {revisionOpen ? <RevisionPlanner onClose={() => setRevisionOpen(false)} onAdded={() => loadPlans()} /> : null}
     </section>
   );
