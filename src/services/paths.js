@@ -63,6 +63,10 @@ export const roomsCollection = () => collection(db, "rooms");
 export const roomDoc = (roomId) => doc(db, "rooms", roomId);
 export const roomMembersCollection = (roomId) => collection(db, "rooms", roomId, "members");
 export const roomMemberDoc = (roomId, uid) => doc(db, "rooms", roomId, "members", uid);
+// Call signalling between two devices in a room.
+export const roomLinksCollection = (roomId) => collection(db, "rooms", roomId, "links");
+export const roomLinkDoc = (roomId, linkId) => doc(db, "rooms", roomId, "links", linkId);
+export const roomLinkIceCollection = (roomId, linkId) => collection(db, "rooms", roomId, "links", linkId, "ice");
 export const studyInvitesCollection = (uid) => collection(db, "profiles", uid, "studyInvites");
 export const studyInviteDoc = (uid, roomId) => doc(db, "profiles", uid, "studyInvites", roomId);
 

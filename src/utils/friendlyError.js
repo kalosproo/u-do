@@ -12,7 +12,19 @@ const NOT_READY = new Set([
   "functions/unimplemented",
 ]);
 
+// What the browser says when the camera or mic can't be used.
+const MEDIA = {
+  NotAllowedError: "Allow the camera and microphone for U.Do in your browser settings, then try again.",
+  SecurityError: "Allow the camera and microphone for U.Do in your browser settings, then try again.",
+  NotFoundError: "No camera or microphone was found on this device.",
+  NotReadableError: "Another app is using your camera or microphone. Close it and try again.",
+  OverconstrainedError: "Your camera can't be used here. Try another device.",
+};
+
 export const friendlyError = (error, fallback = "Something went wrong. Try again.") => {
+  if (MEDIA[error?.name]) return MEDIA[error.name];
+  // Messages written for people, like "the call is full", pass straight through.
+  if (error?.userFacing && error.message) return error.message;
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     return "You're offline. Check your connection and try again.";
   }

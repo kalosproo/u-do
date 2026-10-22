@@ -4305,3 +4305,30 @@ body.is-focusing { overflow: hidden; }
 @keyframes undo-ring { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 100; } }
 @media (prefers-reduced-motion: reduce) { .undo-toast { animation: none; } .undo-toast-ring-bar { animation: none; } }
 @media (max-width: 640px) { .undo-toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+
+/* Study room call */
+.call-join { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; }
+.call-join .panel-note { margin: 0; flex: 1 1 200px; }
+.call { margin: 12px 0; display: flex; flex-direction: column; gap: 10px; }
+.call-grid { display: grid; gap: 8px; grid-template-columns: 1fr; background: #000; border-radius: 16px; padding: 8px; }
+.call-grid.is-2, .call-grid.is-3, .call-grid.is-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.call-grid:fullscreen { align-content: center; padding: 16px; border-radius: 0; }
+.call-tile { position: relative; margin: 0; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; background: #161616; display: grid; place-items: center; }
+.call-grid.is-1 .call-tile { aspect-ratio: 16 / 9; }
+.call-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.call-video.is-mirrored { transform: scaleX(-1); }
+.call-tile-avatar { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: #2a2a2a; color: #fff; font-size: 22px; font-weight: 600; }
+.call-tile-status { position: absolute; inset: auto 0 40px; text-align: center; font-size: 12px; color: rgba(255, 255, 255, 0.7); padding: 0 8px; }
+.call-tile figcaption { position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 6px; max-width: calc(100% - 16px); padding: 4px 9px; border-radius: 999px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 12.5px; font-weight: 600; }
+.call-tile figcaption span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.call-tile figcaption small { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; opacity: 0.75; }
+.call-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.call-button { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; min-width: 76px; min-height: 56px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.call-button svg { font-size: 19px; }
+.call-button.is-on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.call-button.is-leave { border-color: var(--text); }
+.call-button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.study-members li.is-away { opacity: 0.5; }
+.study-member-remove { border: 0; background: none; padding: 2px 0 0; color: var(--text-muted); font: inherit; font-size: 11px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.study-room-exits { display: flex; flex-wrap: wrap; gap: 16px; }
+@media (min-width: 900px) { .call-grid.is-1 { max-width: 760px; margin: 0 auto; width: 100%; } }

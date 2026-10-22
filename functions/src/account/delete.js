@@ -108,6 +108,11 @@ const detachFromOthers = async (uid) => {
     for (const friendUid of room.data().invited || []) {
       await db.collection("profiles").doc(friendUid).collection("studyInvites").doc(room.id).delete().catch(() => {});
     }
+    const links = await room.ref.collection("links").get();
+    for (const link of links.docs) {
+      await deleteAll(link.ref.collection("ice"));
+      await link.ref.delete().catch(() => {});
+    }
     await deleteAll(room.ref.collection("members"));
     await room.ref.delete().then(() => { removed.rooms += 1; }).catch(() => {});
   }

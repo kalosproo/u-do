@@ -13,3 +13,14 @@ test("anything else falls back", () => {
   assert.equal(friendlyError({ code: "unavailable" }, "Couldn't save."), "Couldn't save.");
   assert.equal(friendlyError(null), "Something went wrong. Try again.");
 });
+
+test("camera and mic problems say what to do", () => {
+  assert.match(friendlyError({ name: "NotAllowedError" }), /Allow the camera and microphone/);
+  assert.match(friendlyError({ name: "NotFoundError" }), /No camera or microphone/);
+  assert.match(friendlyError({ name: "NotReadableError" }), /Another app/);
+});
+
+test("messages written for people pass through", () => {
+  assert.equal(friendlyError({ userFacing: true, message: "The call is full." }), "The call is full.");
+  assert.equal(friendlyError({ message: "internal detail" }, "Try again."), "Try again.");
+});

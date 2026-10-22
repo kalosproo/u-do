@@ -64,7 +64,19 @@ function PrivacyContent() {
         If you open a study room, the friends you invite can see your display name,
         who else has joined, and the room&apos;s timer. If you join one, the host and the
         others in it see your display name. A room never holds what anyone is studying,
-        and it is deleted when the host closes it.
+        and it is deleted when the host closes it. If the host leaves, whoever has been
+        in the room longest becomes the host.
+      </p>
+      <p>
+        A study room can also be a video call. Your camera and microphone stay off until
+        you turn them on, and only the people on that call see and hear you, live. The
+        picture and sound go straight between your device and theirs — they do not pass
+        through or get stored on U.Do&apos;s servers, and nothing is recorded. To connect
+        the devices, U.Do briefly stores the technical details needed to reach each
+        other, including network addresses; these are deleted when the call ends. To
+        find a route between devices, yours asks a public Google server for its own
+        network address, as video call apps do. Your browser asks your permission before U.Do can use the camera or microphone the
+        first time.
       </p>
       <p>
         If you set up calendar sync, U.Do makes a private link that your calendar app
