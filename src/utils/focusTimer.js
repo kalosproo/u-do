@@ -9,9 +9,10 @@ import { toDateKey } from "./dateKeys.js";
 export const PRESETS = [25, 50, 90];
 export const DEFAULT_MINUTES = 25;
 export const MIN_MINUTES = 1;
-export const MAX_MINUTES = 180;
+// Up to 99 minutes, so the clock is always two cards: MM and SS.
+export const MAX_MINUTES = 99;
 
-/** A length someone typed, as whole minutes from 1 to 180, or null if it isn't one. */
+/** A length someone typed, as whole minutes from 1 to 99, or null if it isn't one. */
 export const cleanMinutes = (value) => {
   const number = Math.round(Number(String(value ?? "").trim()));
   if (!Number.isFinite(number) || String(value ?? "").trim() === "") return null;
@@ -33,14 +34,11 @@ export const breakMinutesFor = (focusMinutes, completed = 0) => {
   return focusMinutes >= 90 ? 15 : focusMinutes >= 50 ? 10 : 5;
 };
 
-/** 1499000 → "24:59"; an hour or more → "1:29:59". Rounds up, so 0.4s left still reads 0:01. */
+/** 1499000 → "24:59", 90 minutes → "90:00": always minutes and seconds. Rounds up, so 0.4s left still reads 00:01. */
 export const formatClock = (ms) => {
   const total = Math.max(0, Math.ceil(ms / 1000));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
   const pad = (n) => String(n).padStart(2, "0");
-  return h ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
 };
 
 /** "1h 40m", "25m", "0m". */

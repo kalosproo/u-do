@@ -3764,7 +3764,6 @@ body.is-focusing { overflow: hidden; }
   align-items: center;
   gap: calc(var(--cw) * 0.1);
 }
-.focus-flip.has-hours { --cw: min(64vw, calc((100dvh - 230px) / 3.2)); }
 
 .flip-card {
   position: relative;
@@ -3822,7 +3821,6 @@ body.is-focusing { overflow: hidden; }
   .focus-style-2 .focus-b { gap: clamp(6px, 2dvh, 20px); }
   .focus-style-2 .focus-top-label { visibility: hidden; }
   .focus-flip { --cw: min(44vw, calc(100dvh - 120px)); flex-direction: row; gap: calc(var(--cw) * 0.08); }
-  .focus-flip.has-hours { --cw: min(30vw, calc(100dvh - 120px)); }
 }
 /* Short landscape — a phone on its side. */
 @media (orientation: landscape) and (max-height: 500px) {
@@ -3833,7 +3831,6 @@ body.is-focusing { overflow: hidden; }
   .focus-stats { padding-top: var(--s-2); }
   .focus-week { height: 26px; }
   .focus-flip { --cw: min(44vw, calc(100dvh - 76px)); }
-  .focus-flip.has-hours { --cw: min(30vw, calc(100dvh - 76px)); }
   .focus-b-line { font-size: 13px; }
 }
 /* Very short portrait (small phones): give the ring room. */
@@ -4343,7 +4340,7 @@ body.is-focusing { overflow: hidden; }
 .focus-tabs button { border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 600; padding: 8px 18px; border-radius: 999px; cursor: pointer; min-height: 38px; }
 .focus-tabs button.is-active { background: var(--text); color: var(--bg); }
 .focus-custom { display: inline-flex; align-items: center; gap: 4px; cursor: text; }
-.focus-custom input { width: 3.2ch; border: 0; background: transparent; color: inherit; font: inherit; text-align: right; padding: 0; outline: none; -moz-appearance: textfield; }
+.focus-custom input { width: 4.2ch; border: 0; background: transparent; color: inherit; font: inherit; text-align: right; padding: 0; outline: none; -moz-appearance: textfield; }
 .focus-custom input::-webkit-outer-spin-button, .focus-custom input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .study-room-link { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: var(--text); text-decoration: none; }
 .study-room-link > svg { flex-shrink: 0; font-size: 18px; }

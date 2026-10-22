@@ -172,7 +172,7 @@ function FocusCard() {
               inputMode="numeric"
               min="1"
               max={MAX_MINUTES}
-              placeholder="10"
+              placeholder="1–99"
               autoFocus
               aria-label="Minutes"
               value={draft}

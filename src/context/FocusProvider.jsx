@@ -5,6 +5,7 @@ import {
   DEFAULT_MINUTES,
   addToLog,
   breakMinutesFor,
+  cleanMinutes,
   isLongBreak,
   formatClock,
   pruneLog,
@@ -122,7 +123,10 @@ export function FocusProvider({ children }) {
   const [guestLog, setGuestLog] = useState(initial.log);
   const [cloud, setCloud] = useState({ uid: null, log: {} });
   const [shareFocus, setShareFocusState] = useState(() => read(KEYS.share, true) !== false);
-  const [setup, setSetupState] = useState(() => ({ minutes: DEFAULT_MINUTES, subject: "", ...read(KEYS.setup, {}) }));
+  const [setup, setSetupState] = useState(() => {
+    const saved = { minutes: DEFAULT_MINUTES, subject: "", ...read(KEYS.setup, {}) };
+    return { ...saved, minutes: cleanMinutes(saved.minutes) || DEFAULT_MINUTES };
+  });
   const [now, setNow] = useState(() => Date.now());
   const [sound, setSoundState] = useState(() => {
     const saved = { kind: "off", volume: 0.5, ...read(KEYS.sound, {}) };
