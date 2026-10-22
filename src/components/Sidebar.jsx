@@ -165,7 +165,7 @@ function Sidebar({ user }) {
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <NavLink to="/" end aria-label="Home"><FiGrid /><span>Home</span></NavLink>
         <NavLink to="/tasks" aria-label="Tasks"><FiCheckSquare /><span>Tasks</span></NavLink>
-        <button type="button" className="mobile-capture" onClick={() => window.dispatchEvent(new Event("udo:quick-capture"))} aria-label="Capture something"><FiPlus aria-hidden="true" /><span>Capture</span></button>
+        <button type="button" className="mobile-capture" data-tip="capture" onClick={() => window.dispatchEvent(new Event("udo:quick-capture"))} aria-label="Capture something"><FiPlus aria-hidden="true" /><span>Capture</span></button>
         <NavLink to="/planner" aria-label="Planner"><FiCalendar /><span>Planner</span></NavLink>
         <button type="button" onClick={() => setIsOpen(true)} aria-label="Open more navigation" aria-expanded={isOpen}><FiMenu /><span>More</span></button>
       </nav>

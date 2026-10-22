@@ -163,7 +163,7 @@ function FocusCard() {
         }}
       />
 
-      <button type="button" className="btn btn-primary focus-card-start" onClick={() => focus.start()}>
+      <button type="button" className="btn btn-primary focus-card-start" data-tip="focus" onClick={() => focus.start()}>
         <FiPlay /> Start focus
       </button>
     </section>

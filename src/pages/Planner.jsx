@@ -365,7 +365,7 @@ function Planner() {
 
         <div className="week-nav" role="navigation" aria-label="Week navigation">
           <button type="button" className="autoplan-trigger" onClick={openAutoPlanner}>AI Auto-Plan Week</button>
-          <button type="button" className="autoplan-trigger" onClick={() => { if (requireUser()) setRevisionOpen(true); }}>Plan revision</button>
+          <button type="button" className="autoplan-trigger" data-tip="revision" onClick={() => { if (requireUser()) setRevisionOpen(true); }}>Plan revision</button>
           <button type="button" className="autoplan-trigger" onClick={() => { if (requireUser()) setTimetableOpen(true); }}>Timetable</button>
           <button
             type="button"
