@@ -42,7 +42,8 @@ function PrivacyContent() {
         If you use the focus timer while signed in, how many minutes you focused each
         day, how many sessions, and the subject you typed for them, so your study stats
         follow you between devices. Exam and deadline countdowns you add — a title, a
-        date and an optional subject — are kept the same way, readable only by you.
+        date and an optional subject — are kept the same way, readable only by you, as
+        are your class timetable and the marks you add to the grade tracker.
       </p>
 
       <h3>Your profile and friends</h3>

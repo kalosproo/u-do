@@ -4229,3 +4229,23 @@ body.is-focusing { overflow: hidden; }
 .next-class { display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: inherit; }
 .next-class-subject { font-size: 20px; font-weight: 700; }
 .next-class-meta { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; color: var(--text-muted); font-size: 13.5px; }
+
+/* Grade tracker */
+.grades-card { display: flex; flex-direction: column; gap: var(--s-3); }
+.grades-card .panel-head .btn { display: inline-flex; align-items: center; gap: 6px; }
+.grades-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+.grades-form .grades-subject, .grades-form .grades-title { grid-column: 1 / -1; }
+.grades-list, .grades-marks { list-style: none; margin: 0; padding: 0; }
+.grades-list > li { border-bottom: 1px solid var(--border); }
+.grades-list > li:last-child { border-bottom: 0; }
+.grades-row { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 80px 56px; align-items: center; gap: var(--s-3); padding: 10px 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.grades-name { display: flex; flex-direction: column; min-width: 0; }
+.grades-name strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grades-name small { color: var(--text-muted); font-size: 12px; }
+.grades-bar { height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.grades-bar i { display: block; height: 100%; background: var(--text); border-radius: inherit; }
+.grades-avg { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.grades-marks { padding: 0 0 var(--s-2) var(--s-3); }
+.grades-marks li { display: flex; align-items: center; gap: var(--s-3); min-height: 38px; font-size: 13.5px; }
+.grades-marks li > span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grades-score { color: var(--text-muted); font-variant-numeric: tabular-nums; }
