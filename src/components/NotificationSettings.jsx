@@ -27,6 +27,11 @@ const TYPES = [
     note: "Once, when the window opens, listing what you planned for today.",
   },
   {
+    key: "exams",
+    label: "Exams",
+    note: "Once a day, a week, three days, two days and a day before each exam, with your study time for it.",
+  },
+  {
     key: "friends",
     label: "Friends",
     note: "Friend requests and study room invites, as they happen. Ignores the window.",

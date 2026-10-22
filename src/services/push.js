@@ -13,6 +13,7 @@ export const DEFAULT_PUSH_TYPES = Object.freeze({
   tasks: true,
   habits: true,
   planner: true,
+  exams: true,
   friends: true,
 });
 

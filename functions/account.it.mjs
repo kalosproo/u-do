@@ -9,6 +9,8 @@ import { emailUnsubscribe } from "./src/email/email.js";
 import { unsubscribeSignature } from "./src/email/emailCore.js";
 import { deleteMyAccount } from "./src/account/delete.js";
 import { onStudyInvite } from "./src/notifications/friends.js";
+import { gatherExams } from "./src/notifications/digest.js";
+import { composeExamNudge } from "./src/notifications/examNudge.js";
 const out = []; const check = (n, ok, d = "") => out.push({ n, ok: !!ok, d });
 
 let code = null;
@@ -78,6 +80,16 @@ await db.collection("pushSubscriptions").doc("withpush").set({ uid: "withpush", 
 threw = null;
 try { await invite("withpush", "hostA"); } catch (e) { threw = e; }
 check("13. a study invite reaches the push sender without error", threw === null, threw?.message);
+
+// The exam nudge reads the coming week's exams and two weeks of focus.
+const ws = db.collection("users").doc("exam1");
+await ws.collection("exams").doc("a").set({ title: "Physics final", date: "2026-10-25", subject: "Physics" });
+await ws.collection("exams").doc("b").set({ title: "Far away", date: "2026-12-01", subject: "Maths" });
+await ws.collection("focus").doc("2026-10-20").set({ date: "2026-10-20", minutes: 50, subjects: { Physics: 50 } });
+await ws.collection("focus").doc("2026-09-01").set({ date: "2026-09-01", minutes: 90, subjects: { Physics: 90 } });
+const nudge = composeExamNudge(await gatherExams("exam1", "2026-10-22"));
+check("14. the exam nudge names the exam and only recent study time",
+  nudge?.title === "Physics final is in 3 days" && nudge?.body === "50m on Physics in the last two weeks.", JSON.stringify(nudge));
 
 for (const r of out) console.log(`${r.ok ? "  PASS" : "  FAIL"}  ${r.n}${!r.ok && r.d ? "\n        " + r.d : ""}`);
 console.log(`\n${out.filter((r) => r.ok).length} passed, ${out.filter((r) => !r.ok).length} failed`);
