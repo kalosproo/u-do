@@ -111,13 +111,19 @@ export const onWorkspaceWrite = onDocumentWritten(
 );
 
 /** Friends live under profiles, not the workspace, so they get their own trigger. */
+const countConnections = async (uid) => {
+  const profile = db.collection("profiles").doc(uid);
+  const [friends, following] = await Promise.all([countOf(profile.collection("friends")), countOf(profile.collection("following"))]);
+  return friends + following;
+};
+
 export const onFriendsChanged = onDocumentWritten(
   "profiles/{uid}/friends/{friendUid}",
   async (event) => {
     const { uid } = event.params;
 
     try {
-      const friends = await countOf(db.collection("profiles").doc(uid).collection("friends"));
+      const friends = await countConnections(uid);
       const live = await writeUsage(uid, {
         uid,
         counters: { friends },
@@ -130,6 +136,20 @@ export const onFriendsChanged = onDocumentWritten(
     } catch (error) {
       console.error("onFriendsChanged failed", { uid, error });
       await logServerError("onFriendsChanged", error, "error");
+    }
+  },
+);
+
+/** Following counts toward the same "friends" figure the console shows. */
+export const onFollowingChanged = onDocumentWritten(
+  "profiles/{uid}/following/{targetUid}",
+  async (event) => {
+    const { uid } = event.params;
+    try {
+      await writeUsage(uid, { uid, counters: { friends: await countConnections(uid) }, updatedAt: FieldValue.serverTimestamp() });
+    } catch (error) {
+      console.error("onFollowingChanged failed", { uid, error });
+      await logServerError("onFollowingChanged", error, "error");
     }
   },
 );

@@ -4,7 +4,7 @@ import { FiPause, FiPlay, FiUsers } from "react-icons/fi";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
 import { useStudyRoom } from "../../hooks/useStudyRoom";
-import { listFriends } from "../../services/friends";
+import { listMutuals } from "../../services/friends";
 import { MAX_INVITES } from "../../services/studyRooms";
 import { formatClock } from "../../utils/focusTimer";
 import RoomReactions from "./RoomReactions";
@@ -33,7 +33,7 @@ function StudyRoom({ compact = false }) {
   useEffect(() => {
     if (!user || !isHost) return undefined;
     let cancelled = false;
-    listFriends(user.uid)
+    listMutuals(user.uid)
       .then((list) => !cancelled && setFriends(list))
       .catch(() => !cancelled && setFriends([]));
     return () => {
@@ -170,7 +170,7 @@ function StudyRoom({ compact = false }) {
             {friends === null ? (
               <p className="panel-note">Loading friends…</p>
             ) : friends.length === 0 ? (
-              <p className="panel-note">Add friends first, then invite them here.</p>
+              <p className="panel-note">Only mutuals can join — people you follow who follow you back.</p>
             ) : (
               <ul>
                 {friends.map((friend) => {

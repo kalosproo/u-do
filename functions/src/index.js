@@ -123,14 +123,14 @@ export { deleteMyAccount } from "./account/delete.js";
 export { signOutEverywhere } from "./account/security.js";
 
 export { sendScheduledReminders } from "./notifications/digest.js";
-export { onFriendRequest, onFriendAdded, onStudyInvite } from "./notifications/friends.js";
+export { onFriendRequest, onFriendAdded, onStudyInvite, onFollowAccepted } from "./notifications/friends.js";
 export { sendTestPush } from "./notifications/test.js";
 export { sendEmailDigests, emailUnsubscribe } from "./email/email.js";
 export { getCalendarFeedUrl, calendarFeed } from "./calendar/calendar.js";
 
 // Usage and activity for the admin console. The console has read these since
 // it was built; until now nothing on the server wrote them.
-export { onUserCreated, onWorkspaceWrite, onFriendsChanged } from "./usage/track.js";
+export { onUserCreated, onWorkspaceWrite, onFriendsChanged, onFollowingChanged } from "./usage/track.js";
 
 // Crash reports into the errorLogs panel the admin Overview already shows.
 export { reportClientError, pruneErrorLogs } from "./errors/report.js";
