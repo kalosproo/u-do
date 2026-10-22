@@ -17,6 +17,12 @@ import {
 
 export const MAX_INVITES = 10;
 
+/** The only reactions a room allows — icons, never text. Mirrors the rules. */
+export const REACTIONS = ["thumbs", "zap", "coffee", "star", "heart", "moon"];
+
+/** How long a reaction stays on screen. */
+export const REACTION_MS = 6000;
+
 /** Invites older than this are treated as stale and hidden. */
 export const INVITE_TTL_MS = 12 * 60 * 60_000;
 
@@ -55,6 +61,9 @@ export const leaveRoom = async (uid, roomId) => {
   await deleteDoc(studyInviteDoc(uid, roomId)).catch(() => {});
 };
 
+export const react = (uid, roomId, reaction) =>
+  REACTIONS.includes(reaction) ? updateDoc(roomMemberDoc(roomId, uid), { reaction, reactedAt: serverTimestamp() }) : Promise.resolve();
+
 export const declineInvite = (uid, roomId) => deleteDoc(studyInviteDoc(uid, roomId));
 
 /** Withdraws every invite, clears the members, then the room itself. */
@@ -86,7 +95,19 @@ export const watchRoom = (roomId, callback) =>
 export const watchMembers = (roomId, callback) =>
   onSnapshot(
     roomMembersCollection(roomId),
-    (snap) => callback(snap.docs.map((item) => ({ uid: item.id, name: item.data().name || "A friend" }))),
+    (snap) =>
+      callback(
+        snap.docs.map((item) => {
+          const data = item.data();
+          return {
+            uid: item.id,
+            name: data.name || "A friend",
+            reaction: REACTIONS.includes(data.reaction) ? data.reaction : null,
+            // A local write has no server time yet; count it as now.
+            reactedAt: data.reaction ? data.reactedAt?.toMillis?.() || Date.now() : 0,
+          };
+        })
+      ),
     () => callback([])
   );
 

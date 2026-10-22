@@ -9,6 +9,7 @@ import { formatClock, formatMinutes, lastDays, progressOf } from "../../utils/fo
 import { toDateKey } from "../../utils/dateKeys";
 import FlipCard from "./FlipCard";
 import SoundPicker from "./SoundPicker";
+import RoomReactions from "./RoomReactions";
 
 const STYLES = [
   [1, "Timer"],
@@ -172,7 +173,7 @@ function FocusScreen() {
 
   return createPortal(
     <div
-      className={`focus-screen focus-style-${style} ${isBreak ? "is-break" : ""} ${quiet ? "is-quiet" : ""}`}
+      className={`focus-screen focus-style-${style} ${isBreak ? "is-break" : ""} ${quiet ? "is-quiet" : ""} ${inRoom ? "in-room" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label="Focus timer"
@@ -204,9 +205,10 @@ function FocusScreen() {
               {session.paused ? <FiPlay /> : <FiPause />}
             </button>
           ) : null}
+          {inRoom ? <RoomReactions compact /> : null}
           <SoundPicker />
           {canFullscreen() ? (
-            <button type="button" className="focus-icon-btn" onClick={toggleFullscreen} aria-label={isFull ? "Exit full screen" : "Full screen"} title={isFull ? "Exit full screen" : "Full screen"}>
+            <button type="button" className="focus-icon-btn focus-fullscreen-btn" onClick={toggleFullscreen} aria-label={isFull ? "Exit full screen" : "Full screen"} title={isFull ? "Exit full screen" : "Full screen"}>
               {isFull ? <FiMinimize /> : <FiMaximize />}
             </button>
           ) : null}

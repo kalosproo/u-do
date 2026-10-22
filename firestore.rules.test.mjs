@@ -407,6 +407,13 @@ await t("a task can carry a checklist", () => assertSucceeds(updateDoc(doc(alice
 await t("a checklist is capped at 30 steps", () => assertFails(updateDoc(doc(alice, "users", ALICE, "tasks", "oneoff"), { subtasks: Array.from({ length: 31 }, (_, i) => ({ id: String(i), title: "x", done: false })) })));
 await t("a checklist must be a list", () => assertFails(updateDoc(doc(alice, "users", ALICE, "tasks", "oneoff"), { subtasks: "lots" })));
 
+console.log("\n=== study room reactions ===");
+await setDoc(doc(alice, "rooms", "r5"), room());
+await setDoc(doc(alice, "rooms", "r5", "members", ALICE), member(ALICE));
+await t("a member reacts with one of the set icons", () => assertSucceeds(updateDoc(doc(alice, "rooms", "r5", "members", ALICE), { reaction: "zap", reactedAt: new Date() })));
+await t("a reaction cannot be free text", () => assertFails(updateDoc(doc(alice, "rooms", "r5", "members", ALICE), { reaction: "hello everyone" })));
+await t("nobody can react as someone else", () => assertFails(updateDoc(doc(bob, "rooms", "r5", "members", ALICE), { reaction: "heart", reactedAt: new Date() })));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

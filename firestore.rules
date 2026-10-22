@@ -458,9 +458,12 @@ service cloud.firestore {
         allow read: if hostsRoom(roomId) || invitedTo(roomId);
         allow create, update: if isOwner(memberUid)
           && (hostsRoom(roomId) || invitedTo(roomId))
-          && request.resource.data.keys().hasOnly(['uid', 'name', 'joinedAt'])
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'joinedAt', 'reaction', 'reactedAt'])
           && request.resource.data.uid == memberUid
-          && request.resource.data.name is string && request.resource.data.name.size() <= 60;
+          && request.resource.data.name is string && request.resource.data.name.size() <= 60
+          // Reactions are one of a fixed few icons, never free text.
+          && (!('reaction' in request.resource.data)
+              || request.resource.data.reaction in ['thumbs', 'zap', 'coffee', 'star', 'heart', 'moon']);
         allow delete: if isOwner(memberUid) || hostsRoom(roomId);
       }
     }
