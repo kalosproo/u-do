@@ -4152,3 +4152,11 @@ body.is-focusing { overflow: hidden; }
 .chart-loading { height: 220px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--surface-2), var(--surface-hover), var(--surface-2)); background-size: 200% 100%; animation: chart-shimmer 1.4s ease-in-out infinite; opacity: 0.6; }
 @keyframes chart-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .chart-loading { animation: none; } }
+
+/* Calendar sync */
+.calendar-sync-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.calendar-sync-actions .btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.calendar-sync-link { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3); border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2); }
+.calendar-sync-link code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--text-muted); }
+.calendar-sync .focus-link { padding: 0; cursor: pointer; }
+.calendar-sync > .btn { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; }

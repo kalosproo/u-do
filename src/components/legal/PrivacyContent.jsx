@@ -63,6 +63,12 @@ function PrivacyContent() {
         others in it see your display name. A room never holds what anyone is studying,
         and it is deleted when the host closes it.
       </p>
+      <p>
+        If you set up calendar sync, U.Do makes a private link that your calendar app
+        reads your exams and planner entries from. Anyone holding that link can see
+        them, so keep it to yourself; resetting it on your Profile stops the old link
+        working at once. Nobody gets a link unless you ask for one.
+      </p>
 
       <h3>How the service is used</h3>
       <p>

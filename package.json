@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test src/utils/recurrence.test.mjs src/utils/money.test.mjs src/utils/financeReport.test.mjs src/utils/labels.test.mjs src/utils/quotes.test.mjs src/utils/weeklyReview.test.mjs src/utils/focusTimer.test.mjs src/utils/focusStats.test.mjs src/utils/consent.test.mjs src/utils/exams.test.mjs src/utils/achievements.test.mjs src/utils/monthlyReport.test.mjs src/utils/focusGoal.test.mjs src/utils/leaderboard.test.mjs functions/reminders.test.mjs functions/auth.test.mjs functions/usage.test.mjs functions/errors.test.mjs functions/razorpay.test.mjs functions/email.test.mjs",
+    "test": "node --test src/utils/recurrence.test.mjs src/utils/money.test.mjs src/utils/financeReport.test.mjs src/utils/labels.test.mjs src/utils/quotes.test.mjs src/utils/weeklyReview.test.mjs src/utils/focusTimer.test.mjs src/utils/focusStats.test.mjs src/utils/consent.test.mjs src/utils/exams.test.mjs src/utils/achievements.test.mjs src/utils/monthlyReport.test.mjs src/utils/focusGoal.test.mjs src/utils/leaderboard.test.mjs functions/reminders.test.mjs functions/auth.test.mjs functions/usage.test.mjs functions/errors.test.mjs functions/razorpay.test.mjs functions/email.test.mjs functions/calendar.test.mjs",
     "test:rules": "firebase emulators:exec --only firestore --project u-do-rules-test \"node firestore.rules.test.mjs\"",
     "lint:admin": "npm --prefix admin run lint",
     "build:admin": "npm --prefix admin run build",

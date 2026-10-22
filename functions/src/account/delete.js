@@ -40,6 +40,7 @@ const OWNED_DOCS = [
   "aiUsage",
   "errorRate",
   "emailPrefs",
+  "calendarFeeds",
 ];
 
 /** Subcollections hanging off the person's public profile. */

@@ -11,6 +11,7 @@ import { deleteMyAccount } from "./src/account/delete.js";
 import { onStudyInvite } from "./src/notifications/friends.js";
 import { gatherExams } from "./src/notifications/digest.js";
 import { composeExamNudge } from "./src/notifications/examNudge.js";
+import { calendarFeed, getCalendarFeedUrl } from "./src/calendar/calendar.js";
 const out = []; const check = (n, ok, d = "") => out.push({ n, ok: !!ok, d });
 
 let code = null;
@@ -90,6 +91,29 @@ await ws.collection("focus").doc("2026-09-01").set({ date: "2026-09-01", minutes
 const nudge = composeExamNudge(await gatherExams("exam1", "2026-10-22"));
 check("14. the exam nudge names the exam and only recent study time",
   nudge?.title === "Physics final is in 3 days" && nudge?.body === "50m on Physics in the last two weeks.", JSON.stringify(nudge));
+
+// Calendar sync: a link, the feed behind it, and a reset that kills the old one.
+const feed = (url) => new Promise((resolve) => {
+  const query = Object.fromEntries(new URL(url).searchParams);
+  const res = { statusCode: 200, headers: {}, status(c) { this.statusCode = c; return this; }, set(k, v) { this.headers[k] = v; return this; }, send(b) { resolve({ status: this.statusCode, body: b, headers: this.headers }); } };
+  calendarFeed({ method: "GET", query, headers: {}, get: () => undefined, header: () => undefined }, res);
+});
+const cal = db.collection("users").doc("cal1");
+const soon = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+await cal.collection("exams").doc("e1").set({ title: "Physics final", date: soon, subject: "Physics" });
+await cal.collection("planner").doc("p1").set({ title: "Revise optics", date: soon, priority: "medium", completed: false, order: 0 });
+const first = (await getCalendarFeedUrl.run({ auth: { uid: "cal1", token: {} }, data: {}, rawRequest: {} })).url;
+const again = (await getCalendarFeedUrl.run({ auth: { uid: "cal1", token: {} }, data: {}, rawRequest: {} })).url;
+let got = await feed(first);
+check("15. the calendar link serves exams and plans as iCalendar",
+  first === again && got.status === 200 && /text\/calendar/.test(got.headers["Content-Type"]) && got.body.includes("SUMMARY:Exam: Physics final") && got.body.includes("SUMMARY:Revise optics"), got.status);
+const forged = first.replace(/s=[0-9a-f]+/, "s=" + "0".repeat(32));
+check("16. a forged calendar link gets nothing", (await feed(forged)).status === 404);
+const second = (await getCalendarFeedUrl.run({ auth: { uid: "cal1", token: {} }, data: { reset: true }, rawRequest: {} })).url;
+check("17. resetting the link kills the old one", second !== first && (await feed(first)).status === 404 && (await feed(second)).status === 200);
+let calCode = null;
+try { await getCalendarFeedUrl.run({ auth: null, data: {}, rawRequest: {} }); } catch (e) { calCode = e.code; }
+check("18. a calendar link needs a signed-in account", calCode === "unauthenticated", calCode);
 
 for (const r of out) console.log(`${r.ok ? "  PASS" : "  FAIL"}  ${r.n}${!r.ok && r.d ? "\n        " + r.d : ""}`);
 console.log(`\n${out.filter((r) => r.ok).length} passed, ${out.filter((r) => !r.ok).length} failed`);

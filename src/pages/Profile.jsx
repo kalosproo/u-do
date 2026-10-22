@@ -15,6 +15,7 @@ import DeleteAccount from "../components/DeleteAccount";
 import PlanCard from "../components/PlanCard";
 import SecurityCard from "../components/SecurityCard";
 import EmailSummary from "../components/EmailSummary";
+import CalendarSync from "../components/CalendarSync";
 import AchievementsPanel from "../components/AchievementsPanel";
 
 const IMPORT_MODE_OPTIONS = [
@@ -185,6 +186,8 @@ function Profile() {
       <NotificationSettings />
 
       <EmailSummary />
+
+      <CalendarSync />
 
       <article className="panel profile-card">
         <div className="panel-head">
