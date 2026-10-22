@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { FiPause, FiPlay, FiUsers } from "react-icons/fi";
+import { FiChevronRight, FiPause, FiPlay, FiUsers } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
@@ -7,6 +8,8 @@ import { useStudyRoom } from "../../hooks/useStudyRoom";
 import { listFriends } from "../../services/friends";
 import { MAX_INVITES } from "../../services/studyRooms";
 import { formatClock } from "../../utils/focusTimer";
+import { isLive } from "../../utils/roomCall";
+import RoomCall from "./RoomCall";
 import RoomReactions from "./RoomReactions";
 
 const LENGTHS = [25, 50, 90];
@@ -42,14 +45,37 @@ function StudyRoom({ compact = false }) {
   }, [user, isHost]);
 
   useEffect(() => {
-    if (room?.state !== "focus") return undefined;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    if (!room) return undefined;
+    // Every second during a round for the clock; otherwise often enough for "Away".
+    const timer = setInterval(() => setNow(Date.now()), room.state === "focus" ? 1000 : 15_000);
     return () => clearInterval(timer);
-  }, [room?.state]);
+  }, [room]);
 
   if (!user || !study) return null;
-  // On Home it shows up only when there is something to act on.
-  if (compact && !room && study.invites.length === 0) return null;
+  // On Home it's only a pointer to the Study room tab, and only when there is
+  // something there: a room you're in, or an invite.
+  if (compact) {
+    if (!room && study.invites.length === 0) return null;
+    const onCall = study.onCall.length;
+    return (
+      <Link to="/focus?tab=room" className="panel study-room-link">
+        <FiUsers aria-hidden="true" />
+        <span>
+          <strong>
+            {room
+              ? isHost
+                ? "You're in your study room"
+                : `You're in ${room.hostName}'s room`
+              : study.invites.length === 1
+                ? `${study.invites[0].hostName} invited you to study`
+                : `${study.invites.length} study room invites`}
+          </strong>
+          <small>{room ? (onCall ? `${onCall} on the call` : "Open the Study room tab") : "Open to join or decline"}</small>
+        </span>
+        <FiChevronRight aria-hidden="true" />
+      </Link>
+    );
+  }
 
   const act = async (task) => {
     setBusy(true);
@@ -87,9 +113,7 @@ function StudyRoom({ compact = false }) {
           </ul>
         ) : null}
 
-        {compact ? null : (
-          <>
-        <p className="panel-note">Study in sync with friends. You run the timer; theirs starts, pauses and ends with yours.</p>
+        <p className="panel-note">Study in sync with friends, on video if you like. You run the timer; theirs starts, pauses and ends with yours.</p>
         <div className="study-room-start">
           <div className="study-lengths" role="group" aria-label="Round length">
             {LENGTHS.map((value) => (
@@ -102,8 +126,7 @@ function StudyRoom({ compact = false }) {
             Open a room
           </button>
         </div>
-          </>
-        )}
+        {study.notice ? <p className="panel-note">{study.notice}</p> : null}
         {study.error ? <p className="login-error">{study.error}</p> : null}
       </section>
     );
@@ -130,13 +153,33 @@ function StudyRoom({ compact = false }) {
       </div>
 
       <ul className="study-members" aria-label="In the room">
-        {study.members.map((member) => (
-          <li key={member.uid} title={member.name}>
-            <span className="friend-avatar">{initial(member.name)}</span>
-            <small>{member.uid === user.uid ? "You" : member.name.split(" ")[0]}</small>
-          </li>
-        ))}
+        {study.members.map((member) => {
+          const away = member.uid !== user.uid && !isLive(member, now);
+          return (
+            <li key={member.uid} title={member.name} className={away ? "is-away" : undefined}>
+              <span className="friend-avatar">{initial(member.name)}</span>
+              <small>
+                {member.uid === user.uid ? "You" : member.name.split(" ")[0]}
+                {member.uid === room.host ? " · Host" : away ? " · Away" : ""}
+              </small>
+              {isHost && member.uid !== user.uid ? (
+                <button
+                  type="button"
+                  className="study-member-remove"
+                  disabled={busy}
+                  onClick={() => {
+                    if (window.confirm(`Remove ${member.name} from the room?`)) act(() => study.remove(member.uid));
+                  }}
+                >
+                  Remove
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
+
+      <RoomCall />
 
       <RoomReactions />
 
@@ -194,9 +237,14 @@ function StudyRoom({ compact = false }) {
             )}
           </div>
 
-          <button type="button" className="focus-link" disabled={busy} onClick={() => act(study.close)}>
-            Close the room
-          </button>
+          <div className="study-room-exits">
+            <button type="button" className="focus-link" disabled={busy} onClick={() => act(study.leave)}>
+              Leave (someone else hosts)
+            </button>
+            <button type="button" className="focus-link" disabled={busy} onClick={() => act(study.close)}>
+              Close for everyone
+            </button>
+          </div>
         </>
       ) : (
         <button type="button" className="focus-link" disabled={busy} onClick={() => act(study.leave)}>

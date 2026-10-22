@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { FiMaximize2, FiPause, FiPlay, FiSquare } from "react-icons/fi";
 import { Link, useLocation } from "react-router-dom";
 
 import { useFocus } from "../../hooks/useFocus";
-import { PRESETS, formatClock, formatMinutes, lastDays, progressOf } from "../../utils/focusTimer";
+import { MAX_MINUTES, PRESETS, cleanMinutes, formatClock, formatMinutes, lastDays, progressOf } from "../../utils/focusTimer";
 import { toDateKey } from "../../utils/dateKeys";
 import { goalLabel, goalProgress } from "../../utils/focusGoal";
 
@@ -59,6 +60,8 @@ function WeekStrip({ log }) {
 function FocusCard() {
   const focus = useFocus();
   const { pathname } = useLocation();
+  // What's typed in the custom box, or null when it isn't open.
+  const [draft, setDraft] = useState(null);
   if (!focus) return null;
 
   const { session, setup } = focus;
@@ -143,13 +146,49 @@ function FocusCard() {
           <button
             key={minutes}
             type="button"
-            className={`chip ${setup.minutes === minutes ? "active" : ""}`}
-            aria-pressed={setup.minutes === minutes}
-            onClick={() => focus.setSetup({ minutes })}
+            className={`chip ${setup.minutes === minutes && draft === null ? "active" : ""}`}
+            aria-pressed={setup.minutes === minutes && draft === null}
+            onClick={() => {
+              setDraft(null);
+              focus.setSetup({ minutes });
+            }}
           >
             {minutes} min
           </button>
         ))}
+        {draft === null ? (
+          <button
+            type="button"
+            className={`chip ${PRESETS.includes(setup.minutes) ? "" : "active"}`}
+            aria-pressed={!PRESETS.includes(setup.minutes)}
+            onClick={() => setDraft(PRESETS.includes(setup.minutes) ? "" : String(setup.minutes))}
+          >
+            {PRESETS.includes(setup.minutes) ? "Custom" : `${setup.minutes} min`}
+          </button>
+        ) : (
+          <label className="chip active focus-custom">
+            <input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              max={MAX_MINUTES}
+              placeholder="1–99"
+              autoFocus
+              aria-label="Minutes"
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                const minutes = cleanMinutes(event.target.value);
+                if (minutes) focus.setSetup({ minutes });
+              }}
+              onBlur={() => setDraft(null)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+              }}
+            />
+            min
+          </label>
+        )}
       </div>
 
       <input

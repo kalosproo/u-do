@@ -308,8 +308,8 @@ service cloud.firestore {
 
       /**
        * Study room invites. Only a friend may invite you, only to a room they
-       * host, and only as themselves. You decline by deleting it; the host
-       * withdraws it when the room closes.
+       * host, and only as themselves. You decline by deleting it; whoever
+       * hosts the room now withdraws it when they remove you or close it.
        */
       match /studyInvites/{roomId} {
         allow read: if isOwner(uid);
@@ -320,7 +320,7 @@ service cloud.firestore {
           && request.resource.data.host == request.auth.uid
           && request.resource.data.hostName is string && request.resource.data.hostName.size() <= 60
           && hostsRoom(roomId);
-        allow delete: if isOwner(uid) || (isSignedIn() && resource.data.host == request.auth.uid);
+        allow delete: if isOwner(uid) || (isSignedIn() && resource.data.host == request.auth.uid) || hostsRoom(roomId);
       }
 
       match /friends/{friendUid} {
@@ -453,10 +453,15 @@ service cloud.firestore {
      * Group study rooms. The host invites friends; everyone in the room runs
      * the host's timer. A room holds the timer, the host's name and who was
      * invited — never what anyone is studying. An invite, written under the
-     * invitee's profile, is what lets them see the room.
+     * invitee's profile, is what lets them see the room; so does still being
+     * in it, which is how a host who handed over keeps their seat.
      */
     function roomPath(roomId) {
       return /databases/$(database)/documents/rooms/$(roomId);
+    }
+
+    function memberPath(roomId, uid) {
+      return /databases/$(database)/documents/rooms/$(roomId)/members/$(uid);
     }
 
     function hostsRoom(roomId) {
@@ -468,10 +473,13 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/profiles/$(request.auth.uid)/studyInvites/$(roomId));
     }
 
+    function inRoom(roomId) {
+      return isSignedIn() && exists(memberPath(roomId, request.auth.uid));
+    }
+
     function validRoom() {
       let d = request.resource.data;
       return d.keys().hasOnly(['host', 'hostName', 'invited', 'state', 'endsAt', 'left', 'minutes', 'createdAt', 'updatedAt'])
-        && d.host == request.auth.uid
         && d.hostName is string && d.hostName.size() <= 60
         && d.invited is list && d.invited.size() <= 10
         && d.state in ['idle', 'focus', 'paused']
@@ -480,26 +488,101 @@ service cloud.firestore {
         && (d.left == null || d.left is int);
     }
 
+    // Handing over changes who hosts and nothing else.
+    function onlyHostChanges() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['host', 'hostName', 'updatedAt']);
+    }
+
+    // The host is gone: they left, or their app stopped checking in.
+    function hostGone(roomId) {
+      let hostSeat = memberPath(roomId, resource.data.host);
+      return !exists(hostSeat)
+        || !('seenAt' in get(hostSeat).data)
+        || get(hostSeat).data.seenAt < request.time - duration.value(90, 's');
+    }
+
     match /rooms/{roomId} {
-      allow read: if isSignedIn() && (resource.data.host == request.auth.uid || invitedTo(roomId));
-      allow create: if isSignedIn() && validRoom();
-      allow update: if isSignedIn() && resource.data.host == request.auth.uid && validRoom();
+      allow read: if isSignedIn() && (resource.data.host == request.auth.uid || invitedTo(roomId) || inRoom(roomId));
+      allow create: if isSignedIn() && validRoom() && request.resource.data.host == request.auth.uid;
+      allow update: if isSignedIn() && validRoom() && (
+        // The host runs the room.
+        (resource.data.host == request.auth.uid && request.resource.data.host == request.auth.uid)
+        // The host hands it to someone still in the room.
+        || (resource.data.host == request.auth.uid && onlyHostChanges()
+            && exists(memberPath(roomId, request.resource.data.host)))
+        // Someone in the room takes over from a host who is gone.
+        || (request.resource.data.host == request.auth.uid && onlyHostChanges()
+            && inRoom(roomId) && hostGone(roomId))
+      );
       allow delete: if isSignedIn() && resource.data.host == request.auth.uid;
 
       // Who has joined. Each person adds and removes only themselves; the
-      // host clears everyone when the room closes.
+      // host removes someone, or clears everyone when the room closes.
+      // `session` names the one device someone is on the call from.
       match /members/{memberUid} {
-        allow read: if hostsRoom(roomId) || invitedTo(roomId);
+        allow read: if hostsRoom(roomId) || invitedTo(roomId) || inRoom(roomId);
         allow create, update: if isOwner(memberUid)
-          && (hostsRoom(roomId) || invitedTo(roomId))
-          && request.resource.data.keys().hasOnly(['uid', 'name', 'joinedAt', 'reaction', 'reactedAt'])
+          && (hostsRoom(roomId) || invitedTo(roomId) || inRoom(roomId))
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'joinedAt', 'reaction', 'reactedAt', 'seenAt', 'session', 'cam', 'mic'])
           && request.resource.data.uid == memberUid
           && request.resource.data.name is string && request.resource.data.name.size() <= 60
           // Reactions are one of a fixed few icons, never free text.
           && (!('reaction' in request.resource.data)
-              || request.resource.data.reaction in ['thumbs', 'zap', 'coffee', 'star', 'heart', 'moon']);
+              || request.resource.data.reaction in ['thumbs', 'zap', 'coffee', 'star', 'heart', 'moon'])
+          && (!('session' in request.resource.data) || request.resource.data.session == null
+              || (request.resource.data.session is string && request.resource.data.session.size() <= 40))
+          && (!('cam' in request.resource.data) || request.resource.data.cam is bool)
+          && (!('mic' in request.resource.data) || request.resource.data.mic is bool);
         allow delete: if isOwner(memberUid) || hostsRoom(roomId);
       }
+
+      /**
+       * Video call signalling between two devices in the room: the offer,
+       * the answer, then network candidates. Only the two people on a link
+       * can read or write it; the media itself goes device to device and
+       * never passes through here.
+       */
+      match /links/{linkId} {
+        // Someone in the room may wait for a link that doesn't exist yet.
+        allow read: if isSignedIn() && (
+          (resource == null && inRoom(roomId))
+          || (resource != null && (request.auth.uid in resource.data.users || hostsRoom(roomId))));
+        allow create: if isSignedIn()
+          && request.resource.data.keys().hasOnly(['users', 'sessions', 'offer', 'answer', 'createdAt'])
+          && request.resource.data.users is list && request.resource.data.users.size() == 2
+          && request.auth.uid in request.resource.data.users
+          && exists(memberPath(roomId, request.resource.data.users[0]))
+          && exists(memberPath(roomId, request.resource.data.users[1]))
+          && request.resource.data.sessions is list && request.resource.data.sessions.size() == 2
+          && validSdp(request.resource.data.offer) && request.resource.data.answer == null;
+        allow update: if isSignedIn() && request.auth.uid in resource.data.users
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['offer', 'answer'])
+          && validSdp(request.resource.data.offer) && validSdp(request.resource.data.answer);
+        allow delete: if isSignedIn() && (request.auth.uid in resource.data.users || hostsRoom(roomId));
+
+        match /ice/{iceId} {
+          allow read, delete: if isSignedIn()
+            && (request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)/links/$(linkId)).data.users
+                || hostsRoom(roomId));
+          allow create: if isSignedIn()
+            && request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)/links/$(linkId)).data.users
+            && request.resource.data.keys().hasOnly(['from', 'c', 'at'])
+            && request.resource.data.from is string && request.resource.data.from.size() <= 40
+            && request.resource.data.c is string && request.resource.data.c.size() <= 2000;
+        }
+      }
+    }
+
+    // Your own seat in any room, so each of your devices can find the room
+    // you're in. It shows nothing about anyone else.
+    match /{path=**}/members/{memberUid} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    function validSdp(value) {
+      return value == null
+        || (value is map && value.keys().hasOnly(['type', 'sdp'])
+            && value.type in ['offer', 'answer'] && value.sdp is string && value.sdp.size() <= 60000);
     }
 
     match /pushSubscriptions/{uid} {

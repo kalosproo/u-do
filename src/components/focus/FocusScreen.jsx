@@ -48,13 +48,10 @@ function Week({ log }) {
 
 const pad = (n) => String(n).padStart(2, "0");
 
-/** The cards: MM SS, or HH MM SS for a session of an hour or more. */
-const flipCards = (ms, withHours) => {
+/** The two cards: minutes (up to 99) and seconds. */
+const flipCards = (ms) => {
   const total = Math.max(0, Math.ceil(ms / 1000));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return withHours ? [pad(h), pad(m), pad(s)] : [pad(Math.floor(total / 60)), pad(s)];
+  return [pad(Math.floor(total / 60)), pad(total % 60)];
 };
 
 const endsAt = (ms) =>
@@ -169,7 +166,7 @@ function FocusScreen() {
     </div>
   );
 
-  const cards = flipCards(remaining, totalMinutes >= 60);
+  const cards = flipCards(remaining);
 
   return createPortal(
     <div
@@ -275,7 +272,7 @@ function FocusScreen() {
             {inRoom ? ` · ${roomLine.charAt(0).toLowerCase()}${roomLine.slice(1)}` : ""}
           </p>
           <div
-            className={`focus-flip ${cards.length === 3 ? "has-hours" : ""}`}
+            className="focus-flip"
             role="timer"
             aria-label={`${formatClock(remaining)} left`}
           >

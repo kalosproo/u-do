@@ -1,14 +1,15 @@
 // Focus timer tests.   node --test src/utils/focusTimer.test.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addToLog, breakMinutesFor, isLongBreak, formatClock, formatMinutes, lastDays, progressOf, pruneLog, remainingOf } from "./focusTimer.js";
+import { addToLog, breakMinutesFor, cleanMinutes, isLongBreak, formatClock, formatMinutes, lastDays, progressOf, pruneLog, remainingOf } from "./focusTimer.js";
 
 test("the clock reads like a clock and never shows 00:00 early", () => {
   assert.equal(formatClock(25 * 60_000), "25:00");
   assert.equal(formatClock(1_499_000), "24:59");
   assert.equal(formatClock(400), "00:01");
   assert.equal(formatClock(0), "00:00");
-  assert.equal(formatClock(90 * 60_000), "1:30:00");
+  assert.equal(formatClock(90 * 60_000), "90:00");
+  assert.equal(formatClock(99 * 60_000), "99:00");
   assert.equal(formatClock(-5), "00:00");
 });
 
@@ -54,4 +55,15 @@ test("the daily log adds up and keeps seven days in order", () => {
 test("old days are pruned", () => {
   const log = { "2026-01-01": { minutes: 25, sessions: 1 }, "2026-10-17": { minutes: 25, sessions: 1 } };
   assert.deepEqual(Object.keys(pruneLog(log, new Date(2026, 9, 18))), ["2026-10-17"]);
+});
+
+test("a typed length becomes whole minutes from 1 to 99", () => {
+  assert.equal(cleanMinutes("10"), 10);
+  assert.equal(cleanMinutes(" 30 "), 30);
+  assert.equal(cleanMinutes("12.6"), 13);
+  assert.equal(cleanMinutes("0"), 1);
+  assert.equal(cleanMinutes("500"), 99);
+  assert.equal(cleanMinutes("100"), 99);
+  assert.equal(cleanMinutes(""), null);
+  assert.equal(cleanMinutes("abc"), null);
 });

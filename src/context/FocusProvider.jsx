@@ -5,12 +5,13 @@ import {
   DEFAULT_MINUTES,
   addToLog,
   breakMinutesFor,
+  cleanMinutes,
   isLongBreak,
   formatClock,
   pruneLog,
   remainingOf,
 } from "../utils/focusTimer";
-import { playAmbient, stopAmbient, unlockAudio } from "../utils/ambient";
+import { SOUNDS, playAmbient, scheduleChime, stopAmbient, unlockAudio } from "../utils/ambient";
 import { toDateKey } from "../utils/dateKeys";
 import { cleanGoal, crossesGoal, goalLabel } from "../utils/focusGoal";
 import { useAuth } from "../hooks/useAuth";
@@ -70,6 +71,19 @@ const buzz = (pattern) => {
   }
 };
 
+/**
+ * The timer takes the whole screen — status bar and browser bars too, where
+ * the browser allows it. Only works from a tap, so it's called from one.
+ */
+const goFullscreen = () => {
+  try {
+    if (document.fullscreenElement || !document.fullscreenEnabled) return;
+    document.documentElement.requestFullscreen?.({ navigationUI: "hide" })?.catch?.(() => {});
+  } catch {
+    /* Not allowed here (iPhone Safari); the timer still covers the page. */
+  }
+};
+
 const notify = (title, body) => {
   try {
     if (document.visibilityState === "visible") return;
@@ -109,9 +123,18 @@ export function FocusProvider({ children }) {
   const [guestLog, setGuestLog] = useState(initial.log);
   const [cloud, setCloud] = useState({ uid: null, log: {} });
   const [shareFocus, setShareFocusState] = useState(() => read(KEYS.share, true) !== false);
-  const [setup, setSetupState] = useState(() => ({ minutes: DEFAULT_MINUTES, subject: "", ...read(KEYS.setup, {}) }));
+  const [setup, setSetupState] = useState(() => {
+    const saved = { minutes: DEFAULT_MINUTES, subject: "", ...read(KEYS.setup, {}) };
+    return { ...saved, minutes: cleanMinutes(saved.minutes) || DEFAULT_MINUTES };
+  });
   const [now, setNow] = useState(() => Date.now());
-  const [sound, setSoundState] = useState(() => ({ kind: "off", volume: 0.5, ...read(KEYS.sound, {}) }));
+  const [sound, setSoundState] = useState(() => {
+    const saved = { kind: "off", volume: 0.5, ...read(KEYS.sound, {}) };
+    // White noise was retired for being too harsh; Deep is the closest calm one.
+    if (saved.kind === "white") saved.kind = "brown";
+    if (!SOUNDS.some(([id]) => id === saved.kind)) saved.kind = "off";
+    return saved;
+  });
   const [goal, setGoalState] = useState(() => cleanGoal(read(KEYS.goal, undefined)));
   const titleRef = useRef(null);
 
@@ -196,6 +219,28 @@ export function FocusProvider({ children }) {
     else stopAmbient();
   }, [soundOn, sound.kind, sound.volume]);
   useEffect(() => () => stopAmbient(), []);
+
+  // The chime: queued on the audio clock for the exact moment this phase ends,
+  // so it rings on time even in a background tab. Pausing or stopping
+  // withdraws it; a chime already ringing is left to finish.
+  const chimeKey = session && !session.paused ? `${session.phase}|${session.endsAt}` : null;
+  useEffect(() => {
+    if (!chimeKey) return undefined;
+    let handle = null;
+    // Audio only runs once a tap has woken it, so keep trying until it has.
+    const attempt = () => {
+      const current = sessionRef.current;
+      if (handle || !current || current.paused) return;
+      handle = scheduleChime(remainingOf(current) / 1000, current.phase === "focus" ? "break" : "focus");
+      if (handle) clearInterval(retry);
+    };
+    const retry = setInterval(attempt, 2000);
+    attempt();
+    return () => {
+      clearInterval(retry);
+      handle?.cancel();
+    };
+  }, [chimeKey]);
 
   const goalRef = useRef(goal);
   useEffect(() => {
@@ -290,6 +335,7 @@ export function FocusProvider({ children }) {
     setSession({ phase: "focus", minutes, subject: clean, count: 0, endsAt: Date.now() + minutes * 60_000, paused: false });
     setNow(Date.now());
     setView("full");
+    goFullscreen();
   }, [setup]);
 
   const pause = useCallback(() => {
@@ -369,7 +415,10 @@ export function FocusProvider({ children }) {
     setSession((current) => (current?.room === room ? { ...current, room: undefined } : current));
   }, []);
 
-  const open = useCallback(() => setView("full"), []);
+  const open = useCallback(() => {
+    setView("full");
+    goFullscreen();
+  }, []);
 
   /** Called from a tap, so it can also wake the audio context on iOS. */
   const setSound = useCallback((patch) => {

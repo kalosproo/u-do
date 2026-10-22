@@ -3721,7 +3721,7 @@ body.is-focusing { overflow: hidden; }
 .focus-a { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: var(--s-4); }
 .focus-ring {
   position: relative;
-  width: min(80vw, calc(100dvh - 330px), 400px);
+  width: min(84vw, calc(100dvh - 330px), 560px);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -3758,13 +3758,12 @@ body.is-focusing { overflow: hidden; }
 
 /* Portrait: the cards stack. Every size comes from one width. */
 .focus-flip {
-  --cw: min(76vw, calc((100dvh - 230px) / 2.12));
+  --cw: min(84vw, calc((100dvh - 190px) / 2.1));
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: calc(var(--cw) * 0.1);
 }
-.focus-flip.has-hours { --cw: min(64vw, calc((100dvh - 230px) / 3.2)); }
 
 .flip-card {
   position: relative;
@@ -3814,10 +3813,14 @@ body.is-focusing { overflow: hidden; }
 /* ---- Landscape: every phone, tablets and desktops --------------------- */
 @media (orientation: landscape) {
   .focus-a { flex-direction: row; justify-content: center; gap: clamp(24px, 6vw, 120px); }
-  .focus-ring { width: min(46vw, calc(100dvh - 96px), 480px); }
+  .focus-ring { width: min(48vw, calc(100dvh - 96px), 640px); }
   .focus-a-side { max-width: 340px; gap: var(--s-3); }
-  .focus-flip { --cw: min(38vw, calc(100dvh - 190px)); flex-direction: row; gap: calc(var(--cw) * 0.12); }
-  .focus-flip.has-hours { --cw: min(27vw, calc(100dvh - 190px)); }
+  /* The flip clock fills the screen: the top bar floats over it instead of
+     taking a row, and the cards take the height that's left. */
+  .focus-style-2 .focus-top { position: absolute; top: calc(var(--s-2) + env(safe-area-inset-top, 0px)); left: calc(var(--s-4) + env(safe-area-inset-left, 0px)); right: calc(var(--s-4) + env(safe-area-inset-right, 0px)); z-index: 5; }
+  .focus-style-2 .focus-b { gap: clamp(6px, 2dvh, 20px); }
+  .focus-style-2 .focus-top-label { visibility: hidden; }
+  .focus-flip { --cw: min(44vw, calc(100dvh - 120px)); flex-direction: row; gap: calc(var(--cw) * 0.08); }
 }
 /* Short landscape — a phone on its side. */
 @media (orientation: landscape) and (max-height: 500px) {
@@ -3827,8 +3830,7 @@ body.is-focusing { overflow: hidden; }
   .focus-btn { --btn: 62px; font-size: 13.5px; }
   .focus-stats { padding-top: var(--s-2); }
   .focus-week { height: 26px; }
-  .focus-flip { --cw: min(38vw, calc(100dvh - 130px)); }
-  .focus-flip.has-hours { --cw: min(27vw, calc(100dvh - 130px)); }
+  .focus-flip { --cw: min(44vw, calc(100dvh - 76px)); }
   .focus-b-line { font-size: 13px; }
 }
 /* Very short portrait (small phones): give the ring room. */
@@ -4305,3 +4307,42 @@ body.is-focusing { overflow: hidden; }
 @keyframes undo-ring { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 100; } }
 @media (prefers-reduced-motion: reduce) { .undo-toast { animation: none; } .undo-toast-ring-bar { animation: none; } }
 @media (max-width: 640px) { .undo-toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+
+/* Study room call */
+.call-join { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; }
+.call-join .panel-note { margin: 0; flex: 1 1 200px; }
+.call { margin: 12px 0; display: flex; flex-direction: column; gap: 10px; }
+.call-grid { display: grid; gap: 8px; grid-template-columns: 1fr; background: #000; border-radius: 16px; padding: 8px; }
+.call-grid.is-2, .call-grid.is-3, .call-grid.is-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.call-grid:fullscreen { align-content: center; padding: 16px; border-radius: 0; }
+.call-tile { position: relative; margin: 0; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; background: #161616; display: grid; place-items: center; }
+.call-grid.is-1 .call-tile { aspect-ratio: 16 / 9; }
+.call-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.call-video.is-mirrored { transform: scaleX(-1); }
+.call-tile-avatar { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: #2a2a2a; color: #fff; font-size: 22px; font-weight: 600; }
+.call-tile-status { position: absolute; inset: auto 0 40px; text-align: center; font-size: 12px; color: rgba(255, 255, 255, 0.7); padding: 0 8px; }
+.call-tile figcaption { position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 6px; max-width: calc(100% - 16px); padding: 4px 9px; border-radius: 999px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 12.5px; font-weight: 600; }
+.call-tile figcaption span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.call-tile figcaption small { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; opacity: 0.75; }
+.call-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.call-button { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; min-width: 76px; min-height: 56px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.call-button svg { font-size: 19px; }
+.call-button.is-on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.call-button.is-leave { border-color: var(--text); }
+.call-button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.study-members li.is-away { opacity: 0.5; }
+.study-member-remove { border: 0; background: none; padding: 2px 0 0; color: var(--text-muted); font: inherit; font-size: 11px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.study-room-exits { display: flex; flex-wrap: wrap; gap: 16px; }
+@media (min-width: 900px) { .call-grid.is-1 { max-width: 760px; margin: 0 auto; width: 100%; } }
+
+/* Focus page tabs, and the custom length box */
+.focus-tabs { display: inline-flex; align-self: flex-start; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; }
+.focus-tabs button { border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 600; padding: 8px 18px; border-radius: 999px; cursor: pointer; min-height: 38px; }
+.focus-tabs button.is-active { background: var(--text); color: var(--bg); }
+.focus-custom { display: inline-flex; align-items: center; gap: 4px; cursor: text; }
+.focus-custom input { width: 4.2ch; border: 0; background: transparent; color: inherit; font: inherit; text-align: right; padding: 0; outline: none; -moz-appearance: textfield; }
+.focus-custom input::-webkit-outer-spin-button, .focus-custom input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.study-room-link { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: var(--text); text-decoration: none; }
+.study-room-link > svg { flex-shrink: 0; font-size: 18px; }
+.study-room-link > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.study-room-link small { color: var(--text-muted); font-size: 12.5px; }

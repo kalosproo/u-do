@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import {
   initializeTestEnvironment, assertFails, assertSucceeds,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, increment, deleteDoc, collection, getDocs, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, increment, deleteDoc, collection, getDocs, updateDoc, addDoc, query, where, collectionGroup } from "firebase/firestore";
 
 const env = await initializeTestEnvironment({
   projectId: "u-do-rules-test",
@@ -391,6 +391,64 @@ await t("after declining, the room is hidden again", () => assertFails(getDoc(do
 await t("host invites again", () => assertSucceeds(setDoc(doc(alice, "profiles", BOB, "studyInvites", "r1"), invite())));
 await t("host withdraws the invite", () => assertSucceeds(deleteDoc(doc(alice, "profiles", BOB, "studyInvites", "r1"))));
 await t("host clears members and closes", () => assertSucceeds(deleteDoc(doc(alice, "rooms", "r1", "members", ALICE)).then(() => deleteDoc(doc(alice, "rooms", "r1")))));
+
+console.log("\n=== study room host handover ===");
+const CARL = "carl_uid";
+const carl = env.authenticatedContext(CARL).firestore();
+const ago = (ms) => new Date(Date.now() - ms);
+await env.withSecurityRulesDisabled(async (ctx) => {
+  const db = ctx.firestore();
+  await setDoc(doc(db, "profiles", CARL, "friends", ALICE), { uid: ALICE });
+  await setDoc(doc(db, "rooms", "h1"), room({ invited: [BOB, CARL] }));
+  for (const [uid, joined] of [[ALICE, 1000], [BOB, 2000], [CARL, 3000]]) {
+    await setDoc(doc(db, "rooms", "h1", "members", uid), member(uid, { joinedAt: new Date(joined), seenAt: new Date() }));
+    if (uid !== ALICE) await setDoc(doc(db, "profiles", uid, "studyInvites", "h1"), invite());
+  }
+});
+const takeOverAs = (as, uid, patch = {}) => updateDoc(doc(as, "rooms", "h1"), { host: uid, hostName: "New host", updatedAt: new Date(), ...patch });
+await t("nobody takes over while the host is still here", () => assertFails(takeOverAs(bob, BOB)));
+await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), "rooms", "h1", "members", ALICE), { seenAt: ago(120_000) }));
+await t("taking over cannot also change the timer", () => assertFails(takeOverAs(bob, BOB, { state: "focus", endsAt: Date.now() + 60000 })));
+await t("a stranger cannot take over", () => assertFails(takeOverAs(mallory, MALLORY)));
+await t("someone in the room takes over from a host who went quiet", () => assertSucceeds(takeOverAs(bob, BOB)));
+await t("nobody else can take over from a live new host", () => assertFails(takeOverAs(carl, CARL)));
+await t("the new host runs the timer", () => assertSucceeds(updateDoc(doc(bob, "rooms", "h1"), { state: "focus", endsAt: Date.now() + 60000 })));
+await t("the old host, still in the room, can read it", () => assertSucceeds(getDoc(doc(alice, "rooms", "h1"))));
+await t("the old host checks back in", () => assertSucceeds(updateDoc(doc(alice, "rooms", "h1", "members", ALICE), { seenAt: new Date() })));
+await t("the old host cannot run the timer any more", () => assertFails(updateDoc(doc(alice, "rooms", "h1"), { state: "paused" })));
+await t("the new host removes someone's invite", () => assertSucceeds(deleteDoc(doc(bob, "profiles", CARL, "studyInvites", "h1"))));
+await t("...and their seat", () => assertSucceeds(deleteDoc(doc(bob, "rooms", "h1", "members", CARL))));
+await t("someone removed can't see the room", () => assertFails(getDoc(doc(carl, "rooms", "h1"))));
+await t("someone removed can't sit back down", () => assertFails(setDoc(doc(carl, "rooms", "h1", "members", CARL), member(CARL))));
+await t("a host can't hand the room to someone outside it", () => assertFails(updateDoc(doc(bob, "rooms", "h1"), { host: MALLORY, hostName: "M", updatedAt: new Date() })));
+await t("a host hands the room to someone in it", () => assertSucceeds(updateDoc(doc(bob, "rooms", "h1"), { host: ALICE, hostName: "Alice", updatedAt: new Date() })));
+
+console.log("\n=== study room calls ===");
+const seatAs = (as, uid, patch) => updateDoc(doc(as, "rooms", "h1", "members", uid), patch);
+await t("a member says which device they're on the call from", () => assertSucceeds(seatAs(bob, BOB, { session: "sessB", cam: true, mic: false })));
+await t("a call device id is short", () => assertFails(seatAs(bob, BOB, { session: "x".repeat(41) })));
+await t("camera and mic are on or off, nothing else", () => assertFails(seatAs(bob, BOB, { cam: "yes" })));
+const offer = { type: "offer", sdp: "v=0 fake" };
+const link = (patch = {}) => ({ users: [ALICE, BOB], sessions: ["sessA", "sessB"], offer, answer: null, createdAt: new Date(), ...patch });
+await t("someone in the room waits for a link that isn't there yet", () => assertSucceeds(getDoc(doc(bob, "rooms", "h1", "links", "L1"))));
+await t("a stranger cannot even wait for one", () => assertFails(getDoc(doc(mallory, "rooms", "h1", "links", "L1"))));
+await t("a member offers a call link to another member", () => assertSucceeds(setDoc(doc(alice, "rooms", "h1", "links", "L1"), link())));
+await t("a link must include whoever creates it", () => assertFails(setDoc(doc(mallory, "rooms", "h1", "links", "L2"), link())));
+await t("a link can't reach someone who isn't in the room", () => assertFails(setDoc(doc(alice, "rooms", "h1", "links", "L3"), link({ users: [ALICE, CARL] }))));
+await t("a link can't carry anything else", () => assertFails(setDoc(doc(alice, "rooms", "h1", "links", "L4"), link({ note: "hi" }))));
+await t("the other side reads the offer", () => assertSucceeds(getDoc(doc(bob, "rooms", "h1", "links", "L1"))));
+await t("...and finds it by looking for their own links", () => assertSucceeds(getDocs(query(collection(bob, "rooms", "h1", "links"), where("users", "array-contains", BOB)))));
+await t("a stranger cannot read the link", () => assertFails(getDoc(doc(mallory, "rooms", "h1", "links", "L1"))));
+await t("the other side answers", () => assertSucceeds(updateDoc(doc(bob, "rooms", "h1", "links", "L1"), { answer: { type: "answer", sdp: "v=0 fake" } })));
+await t("nobody can swap who a link is between", () => assertFails(updateDoc(doc(bob, "rooms", "h1", "links", "L1"), { users: [BOB, MALLORY] })));
+await t("an answer is an SDP and nothing more", () => assertFails(updateDoc(doc(bob, "rooms", "h1", "links", "L1"), { answer: { type: "answer", sdp: "v=0", extra: 1 } })));
+await t("each side adds network candidates", () => assertSucceeds(addDoc(collection(bob, "rooms", "h1", "links", "L1", "ice"), { from: "sessB", c: "{}", at: new Date() })));
+await t("a stranger cannot add candidates", () => assertFails(addDoc(collection(mallory, "rooms", "h1", "links", "L1", "ice"), { from: "x", c: "{}", at: new Date() })));
+await t("a stranger cannot read candidates", () => assertFails(getDocs(collection(mallory, "rooms", "h1", "links", "L1", "ice"))));
+await t("the two sides read candidates", () => assertSucceeds(getDocs(query(collection(alice, "rooms", "h1", "links", "L1", "ice"), where("from", "==", "sessB")))));
+await t("either side hangs up and cleans the link away", () => assertSucceeds(deleteDoc(doc(bob, "rooms", "h1", "links", "L1"))));
+await t("anyone finds their own seats from any device", () => assertSucceeds(getDocs(query(collectionGroup(bob, "members"), where("uid", "==", BOB)))));
+await t("...but can't search for someone else's", () => assertFails(getDocs(query(collectionGroup(mallory, "members"), where("uid", "==", BOB)))));
 
 console.log("\n=== tasks as the app writes them ===");
 const oneOff = { title: "Buy notebook", dueDate: "", dueTime: "", priority: "medium", leadMinutes: 30, repeat: { kind: "none", days: [] }, seriesId: null, status: "todo", completed: false, createdAt: new Date() };
