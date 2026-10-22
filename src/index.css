@@ -4112,8 +4112,22 @@ body.is-focusing { overflow: hidden; }
    it, and delete — nothing else to read past. */
 .task-list-panel { padding: var(--s-2) var(--s-4); }
 .task-list { list-style: none; margin: 0; padding: 0; }
-.task-row { display: flex; align-items: center; gap: var(--s-3); padding: 12px 0; border-bottom: 1px solid var(--border); }
-.task-row:last-child { border-bottom: 0; }
+.task-item { border-bottom: 1px solid var(--border); }
+.task-item:last-child { border-bottom: 0; }
+.task-row { display: flex; align-items: center; gap: var(--s-3); padding: 12px 0; }
+.task-row .task-body { background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.task-expand { color: var(--text-subtle); flex-shrink: 0; transition: transform 0.2s var(--ease-out, ease); }
+.task-item.is-open .task-expand { transform: rotate(180deg); }
+.task-steps-count { font-variant-numeric: tabular-nums; }
+.task-steps { padding: 0 0 var(--s-3) 34px; display: flex; flex-direction: column; gap: var(--s-2); }
+.task-steps ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.task-steps li { display: flex; align-items: center; gap: var(--s-2); min-height: 36px; }
+.task-steps label { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s-2); font-size: 14px; cursor: pointer; }
+.task-steps input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--text); flex-shrink: 0; }
+.task-steps li.is-done span { text-decoration: line-through; color: var(--text-subtle); }
+.task-step-remove { background: none; border: 0; color: var(--text-subtle); width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 8px; }
+.task-step-add { display: flex; gap: var(--s-2); }
+.task-step-add input { flex: 1; min-width: 0; }
 .task-row .task-check { width: 22px; height: 22px; border-radius: 7px; font-size: 13px; cursor: pointer; }
 .task-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .task-body .task-title { margin: 0; font-size: 15px; font-weight: 550; overflow-wrap: anywhere; }
@@ -4122,6 +4136,7 @@ body.is-focusing { overflow: hidden; }
 .task-flag { font-weight: 700; color: var(--text); letter-spacing: 0.02em; }
 .task-row.task-done .task-title { text-decoration: line-through; color: var(--text-subtle); }
 .task-row.task-overdue { box-shadow: inset 3px 0 0 var(--text); padding-left: 10px; margin-left: -10px; }
+.task-row .task-body .task-title { display: block; }
 .task-row .task-delete { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; }
 .task-list-panel .empty-day { padding: var(--s-5) 0; font-size: 13.5px; }
 

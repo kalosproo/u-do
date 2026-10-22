@@ -402,6 +402,11 @@ await t("a friend reads it", () => assertSucceeds(getDoc(doc(bob, "profiles", AL
 await t("a stranger cannot read it", () => assertFails(getDoc(doc(mallory, "profiles", ALICE, "shared", "focusWeek"))));
 await t("nobody can inflate someone else's total", () => assertFails(setDoc(doc(bob, "profiles", ALICE, "shared", "focusWeek"), { week: "2026-10-19", minutes: 9999 })));
 
+console.log("\n=== subtasks ===");
+await t("a task can carry a checklist", () => assertSucceeds(updateDoc(doc(alice, "users", ALICE, "tasks", "oneoff"), { subtasks: [{ id: "a", title: "Outline", done: false }] })));
+await t("a checklist is capped at 30 steps", () => assertFails(updateDoc(doc(alice, "users", ALICE, "tasks", "oneoff"), { subtasks: Array.from({ length: 31 }, (_, i) => ({ id: String(i), title: "x", done: false })) })));
+await t("a checklist must be a list", () => assertFails(updateDoc(doc(alice, "users", ALICE, "tasks", "oneoff"), { subtasks: "lots" })));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

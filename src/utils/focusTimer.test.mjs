@@ -1,7 +1,7 @@
 // Focus timer tests.   node --test src/utils/focusTimer.test.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addToLog, breakMinutesFor, formatClock, formatMinutes, lastDays, progressOf, pruneLog, remainingOf } from "./focusTimer.js";
+import { addToLog, breakMinutesFor, isLongBreak, formatClock, formatMinutes, lastDays, progressOf, pruneLog, remainingOf } from "./focusTimer.js";
 
 test("the clock reads like a clock and never shows 00:00 early", () => {
   assert.equal(formatClock(25 * 60_000), "25:00");
@@ -16,6 +16,12 @@ test("breaks scale with the session", () => {
   assert.equal(breakMinutesFor(25), 5);
   assert.equal(breakMinutesFor(50), 10);
   assert.equal(breakMinutesFor(90), 15);
+  // Every fourth session in a row earns a long break.
+  assert.equal(breakMinutesFor(25, 3), 5);
+  assert.equal(breakMinutesFor(25, 4), 20);
+  assert.equal(breakMinutesFor(50, 8), 30);
+  assert.equal(isLongBreak(0), false);
+  assert.equal(isLongBreak(4), true);
 });
 
 test("time left comes from the end time, so a sleeping tab stays right", () => {

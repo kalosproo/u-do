@@ -10,7 +10,19 @@ export const PRESETS = [25, 50, 90];
 export const DEFAULT_MINUTES = 25;
 
 /** A rest that scales with the stretch it follows. */
-export const breakMinutesFor = (focusMinutes) => (focusMinutes >= 90 ? 15 : focusMinutes >= 50 ? 10 : 5);
+/**
+ * Break length after a session. Every fourth session in a row earns a long
+ * break — the classic Pomodoro rhythm — sized to the session length.
+ * `completed` is how many sessions are done, counting the one just finished.
+ */
+export const LONG_BREAK_EVERY = 4;
+
+export const isLongBreak = (completed) => completed > 0 && completed % LONG_BREAK_EVERY === 0;
+
+export const breakMinutesFor = (focusMinutes, completed = 0) => {
+  if (isLongBreak(completed)) return focusMinutes >= 50 ? 30 : 20;
+  return focusMinutes >= 90 ? 15 : focusMinutes >= 50 ? 10 : 5;
+};
 
 /** 1499000 → "24:59"; an hour or more → "1:29:59". Rounds up, so 0.4s left still reads 0:01. */
 export const formatClock = (ms) => {

@@ -162,6 +162,7 @@ service cloud.firestore {
         && optionalOf(data, 'completed', 'bool')
         && optionalOf(data, 'leadMinutes', 'number')
         && optionalOf(data, 'repeat', 'map')
+        && (!('subtasks' in data) || (data.subtasks is list && data.subtasks.size() <= 30))
         && (!('repeat' in data) || data.repeat == null || data.repeat.size() <= 10);
     }
 

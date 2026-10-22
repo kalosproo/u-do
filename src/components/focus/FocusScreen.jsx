@@ -139,7 +139,7 @@ function FocusScreen() {
   const progress = progressOf({ ...session, minutes: totalMinutes }, focus.now);
   const today = focus.log[toDateKey(new Date())] || { minutes: 0, sessions: 0 };
   const sessionNo = (session.count || 0) + (isBreak ? 0 : 1);
-  const label = isBreak ? "Break" : session.subject || "Focus";
+  const label = isBreak ? (session.longBreak ? "Long break" : "Break") : session.subject || "Focus";
   const ends = session.paused ? "Paused" : endsAt(remaining);
   // Only the flip clock goes quiet, and only while it is actually running.
   const quiet = style === 2 && calm && !session.paused;
@@ -190,7 +190,7 @@ function FocusScreen() {
           ) : null}
         </div>
         <span className="eyebrow focus-top-label">
-          {isBreak ? "BREAK" : `SESSION ${sessionNo}`}
+          {isBreak ? (session.longBreak ? "LONG BREAK" : "BREAK") : `SESSION ${((sessionNo - 1) % 4) + 1} OF 4`}
         </span>
         <div className="focus-top-right">
           {style === 2 ? (
@@ -238,7 +238,7 @@ function FocusScreen() {
                   <FiBookOpen aria-hidden="true" /> {session.subject}
                 </span>
               ) : (
-                <span className="focus-ring-subject">{isBreak ? "Break" : "Focus"}</span>
+                <span className="focus-ring-subject">{isBreak ? (session.longBreak ? "Long break" : "Break") : "Focus"}</span>
               )}
               <strong className="focus-time">{formatClock(remaining)}</strong>
               <span className="focus-ends">
