@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
-import { fromDateKey, todayKey as getTodayKey } from "../utils/dateKeys";
+import { fromDateKey, toDateKey } from "../utils/dateKeys";
 import {
   clearTasks,
   createTask,
@@ -16,18 +16,32 @@ import ClearDataButton from "../components/ClearDataButton";
 import PageMenu, { PageMenuLabel } from "../components/PageMenu";
 import { celebrate } from "../utils/feedback";
 
-const COLUMNS = [
-  { key: "todo", title: "To do" },
-  { key: "progress", title: "In progress" },
-  { key: "done", title: "Done" },
+// One list, not a board: a task is either still to do or done. Anything
+// once marked "in progress" simply counts as to do.
+const FILTERS = [
+  ["active", "To do"],
+  ["overdue", "Overdue"],
+  ["done", "Done"],
+  ["all", "All"],
 ];
 
-const FILTERS = [
-  ["all", "All"],
-  ["active", "Active"],
-  ["done", "Completed"],
-  ["overdue", "Overdue"],
-];
+const EMPTY = {
+  active: "Nothing to do. Add something above.",
+  overdue: "Nothing overdue.",
+  done: "Nothing done yet. Tick a task when you finish it.",
+  all: "No tasks yet. Add one above.",
+};
+
+const pad = (n) => String(n).padStart(2, "0");
+const clockNow = (date = new Date()) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+
+const completedMs = (task) => {
+  const at = task.completedAt;
+  if (!at) return 0;
+  if (typeof at.toMillis === "function") return at.toMillis();
+  const parsed = new Date(at).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
 
 const PRIORITIES = ["low", "medium", "high"];
 
@@ -73,13 +87,19 @@ function Tasks() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("filter");
   const [filter, setFilter] = useState(
-    FILTERS.some(([key]) => key === requested) ? requested : "all"
+    FILTERS.some(([key]) => key === requested) ? requested : "active"
   );
   const [error, setError] = useState("");
-  const [dragId, setDragId] = useState(null);
-  const [dragOverColumn, setDragOverColumn] = useState(null);
+  // A task due at 18:30 turns overdue at 18:30, not at midnight, so the
+  // clock is re-read every minute.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const todayKey = getTodayKey();
+  const todayKey = toDateKey(now);
+  const nowTime = clockNow(now);
 
   const loadTasks = useCallback(async () => {
     if (!user) return;
@@ -136,11 +156,11 @@ function Tasks() {
 
     if (nextStatus === "done") celebrate();
 
-    // Move the card first so the board feels immediate, then persist.
+    // Tick it on screen first so it feels immediate, then persist.
     setTasks((current) =>
       current.map((item) =>
         item.id === task.id
-          ? { ...item, status: nextStatus, completed: nextStatus === "done" }
+          ? { ...item, status: nextStatus, completed: nextStatus === "done", completedAt: nextStatus === "done" ? new Date() : null }
           : item
       )
     );
@@ -150,57 +170,47 @@ function Tasks() {
       setError("");
       loadTasks();
     } catch (updateError) {
-      setError(updateError?.message || "Couldn't move that task.");
+      setError(updateError?.message || "Couldn't update that task.");
       loadTasks();
     }
   };
 
   const isOverdue = useCallback(
-    (task) => Boolean(task.dueDate) && task.dueDate < todayKey && task.status !== "done",
-    [todayKey]
+    (task) =>
+      task.status !== "done" &&
+      Boolean(task.dueDate) &&
+      (task.dueDate < todayKey || (task.dueDate === todayKey && Boolean(task.dueTime) && task.dueTime < nowTime)),
+    [todayKey, nowTime]
   );
 
-  const filteredTasks = useMemo(
-    () =>
-      tasks.filter((task) => {
-        if (filter === "active") return task.status !== "done";
-        if (filter === "done") return task.status === "done";
-        if (filter === "overdue") return isOverdue(task);
-        return true;
-      }),
-    [filter, isOverdue, tasks]
-  );
+  // To do: overdue first, then soonest due, undated last. Done: newest first.
+  const visibleTasks = useMemo(() => {
+    const open = tasks
+      .filter((task) => task.status !== "done")
+      .sort((a, b) => {
+        const late = Number(isOverdue(b)) - Number(isOverdue(a));
+        if (late) return late;
+        const aKey = a.dueDate ? `${a.dueDate} ${a.dueTime || "99:99"}` : "9999";
+        const bKey = b.dueDate ? `${b.dueDate} ${b.dueTime || "99:99"}` : "9999";
+        return aKey.localeCompare(bKey);
+      });
+    const done = tasks.filter((task) => task.status === "done").sort((a, b) => completedMs(b) - completedMs(a));
 
-  const tasksByStatus = useMemo(() => {
-    const groups = { todo: [], progress: [], done: [] };
-
-    filteredTasks.forEach((task) => {
-      groups[groups[task.status] ? task.status : "todo"].push(task);
-    });
-
-    return groups;
-  }, [filteredTasks]);
+    if (filter === "active") return open;
+    if (filter === "overdue") return open.filter(isOverdue);
+    if (filter === "done") return done;
+    return [...open, ...done];
+  }, [filter, isOverdue, tasks]);
 
   const stats = useMemo(() => {
     const done = tasks.filter((task) => task.status === "done").length;
 
     return {
-      total: tasks.length,
       done,
       active: tasks.length - done,
       overdue: tasks.filter(isOverdue).length,
-      rate: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
     };
   }, [isOverdue, tasks]);
-
-  const handleDrop = (columnKey) => {
-    setDragOverColumn(null);
-
-    const task = tasks.find((item) => item.id === dragId);
-    setDragId(null);
-
-    if (task) updateTaskStatus(task, columnKey);
-  };
 
   return (
     <section className="tasks-page">
@@ -227,7 +237,7 @@ function Tasks() {
         </div>
 
         <div className="tasks-filter-row">
-          {FILTERS.map(([key, label]) => (
+          {FILTERS.filter(([key]) => key !== "overdue" || stats.overdue || filter === "overdue").map(([key, label]) => (
             <button
               key={key}
               type="button"
@@ -235,42 +245,19 @@ function Tasks() {
               onClick={() => {
                 setFilter(key);
                 // Keep the address honest about what is on screen.
-                if (key === "all") searchParams.delete("filter");
+                if (key === "active") searchParams.delete("filter");
                 else searchParams.set("filter", key);
                 setSearchParams(searchParams, { replace: true });
               }}
             >
               {label}
+              {key === "overdue" && stats.overdue ? ` ${stats.overdue}` : ""}
             </button>
           ))}
         </div>
       </header>
 
       {error ? <p className="page-error">{error}</p> : null}
-
-      <div className="stat-grid">
-        <div className="stat">
-          <span className="stat-label">Total</span>
-          <strong className="stat-value">{stats.total}</strong>
-        </div>
-        <div className="stat">
-          <span className="stat-label">Active</span>
-          <strong className="stat-value">{stats.active}</strong>
-        </div>
-        <div className="stat">
-          <span className="stat-label">Overdue</span>
-          <strong className={`stat-value ${stats.overdue ? "is-negative" : ""}`}>
-            {stats.overdue}
-          </strong>
-        </div>
-        <div className="stat">
-          <span className="stat-label">Completion</span>
-          <strong className="stat-value">{stats.rate}%</strong>
-          <div className="bar">
-            <span style={{ width: `${stats.rate}%` }} />
-          </div>
-        </div>
-      </div>
 
       <div className="panel">
         <div className="task-compose">
@@ -362,106 +349,60 @@ function Tasks() {
         ) : null}
       </div>
 
-      <div className="kanban-grid">
-        {COLUMNS.map((column) => (
-          <div
-            key={column.key}
-            className={`kanban-column ${dragOverColumn === column.key ? "is-over" : ""}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOverColumn(column.key);
-            }}
-            onDragLeave={() => setDragOverColumn((current) => (current === column.key ? null : current))}
-            onDrop={() => handleDrop(column.key)}
-          >
-            <div className="column-title-row">
-              <h3>
-                {column.title}
-                <span className="column-count">{tasksByStatus[column.key].length}</span>
-              </h3>
-            </div>
+      <section className="panel task-list-panel" aria-label="Tasks">
+        {visibleTasks.length ? (
+          <ul className="task-list">
+            {visibleTasks.map((task) => {
+              const overdue = isOverdue(task);
+              const done = task.status === "done";
+              const repeatLabel = describeRepeat(task.repeat);
 
-            <div className="column-list is-scrollable">
-              {tasksByStatus[column.key].map((task) => {
-                const overdue = isOverdue(task);
-
-                return (
-                  <article
-                    key={task.id}
-                    draggable
-                    onDragStart={() => setDragId(task.id)}
-                    onDragEnd={() => {
-                      setDragId(null);
-                      setDragOverColumn(null);
-                    }}
-                    className={`kanban-task ${task.status === "done" ? "task-done" : ""} ${
-                      overdue ? "task-overdue" : ""
-                    } ${dragId === task.id ? "is-dragging" : ""}`}
+              return (
+                <li key={task.id} className={`task-row ${done ? "task-done" : ""} ${overdue ? "task-overdue" : ""}`}>
+                  <button
+                    type="button"
+                    className={`task-check ${done ? "checked" : ""}`}
+                    aria-label={done ? `Mark ${task.title} as not done` : `Mark ${task.title} done`}
+                    onClick={() => updateTaskStatus(task, done ? "todo" : "done")}
                   >
-                    <div className="task-top">
-                      <button
-                        type="button"
-                        className={`task-check ${task.status === "done" ? "checked" : ""}`}
-                        aria-label={task.status === "done" ? "Mark active" : "Mark complete"}
-                        onClick={() => updateTaskStatus(task, task.status === "done" ? "todo" : "done")}
-                      >
-                        ✓
-                      </button>
+                    ✓
+                  </button>
 
-                      <p className="task-title">{task.title}</p>
+                  <div className="task-body">
+                    <p className="task-title">{task.title}</p>
+                    {task.dueDate || repeatLabel || task.priority === "high" ? (
+                      <p className="task-sub">
+                        {task.priority === "high" ? <span className="task-flag">High</span> : null}
+                        {task.dueDate ? (
+                          <span className={overdue ? "due-overdue" : ""}>
+                            {overdue ? "Overdue · " : ""}
+                            {formatDueDate(task.dueDate)}
+                            {task.dueTime ? ` · ${formatDueTime(task.dueTime)}` : ""}
+                          </span>
+                        ) : null}
+                        {repeatLabel ? (
+                          <span title="Repeats — the next one appears when you tick this">{repeatLabel}</span>
+                        ) : null}
+                      </p>
+                    ) : null}
+                  </div>
 
-                      <button
-                        type="button"
-                        className="task-delete"
-                        aria-label={`Delete ${task.title}`}
-                        onClick={() => deleteTask(task.id)}
-                      >
-                        <FiTrash2 />
-                      </button>
-                    </div>
-
-                    <div className="task-meta">
-                      <span className={`priority-tag priority-${task.priority}`}>{task.priority}</span>
-                      {task.dueDate ? (
-                        <span className={`date-badge ${overdue ? "due-overdue" : ""}`}>
-                          {overdue ? "Overdue · " : ""}
-                          {formatDueDate(task.dueDate)}
-                          {task.dueTime ? ` · ${formatDueTime(task.dueTime)}` : ""}
-                        </span>
-                      ) : (
-                        <span className="date-badge is-undated">No due date</span>
-                      )}
-                      {describeRepeat(task.repeat) ? (
-                        <span className="repeat-badge" title="Repeats — the next one appears when you tick this">
-                          {describeRepeat(task.repeat)}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className="task-actions-row">
-                      <select
-                        value={task.status}
-                        onChange={(e) => updateTaskStatus(task, e.target.value)}
-                        aria-label={`Status for ${task.title}`}
-                      >
-                        {COLUMNS.map((item) => (
-                          <option key={item.key} value={item.key}>
-                            {item.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </article>
-                );
-              })}
-
-              {tasksByStatus[column.key].length === 0 ? (
-                <p className="empty-day">Nothing here</p>
-              ) : null}
-            </div>
-          </div>
-        ))}
-      </div>
+                  <button
+                    type="button"
+                    className="task-delete"
+                    aria-label={`Delete ${task.title}`}
+                    onClick={() => deleteTask(task.id)}
+                  >
+                    <FiTrash2 />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="empty-day">{EMPTY[filter]}</p>
+        )}
+      </section>
     </section>
   );
 }

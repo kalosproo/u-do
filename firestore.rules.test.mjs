@@ -388,6 +388,20 @@ await t("host invites again", () => assertSucceeds(setDoc(doc(alice, "profiles",
 await t("host withdraws the invite", () => assertSucceeds(deleteDoc(doc(alice, "profiles", BOB, "studyInvites", "r1"))));
 await t("host clears members and closes", () => assertSucceeds(deleteDoc(doc(alice, "rooms", "r1", "members", ALICE)).then(() => deleteDoc(doc(alice, "rooms", "r1")))));
 
+console.log("\n=== tasks as the app writes them ===");
+const oneOff = { title: "Buy notebook", dueDate: "", dueTime: "", priority: "medium", leadMinutes: 30, repeat: { kind: "none", days: [] }, seriesId: null, status: "todo", completed: false, createdAt: new Date() };
+await t("a one-off task (seriesId null) can be added", () => assertSucceeds(setDoc(doc(alice, "users", ALICE, "tasks", "oneoff"), oneOff)));
+await t("...and ticked", () => assertSucceeds(updateDoc(doc(alice, "users", ALICE, "tasks", "oneoff"), { status: "done", completed: true, completedAt: new Date() })));
+await t("a repeating task keeps its series id", () => assertSucceeds(setDoc(doc(alice, "users", ALICE, "tasks", "rep"), { ...oneOff, repeat: { kind: "daily", days: [] }, seriesId: "s123" })));
+await t("a series id still has to be text", () => assertFails(setDoc(doc(alice, "users", ALICE, "tasks", "bad"), { ...oneOff, seriesId: 42 })));
+
+console.log("\n=== focus leaderboard ===");
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "profiles", ALICE, "friends", BOB), { uid: BOB }));
+await t("owner publishes this week's focus total", () => assertSucceeds(setDoc(doc(alice, "profiles", ALICE, "shared", "focusWeek"), { week: "2026-10-19", minutes: 95 })));
+await t("a friend reads it", () => assertSucceeds(getDoc(doc(bob, "profiles", ALICE, "shared", "focusWeek"))));
+await t("a stranger cannot read it", () => assertFails(getDoc(doc(mallory, "profiles", ALICE, "shared", "focusWeek"))));
+await t("nobody can inflate someone else's total", () => assertFails(setDoc(doc(bob, "profiles", ALICE, "shared", "focusWeek"), { week: "2026-10-19", minutes: 9999 })));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

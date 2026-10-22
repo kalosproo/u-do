@@ -123,7 +123,7 @@ export { deleteMyAccount } from "./account/delete.js";
 export { signOutEverywhere } from "./account/security.js";
 
 export { sendScheduledReminders } from "./notifications/digest.js";
-export { onFriendRequest, onFriendAdded } from "./notifications/friends.js";
+export { onFriendRequest, onFriendAdded, onStudyInvite } from "./notifications/friends.js";
 export { sendTestPush } from "./notifications/test.js";
 export { sendEmailDigests, emailUnsubscribe } from "./email/email.js";
 

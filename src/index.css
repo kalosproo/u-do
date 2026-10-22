@@ -1059,7 +1059,11 @@ input[type="file"].upload-input { display: none; }
 /* A logged day used --success (#e5e5e5), which turned a good week into a block
    of white tiles loud enough to pull the eye off the rest of the page. */
 .month-done { background: var(--heat-4); color: var(--accent-contrast); font-weight: 600; }
-.month-today { outline: 1.5px solid var(--info); outline-offset: -1.5px; color: var(--text); }
+/* Today is a ring with bold text, readable whether or not it is ticked yet.
+   Days still to come fade back so the month reads as "so far". */
+.month-today { box-shadow: inset 0 0 0 2px var(--text); color: var(--text); font-weight: 700; }
+.month-done.month-today { box-shadow: inset 0 0 0 2px var(--heat-4), inset 0 0 0 4px var(--bg); color: var(--accent-contrast); }
+.month-future { background: transparent; border: 1px solid var(--border); color: var(--text-subtle); opacity: 0.7; }
 
 /* =========================================================================
    FINANCE
@@ -1271,7 +1275,7 @@ input[type="file"].upload-input { display: none; }
   border-radius: var(--r-sm);
   padding: var(--s-2);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--s-2);
   font-size: 13px;
@@ -1280,8 +1284,8 @@ input[type="file"].upload-input { display: none; }
 .task-card:hover { border-color: var(--border-strong); }
 .task-dragging { opacity: 0.45; }
 .task-completed .task-title { text-decoration: line-through; color: var(--text-subtle); }
-.task-main { display: flex; align-items: flex-start; gap: 6px; flex: 1; min-width: 0; }
-.task-checkbox { margin-top: 2px; accent-color: var(--success); width: 15px; height: 15px; flex-shrink: 0; }
+.task-main { display: flex; align-items: center; gap: var(--s-2); flex: 1; min-width: 0; }
+.task-checkbox { accent-color: var(--success); width: 18px; height: 18px; flex-shrink: 0; }
 /* flex: 1 so the title owns whatever the checkbox leaves, rather than
    shrink-wrapping and letting the row's spare width go nowhere. */
 .task-title-wrap { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
@@ -2819,7 +2823,9 @@ h3, .panel-title { letter-spacing: -0.013em; }
 
   .main-content.with-sidebar { margin-left: 0; padding-top: calc(var(--tap-target) + var(--s-5)); }
 
-  .nav-toggle { display: inline-flex; }
+  /* Scrolls away with the page instead of floating over every heading. */
+  .nav-toggle { display: inline-flex; position: absolute; }
+  .nav-toggle.is-open { position: fixed; }
 
   /* No inner scrollboxes at touch widths. A capped list inside a page that
      also scrolls traps the gesture: the finger sits over the list, the list
@@ -2906,7 +2912,10 @@ h3, .panel-title { letter-spacing: -0.013em; }
   body { font-size: 14.5px; }
 
   .main-content { padding: var(--s-4) var(--s-4) calc(76px + env(safe-area-inset-bottom)); }
-  .main-content.with-sidebar { padding-top: calc(var(--tap-target) + var(--s-4)); }
+  /* Phones have "More" in the bottom bar, so the corner button only appears
+     as the close button while the drawer is open. */
+  .nav-toggle:not(.is-open) { display: none; }
+  .main-content.with-sidebar { padding-top: calc(var(--s-4) + env(safe-area-inset-top, 0px)); }
 
   .sidebar { width: min(280px, 84vw); }
 
@@ -2929,12 +2938,22 @@ h3, .panel-title { letter-spacing: -0.013em; }
   .habits-add-bar,
   .history-filters { grid-template-columns: 1fr; }
 
+  /* Tasks: title and Add span the row; date/time and priority/repeat pair up,
+     so adding a task is three rows, not six. */
+  .task-compose { grid-template-columns: 1fr 1fr; }
+  .task-compose > input:first-child,
+  .task-compose > .btn { grid-column: 1 / -1; }
+
   .btn,
   .button-primary,
   .button-secondary,
   input,
   select,
   textarea { min-height: var(--tap-target); }
+  /* ...but a checkbox is not a text field: stretching it to 44px is what
+     pushed the planner's titles off their checkboxes. */
+  input[type="checkbox"],
+  input[type="radio"] { min-height: 0; }
 
   .profile-actions { flex-direction: column; }
   .profile-actions > * { width: 100%; }
@@ -4088,3 +4107,43 @@ body.is-focusing { overflow: hidden; }
 /* Who's in the room, on the full-screen timer */
 .focus-room { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: 0.04em; color: var(--text-muted); white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; }
 .focus-room svg { flex-shrink: 0; }
+
+/* Tasks: one list. A row is the checkbox, the title with one quiet line under
+   it, and delete — nothing else to read past. */
+.task-list-panel { padding: var(--s-2) var(--s-4); }
+.task-list { list-style: none; margin: 0; padding: 0; }
+.task-row { display: flex; align-items: center; gap: var(--s-3); padding: 12px 0; border-bottom: 1px solid var(--border); }
+.task-row:last-child { border-bottom: 0; }
+.task-row .task-check { width: 22px; height: 22px; border-radius: 7px; font-size: 13px; cursor: pointer; }
+.task-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.task-body .task-title { margin: 0; font-size: 15px; font-weight: 550; overflow-wrap: anywhere; }
+.task-sub { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: var(--text-muted); }
+.task-sub .due-overdue { color: var(--text); font-weight: 600; }
+.task-flag { font-weight: 700; color: var(--text); letter-spacing: 0.02em; }
+.task-row.task-done .task-title { text-decoration: line-through; color: var(--text-subtle); }
+.task-row.task-overdue { box-shadow: inset 3px 0 0 var(--text); padding-left: 10px; margin-left: -10px; }
+.task-row .task-delete { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; }
+.task-list-panel .empty-day { padding: var(--s-5) 0; font-size: 13.5px; }
+
+/* Daily focus goal */
+.focus-card-today-wrap { display: flex; align-items: center; gap: var(--s-2); }
+.focus-card-today strong { white-space: nowrap; }
+.focus-goal-ring { width: 40px; height: 40px; transform: rotate(-90deg); flex-shrink: 0; }
+.focus-goal-ring circle { fill: none; stroke-width: 5; }
+.focus-goal-ring .focus-ring-track { stroke: var(--border); }
+.focus-goal-ring .focus-ring-fill { stroke: var(--text); stroke-linecap: round; transition: stroke-dashoffset 0.6s var(--ease-out, ease); }
+.focus-goal-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.focus-goal-label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-right: var(--s-1); }
+
+/* Friends leaderboard */
+.leaderboard-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.leaderboard-list li { display: flex; align-items: center; gap: var(--s-3); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.leaderboard-list li:last-child { border-bottom: 0; }
+.leaderboard-rank { width: 20px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-muted); flex-shrink: 0; }
+.leaderboard-list li:first-child .leaderboard-rank { color: var(--text); }
+.leaderboard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.leaderboard-main strong { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leaderboard-bar { height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.leaderboard-bar i { display: block; height: 100%; background: var(--text); opacity: 0.35; border-radius: inherit; }
+.leaderboard-list li.is-me .leaderboard-bar i { opacity: 1; }
+.leaderboard-time { font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 64px; text-align: right; }

@@ -80,7 +80,7 @@ function Sidebar({ user }) {
     <>
       <button
         type="button"
-        className="nav-toggle"
+        className={`nav-toggle ${isOpen ? "is-open" : ""}`}
         onClick={() => setIsOpen((open) => !open)}
         aria-label={isOpen ? "Close navigation" : "Open navigation"}
         aria-expanded={isOpen}

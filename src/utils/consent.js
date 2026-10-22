@@ -6,8 +6,8 @@
  * would make "they agreed" permanently true no matter how much the policy
  * later changed, which is the failure mode worth designing out.
  */
-export const PRIVACY_POLICY_VERSION = 6;
-export const PRIVACY_POLICY_UPDATED = "21 October 2026";
+export const PRIVACY_POLICY_VERSION = 7;
+export const PRIVACY_POLICY_UPDATED = "22 October 2026";
 
 /** The Terms of Service, accepted alongside the policy and versioned the same way. */
 export const TERMS_VERSION = 1;

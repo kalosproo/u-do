@@ -2,12 +2,14 @@ import { useMemo } from "react";
 
 import FocusCard from "../components/focus/FocusCard";
 import FriendsFocusing from "../components/focus/FriendsFocusing";
+import FocusLeaderboard from "../components/focus/FocusLeaderboard";
 import StudyRoom from "../components/focus/StudyRoom";
 import ExamCountdowns from "../components/ExamCountdowns";
 import { useAuth } from "../hooks/useAuth";
 import { useFocus } from "../hooks/useFocus";
 import { formatMinutes } from "../utils/focusTimer";
 import { focusStats } from "../utils/focusStats";
+import { GOAL_OPTIONS, goalLabel } from "../utils/focusGoal";
 
 const shortDay = (key) =>
   new Date(`${key}T00:00:00`).toLocaleDateString(undefined, { weekday: "narrow" });
@@ -58,6 +60,21 @@ function Focus() {
         ))}
       </div>
 
+      <div className="focus-goal-row" role="group" aria-label="Daily focus goal">
+        <span className="focus-goal-label">Daily goal</span>
+        {GOAL_OPTIONS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={`chip ${focus.goal === value ? "active" : ""}`}
+            aria-pressed={focus.goal === value}
+            onClick={() => focus.setGoal(value)}
+          >
+            {goalLabel(value)}
+          </button>
+        ))}
+      </div>
+
       <section className="panel focus-chart-panel" aria-label="Last fourteen days">
         <div className="panel-head">
           <h3 className="panel-title">Last 14 days</h3>
@@ -99,14 +116,16 @@ function Focus() {
         )}
       </section>
 
+      {user ? <FocusLeaderboard /> : null}
+
       {user ? <FriendsFocusing /> : null}
 
       {user ? (
         <label className="focus-share-toggle">
           <input type="checkbox" checked={focus.shareFocus} onChange={(event) => focus.setShareFocus(event.target.checked)} />
           <span>
-            <strong>Let friends see when I&apos;m focusing</strong>
-            <span className="panel-note">They see that you&apos;re focusing and how long is left — never what you&apos;re studying.</span>
+            <strong>Share my focus with friends</strong>
+            <span className="panel-note">They see when you&apos;re focusing, how long is left, and your total this week — never what you&apos;re studying.</span>
           </span>
         </label>
       ) : null}

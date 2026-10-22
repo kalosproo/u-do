@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useFocus } from "../../hooks/useFocus";
 import { PRESETS, formatClock, formatMinutes, lastDays, progressOf } from "../../utils/focusTimer";
 import { toDateKey } from "../../utils/dateKeys";
+import { goalLabel, goalProgress } from "../../utils/focusGoal";
 
 function MiniRing({ progress, paused }) {
   const r = 44;
@@ -16,6 +17,19 @@ function MiniRing({ progress, paused }) {
       </svg>
       <span>{paused ? <FiPause /> : <span className="focus-mini-dot" />}</span>
     </div>
+  );
+}
+
+/** Today's minutes against the daily goal, as a small ring. */
+function GoalRing({ minutes, goal }) {
+  const r = 20;
+  const c = 2 * Math.PI * r;
+  const progress = goalProgress(minutes, goal);
+  return (
+    <svg className={`focus-goal-ring ${progress >= 1 ? "is-done" : ""}`} viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="24" r={r} className="focus-ring-track" />
+      <circle cx="24" cy="24" r={r} className="focus-ring-fill" strokeDasharray={c} strokeDashoffset={c * (1 - progress)} />
+    </svg>
   );
 }
 
@@ -100,9 +114,18 @@ function FocusCard() {
           <p className="eyebrow">FOCUS</p>
           <h3 className="focus-card-title">Study without distractions.</h3>
         </div>
-        <div className="focus-card-today">
-          <strong>{formatMinutes(today.minutes)}</strong>
-          {pathname === "/focus" ? <span>today</span> : <Link to="/focus" className="focus-card-stats">today · stats</Link>}
+        <div className="focus-card-today-wrap">
+          {focus.goal ? <GoalRing minutes={today.minutes} goal={focus.goal} /> : null}
+          <div className="focus-card-today">
+            <strong>{formatMinutes(today.minutes)}</strong>
+            {pathname === "/focus" ? (
+              <span>{focus.goal ? `of ${goalLabel(focus.goal)} today` : "today"}</span>
+            ) : (
+              <Link to="/focus" className="focus-card-stats">
+                {focus.goal ? `of ${goalLabel(focus.goal)} · stats` : "today · stats"}
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 

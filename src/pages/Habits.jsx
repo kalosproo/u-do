@@ -410,7 +410,7 @@ function Habits() {
                     key={dateKey}
                     className={`month-cell ${completed ? "month-done" : ""} ${
                       dateKey === todayKey ? "month-today" : ""
-                    }`}
+                    } ${dateKey > todayKey ? "month-future" : ""}`}
                   >
                     {Number(dateKey.slice(8))}
                   </span>

@@ -28,8 +28,8 @@ const TYPES = [
   },
   {
     key: "friends",
-    label: "Friend requests",
-    note: "As they happen. Ignores the window.",
+    label: "Friends",
+    note: "Friend requests and study room invites, as they happen. Ignores the window.",
   },
 ];
 

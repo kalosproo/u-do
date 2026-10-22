@@ -51,8 +51,9 @@ function PrivacyContent() {
         signed-in people can see so that search and invite links work. If you add
         friends, they can additionally see a summary of your habits: their names, your
         streaks and your completion rates. While you run a focus session they can also
-        see that you are focusing and how long is left — never what you are studying —
-        unless you turn that off on the Focus page. They can see which achievement
+        see that you are focusing and how long is left, and the leaderboard shows them
+        your total focus time this week. They never see what you are studying, and you
+        can turn both off on the Focus page. They can see which achievement
         badges you have earned and when. They cannot see your tasks, your planner, your
         finances, your exams, or anything else.
       </p>
