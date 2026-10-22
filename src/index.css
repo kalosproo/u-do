@@ -4198,3 +4198,16 @@ body.is-focusing { overflow: hidden; }
 @media (max-width: 480px) { .focus-screen.in-room .focus-fullscreen-btn { display: none; } }
 .room-reactions-pop .room-reactions-bar { flex-wrap: nowrap; }
 .room-reactions-toasts .room-reactions-live { flex-direction: column; align-items: flex-end; min-height: 0; }
+
+/* Revision planner */
+.revision-popup { display: flex; flex-direction: column; gap: var(--s-3); max-height: min(88dvh, 720px); overflow-y: auto; }
+.revision-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.revision-field select, .revision-field input, .revision-field textarea { font-weight: 400; color: var(--text); }
+.revision-field textarea { resize: vertical; min-height: 110px; font: inherit; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); }
+.revision-check { display: flex; align-items: center; gap: var(--s-2); font-size: 13.5px; }
+.revision-check input { width: 18px; height: 18px; accent-color: var(--text); }
+.revision-preview { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--r-sm); max-height: 240px; overflow-y: auto; }
+.revision-preview li { display: flex; gap: var(--s-3); padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.revision-preview li:last-child { border-bottom: 0; }
+.revision-preview li span { color: var(--text-muted); min-width: 92px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.revision-preview li strong { font-weight: 550; min-width: 0; overflow-wrap: anywhere; }

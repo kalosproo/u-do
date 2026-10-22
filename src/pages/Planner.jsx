@@ -14,6 +14,7 @@ import {
   setPlanCompleted,
 } from "../services/planner";
 import { celebrate } from "../utils/feedback";
+import RevisionPlanner from "../components/RevisionPlanner";
 
 function sortPlans(list) {
   return [...list].sort((a, b) => {
@@ -119,6 +120,7 @@ function Planner() {
   const [editingText, setEditingText] = useState("");
   const [dragTaskId, setDragTaskId] = useState(null);
   const [autoPlanOpen, setAutoPlanOpen] = useState(false);
+  const [revisionOpen, setRevisionOpen] = useState(false);
   const [autoPlanLoading, setAutoPlanLoading] = useState(false);
   const [autoPlanApplying, setAutoPlanApplying] = useState(false);
   const [autoPlanSummary, setAutoPlanSummary] = useState("");
@@ -345,6 +347,7 @@ function Planner() {
 
         <div className="week-nav" role="navigation" aria-label="Week navigation">
           <button type="button" className="autoplan-trigger" onClick={openAutoPlanner}>AI Auto-Plan Week</button>
+          <button type="button" className="autoplan-trigger" onClick={() => { if (requireUser()) setRevisionOpen(true); }}>Plan revision</button>
           <button
             type="button"
             aria-label="Previous week"
@@ -494,6 +497,7 @@ function Planner() {
       </div>
       {autoPlanOpen && <div className="autoplan-overlay" role="dialog" aria-modal="true" aria-label="AI Auto-Plan Week"><section className="autoplan-popup"><div className="autoplan-header"><h4>AI Auto-Plan Week</h4><button type="button" className="autoplan-close" onClick={closeAutoPlanner} aria-label="Close">✕</button></div>
         {autoPlanLoading ? <p className="autoplan-muted">Reading your tasks and this week's planner...</p> : <>{autoPlanSummary && <p className="autoplan-summary">{autoPlanSummary}</p>}{autoPlanStatus && <p className="autoplan-status">{autoPlanStatus}</p>}{autoPlanItems.length ? <div className="autoplan-list">{autoPlanItems.map((item) => <div key={item.id} className="autoplan-item"><div><strong>{item.title}</strong><small>{item.date} · {item.priority}</small></div><button type="button" className="autoplan-remove" onClick={() => setAutoPlanItems((items) => items.filter((current) => current.id !== item.id))} aria-label={`Remove ${item.title}`}>✕</button></div>)}</div> : !autoPlanStatus && <p className="autoplan-muted">Nothing new to schedule right now.</p>}{autoPlanItems.length ? <div className="autoplan-cta-row"><button type="button" className="autoplan-primary" onClick={applyAutoPlan} disabled={autoPlanApplying}>{autoPlanApplying ? "Adding..." : `Add ${autoPlanItems.length} to Planner`}</button><button type="button" className="autoplan-secondary" onClick={closeAutoPlanner} disabled={autoPlanApplying}>Cancel</button></div> : null}</>}</section></div>}
+      {revisionOpen ? <RevisionPlanner onClose={() => setRevisionOpen(false)} onAdded={() => loadPlans()} /> : null}
     </section>
   );
 }
