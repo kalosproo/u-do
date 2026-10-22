@@ -324,7 +324,9 @@ service cloud.firestore {
       }
 
       match /friends/{friendUid} {
-        allow read: if isOwner(uid) || isOwner(friendUid);
+        // Your friends may see who else you're friends with, which is what
+        // lets the app show mutual friends. Strangers still cannot.
+        allow read: if isOwner(uid) || isOwner(friendUid) || isFriendOf(uid);
 
         // Adding someone to your own list only ever widens who may see your
         // card, so you may do it freely.

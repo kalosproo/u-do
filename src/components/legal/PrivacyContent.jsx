@@ -55,8 +55,10 @@ function PrivacyContent() {
         see that you are focusing and how long is left, and the leaderboard shows them
         your total focus time this week. They never see what you are studying, and you
         can turn both off on the Focus page. They can see which achievement
-        badges you have earned and when. They cannot see your tasks, your planner, your
-        finances, your exams, or anything else.
+        badges you have earned and when, and who else they share as friends with you,
+        so the app can show mutual friends. Nobody becomes your friend unless you
+        accept their request, and you can remove a friend at any time. They cannot see
+        your tasks, your planner, your finances, your exams, or anything else.
       </p>
       <p>
         If you open a study room, the friends you invite can see your display name,

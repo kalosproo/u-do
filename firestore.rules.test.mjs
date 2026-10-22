@@ -98,6 +98,10 @@ await env.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(ctx.firestore(),"profiles",BOB,"friends",ALICE),{uid:ALICE});
 });
 await t("bob reads alice's summary while friends", () => assertSucceeds(getDoc(doc(bob,"profiles",ALICE,"shared","summary"))));
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(),"profiles",ALICE,"friends","carl_uid"),{uid:"carl_uid"}));
+await t("bob (a friend) can see alice is friends with carl — mutual friends", () => assertSucceeds(getDoc(doc(bob,"profiles",ALICE,"friends","carl_uid"))));
+await t("mallory (a stranger) CANNOT read alice's friend list", () => assertFails(getDoc(doc(mallory,"profiles",ALICE,"friends","carl_uid"))));
+await t("mallory CANNOT list alice's friends either", () => assertFails(getDocs(collection(mallory,"profiles",ALICE,"friends"))));
 await t("alice removes bob from her list", () => assertSucceeds(deleteDoc(doc(alice,"profiles",ALICE,"friends",BOB))));
 await t("bob can no longer read alice's summary", () => assertFails(getDoc(doc(bob,"profiles",ALICE,"shared","summary"))));
 await t("alice can remove herself from bob's list too", () => assertSucceeds(deleteDoc(doc(alice,"profiles",BOB,"friends",ALICE))));

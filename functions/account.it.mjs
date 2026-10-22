@@ -61,6 +61,9 @@ await db.collection("profiles").doc("friend1").collection("studyInvites").doc("r
 await db.collection("rooms").doc("room2").set({ host: "someoneElse", hostName: "Else", invited: [host.uid], state: "idle", minutes: 25 });
 await db.collection("rooms").doc("room2").collection("members").doc(host.uid).set({ uid: host.uid, name: "Host" });
 await db.collection("profiles").doc(host.uid).collection("studyInvites").doc("room2").set({ host: "someoneElse", hostName: "Else" });
+const prof = (id) => db.collection("profiles").doc(id);
+await prof(host.uid).collection("friends").doc("oldpal").set({ uid: "oldpal" });
+await prof("oldpal").collection("friends").doc(host.uid).set({ uid: host.uid });
 await db.collection("users").doc(host.uid).collection("classes").doc("c1").set({ subject: "Physics", day: 4, start: "14:00", end: "15:00" });
 await db.collection("users").doc(host.uid).collection("grades").doc("g1").set({ subject: "Physics", score: 40, outOf: 50 });
 await deleteMyAccount.run({ auth: { uid: host.uid, token: { auth_time: Math.floor(Date.now() / 1000) } }, data: {}, rawRequest: {} });
@@ -68,6 +71,8 @@ check("10. deleting an account closes the rooms it hosts",
   !(await db.collection("rooms").doc("room1").get()).exists
   && !(await db.collection("profiles").doc("friend1").collection("studyInvites").doc("room1").get()).exists
   && (await db.collection("rooms").doc("room1").collection("members").get()).empty);
+check("11b. ...and leaves nobody still listing it as a friend",
+  !(await prof("oldpal").collection("friends").doc(host.uid).get()).exists);
 check("11a. ...and deletes the timetable and grades",
   (await db.collection("users").doc(host.uid).collection("classes").get()).empty
   && (await db.collection("users").doc(host.uid).collection("grades").get()).empty);

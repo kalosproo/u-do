@@ -174,13 +174,15 @@ export const deleteMyAccount = onCall({ timeoutSeconds: 300, secrets: [KEY_ID, K
       removed[name] = await deleteAll(db.collection("users").doc(uid).collection(name));
     }
 
+    // Before the profile's own lists go: detaching reads them to find the
+    // other half of every friendship.
+    Object.assign(removed, await detachFromOthers(uid));
+
     for (const name of PROFILE_SUBS) {
       removed[`profile.${name}`] = await deleteAll(
         db.collection("profiles").doc(uid).collection(name),
       );
     }
-
-    Object.assign(removed, await detachFromOthers(uid));
     Object.assign(removed, await releaseReservations(uid));
 
     await db.collection("profiles").doc(uid).delete().catch(() => {});

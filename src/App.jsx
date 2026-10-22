@@ -34,6 +34,7 @@ import AdSlot from "./components/AdSlot";
 import IndexingPolicy from "./components/IndexingPolicy";
 import { usePlan } from "./hooks/usePlan";
 import KeyboardShortcuts from "./components/KeyboardShortcuts";
+import CoachMarks from "./components/CoachMarks";
 
 /** The signed-in chrome. Login sits outside it, on its own full-page canvas. */
 function AppLayout() {
@@ -157,6 +158,9 @@ function App() {
 
       {/* Before the consent prompt, so the prompt renders above it. */}
       <WelcomeTour />
+
+      {/* One-time arrows pointing at the main controls. */}
+      <CoachMarks />
 
       {/* Outside the routes so it covers every page, and portalled to the body
           so it sits above the background layer. */}

@@ -392,6 +392,7 @@ function Tasks() {
                     <button
                       type="button"
                       className="task-body"
+                      data-tip="steps"
                       aria-expanded={open}
                       aria-label={`${task.title}, ${open ? "hide" : "show"} steps`}
                       onClick={() => {

@@ -543,3 +543,26 @@ export const listFriends = async (uid) => {
     })
   );
 };
+
+/**
+ * Friends you share with someone you looked up. Each check reads one of your
+ * friends' lists, which the rules allow only because they are your friend —
+ * so this can never reveal anything about a stranger's friends.
+ */
+export const mutualFriendsWith = async (uid, targetUid, limit = 30) => {
+  if (!uid || !targetUid || uid === targetUid) return { count: 0, names: [] };
+
+  const mine = (await getDocs(friendsCollection(uid))).docs.map((item) => item.id).filter((id) => id !== targetUid).slice(0, limit);
+  const shared = (
+    await Promise.all(
+      mine.map(async (friendUid) =>
+        (await getDoc(friendDoc(friendUid, targetUid)).catch(() => null))?.exists() ? friendUid : null
+      )
+    )
+  ).filter(Boolean);
+
+  const names = await Promise.all(
+    shared.slice(0, 2).map(async (friendUid) => (await readProfile(friendUid).catch(() => null))?.displayName || "a friend")
+  );
+  return { count: shared.length, names };
+};

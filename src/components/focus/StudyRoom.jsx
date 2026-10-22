@@ -98,7 +98,7 @@ function StudyRoom({ compact = false }) {
               </button>
             ))}
           </div>
-          <button type="button" className="btn btn-primary" disabled={busy} onClick={() => act(() => study.create(minutes))}>
+          <button data-tip="room" type="button" className="btn btn-primary" disabled={busy} onClick={() => act(() => study.create(minutes))}>
             Open a room
           </button>
         </div>
