@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import {
@@ -77,6 +77,8 @@ function Avatar({ person }) {
   return <span className="friend-avatar">{label.trim().charAt(0).toUpperCase()}</span>;
 }
 
+const UNDO_MS = 10000;
+
 function Friends() {
   const navigate = useNavigate();
   const requireUser = useAuthGuard();
@@ -103,6 +105,15 @@ function Friends() {
   const [friendFilter, setFriendFilter] = useState("");
   const [toggled, setToggled] = useState(() => new Set());
 
+  // A deleted request waits UNDO_MS before it is really deleted, so a
+  // mis-tap can be taken back. The ref is what the timer and unmount read.
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const pendingRef = useRef(null);
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   const inviteLink = useMemo(
     () => (profile?.inviteCode ? buildInviteLink(profile.inviteCode) : ""),
     [profile]
@@ -126,7 +137,9 @@ function Friends() {
       listFriends(user.uid),
     ]);
 
-    if (incoming.status === "fulfilled") setRequests(incoming.value);
+    if (incoming.status === "fulfilled") {
+      setRequests(incoming.value.filter((item) => item.uid !== pendingRef.current?.request.uid));
+    }
     if (sent.status === "fulfilled") setOutgoing(sent.value);
     if (mine.status === "fulfilled") setFriends(mine.value);
 
@@ -334,20 +347,53 @@ function Friends() {
     }
   };
 
-  const handleDecline = async (requesterUid) => {
-    const currentUser = requireUser();
-    if (!currentUser) return;
+  // Really deletes whatever is waiting. Safe to call twice.
+  const commitDelete = useCallback(() => {
+    const pending = pendingRef.current;
+    const currentUser = userRef.current;
+    pendingRef.current = null;
+    setPendingDelete(null);
+    if (!pending || !currentUser) return;
 
-    setBusyUid(requesterUid);
-    try {
-      await declineFriendRequest(currentUser, requesterUid);
-      setRequests((current) => current.filter((item) => item.uid !== requesterUid));
-      if (searchResult?.uid === requesterUid) setSearchRelationship(RELATIONSHIP.NONE);
-    } catch (error) {
+    declineFriendRequest(currentUser, pending.request.uid).catch((error) => {
       setStatus(error?.message || "Couldn't delete that request.");
-    } finally {
-      setBusyUid("");
-    }
+      setRequests((current) => [pending.request, ...current.filter((item) => item.uid !== pending.request.uid)]);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!pendingDelete) return undefined;
+    const timer = setTimeout(commitDelete, UNDO_MS);
+    return () => clearTimeout(timer);
+  }, [pendingDelete, commitDelete]);
+
+  // Leaving the page doesn't cancel a delete you meant.
+  useEffect(() => commitDelete, [commitDelete]);
+
+  const handleDecline = (request) => {
+    if (!requireUser()) return;
+    if (pendingRef.current) commitDelete();
+
+    const index = requests.findIndex((item) => item.uid === request.uid);
+    const pending = { request, index, id: Date.now() };
+    pendingRef.current = pending;
+    setPendingDelete(pending);
+    setRequests((current) => current.filter((item) => item.uid !== request.uid));
+    if (searchResult?.uid === request.uid) setSearchRelationship(RELATIONSHIP.NONE);
+  };
+
+  const handleUndoDelete = () => {
+    const pending = pendingRef.current;
+    pendingRef.current = null;
+    setPendingDelete(null);
+    if (!pending) return;
+
+    setRequests((current) => {
+      const rest = current.filter((item) => item.uid !== pending.request.uid);
+      rest.splice(Math.max(0, Math.min(pending.index, rest.length)), 0, pending.request);
+      return rest;
+    });
+    if (searchResult?.uid === pending.request.uid) setSearchRelationship(RELATIONSHIP.INCOMING);
   };
 
   const handleRemove = async (friendUid, name) => {
@@ -515,7 +561,7 @@ function Friends() {
                 <button
                   type="button"
                   className="button-secondary"
-                  onClick={() => handleDecline(request.uid)}
+                  onClick={() => handleDecline(request)}
                   disabled={busyUid === request.uid}
                   aria-label={`Delete request from ${request.displayName || "them"}`}
                 >
@@ -840,6 +886,15 @@ function Friends() {
           </div>
         ) : null}
       </article>
+      {pendingDelete ? (
+        <div className="undo-toast" role="status" key={pendingDelete.id}>
+          <span>Request from {pendingDelete.request.displayName || "U.Do user"} deleted</span>
+          <button type="button" onClick={handleUndoDelete}>
+            Undo
+          </button>
+          <i className="undo-toast-timer" style={{ animationDuration: `${UNDO_MS}ms` }} aria-hidden="true" />
+        </div>
+      ) : null}
     </section>
   );
 }
