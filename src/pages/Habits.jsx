@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { useAdhd } from "../hooks/useAdhd";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { fromDateKey, toDateKey } from "../utils/dateKeys";
@@ -30,6 +31,13 @@ const STATE_LABEL = {
   frozen: "Freeze used",
   broken: "Broken",
   recovery: "Recoverable",
+};
+
+// ADHD mode: a missed day is a fresh start, not a failure.
+const CALM_LABEL = {
+  ...STATE_LABEL,
+  broken: "Welcome back",
+  recovery: "Pick it up today",
 };
 
 const getMonthCells = (baseDate) => {
@@ -71,6 +79,7 @@ const getCompletionRate = (completedWindows, frequency, today) => {
 
 function Habits() {
   const { user } = useAuth();
+  const labels = useAdhd()?.enabled ? CALM_LABEL : STATE_LABEL;
   const requireUser = useAuthGuard();
 
   const [habits, setHabits] = useState([]);
@@ -316,7 +325,7 @@ function Habits() {
                   <span className="habit-name">{habit.title}</span>
                   <span className="habit-sub">
                     <span className={`state-${habit.streakState}`}>
-                      {STATE_LABEL[habit.streakState] || habit.streakState}
+                      {labels[habit.streakState] || habit.streakState}
                     </span>
                     · {habit.frequency} · {habit.completionRate}%
                   </span>

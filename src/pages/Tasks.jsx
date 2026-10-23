@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FiChevronDown, FiPlus, FiTrash2, FiX } from "react-icons/fi";
+import { FiChevronDown, FiPlay, FiPlus, FiTrash2, FiX } from "react-icons/fi";
+import { useAdhd } from "../hooks/useAdhd";
 import { useAuth } from "../hooks/useAuth";
+import { useFocus } from "../hooks/useFocus";
+import { STARTER_MINUTES } from "../utils/focusTimer";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 import { fromDateKey, toDateKey } from "../utils/dateKeys";
 import {
@@ -92,6 +95,9 @@ function Tasks() {
     FILTERS.some(([key]) => key === requested) ? requested : "active"
   );
   const [error, setError] = useState("");
+  // ADHD mode says "from earlier" and keeps it plain: no alarm on a late task.
+  const calm = Boolean(useAdhd()?.enabled);
+  const focus = useFocus();
   const [openId, setOpenId] = useState(null);
   const [stepText, setStepText] = useState("");
   // A task due at 18:30 turns overdue at 18:30, not at midnight, so the
@@ -237,7 +243,7 @@ function Tasks() {
             <h1 className="page-title">Tasks</h1>
             <p className="page-sub">
               {stats.active} active · {stats.done} done
-              {stats.overdue ? ` · ${stats.overdue} overdue` : ""}
+              {stats.overdue ? ` · ${stats.overdue} ${calm ? "from earlier" : "overdue"}` : ""}
             </p>
           </div>
 
@@ -267,7 +273,7 @@ function Tasks() {
                 setSearchParams(searchParams, { replace: true });
               }}
             >
-              {label}
+              {key === "overdue" && calm ? "From earlier" : label}
               {key === "overdue" && stats.overdue ? ` ${stats.overdue}` : ""}
             </button>
           ))}
@@ -370,7 +376,8 @@ function Tasks() {
         {visibleTasks.length ? (
           <ul className="task-list">
             {visibleTasks.map((task) => {
-              const overdue = isOverdue(task);
+              const late = isOverdue(task);
+              const overdue = late && !calm;
               const done = task.status === "done";
               const repeatLabel = describeRepeat(task.repeat);
 
@@ -406,7 +413,7 @@ function Tasks() {
                           {task.priority === "high" ? <span className="task-flag">High</span> : null}
                           {task.dueDate ? (
                             <span className={overdue ? "due-overdue" : ""}>
-                              {overdue ? "Overdue · " : ""}
+                              {late ? (calm ? "From earlier · " : "Overdue · ") : ""}
                               {formatDueDate(task.dueDate)}
                               {task.dueTime ? ` · ${formatDueTime(task.dueTime)}` : ""}
                             </span>
@@ -431,6 +438,15 @@ function Tasks() {
 
                   {open ? (
                     <div className="task-steps">
+                      {calm && !done ? (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-primary task-just-start"
+                          onClick={() => (focus?.session ? focus.open() : focus?.start(STARTER_MINUTES, task.title, { starter: true }))}
+                        >
+                          <FiPlay aria-hidden="true" /> {focus?.session ? "Back to the timer" : `Just start · ${STARTER_MINUTES} min`}
+                        </button>
+                      ) : null}
                       {task.subtasks?.length ? (
                         <ul>
                           {task.subtasks.map((step) => (
@@ -482,7 +498,7 @@ function Tasks() {
             })}
           </ul>
         ) : (
-          <p className="empty-day">{EMPTY[filter]}</p>
+          <p className="empty-day">{filter === "overdue" && calm ? "Nothing from earlier." : EMPTY[filter]}</p>
         )}
       </section>
     </section>

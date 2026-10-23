@@ -1,0 +1,479 @@
+/* =========================================================================
+   ADHD MODE
+   A calmer, one-thing-at-a-time U.Do, switched on per account. Everything
+   here is either a new .adhd-* / .focus-idea / .focus-starter piece, or
+   scoped under html[data-adhd="on"], so nobody else's app changes at all.
+   Loaded after index.css, so it wins ties without !important.
+   ========================================================================= */
+
+.adhd-home {
+  --adhd-radius: 26px;
+  --adhd-glow: rgba(255, 255, 255, 0.075);
+  max-width: 660px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  padding: var(--s-2) 0 var(--s-16);
+}
+:root[data-theme="light"] .adhd-home { --adhd-glow: rgba(10, 10, 10, 0.05); }
+
+.adhd-home :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+/* Each block settles in a beat after the one above it. */
+.adhd-home > * { animation: adhd-rise 0.6s var(--ease-out) both; }
+.adhd-home > :nth-child(2) { animation-delay: 50ms; }
+.adhd-home > :nth-child(3) { animation-delay: 100ms; }
+.adhd-home > :nth-child(4) { animation-delay: 150ms; }
+.adhd-home > :nth-child(5) { animation-delay: 200ms; }
+@keyframes adhd-rise { from { opacity: 0; transform: translateY(12px); } }
+
+/* ---- Header ----------------------------------------------------------- */
+.adhd-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-4); }
+.adhd-date { font-size: var(--t-xs); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-subtle); }
+.adhd-hello { margin-top: var(--s-2); font-size: clamp(32px, 7.4vw, 46px); font-weight: 750; letter-spacing: -0.04em; line-height: 1.02; }
+.adhd-sub { margin-top: var(--s-3); max-width: 34ch; font-size: 16.5px; line-height: 1.5; color: var(--text-muted); }
+
+.adhd-ghost,
+.adhd-back {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 650;
+  cursor: pointer;
+  transition: color var(--speed) var(--ease), border-color var(--speed) var(--ease), background var(--speed) var(--ease), transform var(--speed-fast) var(--ease);
+}
+.adhd-ghost:hover,
+.adhd-back:hover { color: var(--text); border-color: var(--border-strong); background: var(--accent-soft); }
+.adhd-ghost:active,
+.adhd-back:active { transform: scale(0.97); }
+.adhd-back { margin-bottom: var(--s-4); }
+
+/* ---- Progress: one bar per pick, filling left to right ---------------- */
+.adhd-progress { display: flex; align-items: center; gap: var(--s-4); }
+.adhd-bars { flex: 1; display: flex; gap: 6px; }
+.adhd-bars span { position: relative; flex: 1; height: 6px; overflow: hidden; border-radius: var(--r-pill); background: var(--surface-2); }
+.adhd-bars span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--text);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.8s var(--ease-out);
+}
+.adhd-bars .is-done::after { transform: scaleX(1); }
+/* The one in progress shimmers, slowly — alive, not urgent. */
+.adhd-bars .is-now::after {
+  transform: scaleX(1);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 45%, transparent), transparent);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: adhd-shimmer 2.6s ease-in-out infinite;
+}
+@keyframes adhd-shimmer { from { background-position: -100% 0; } to { background-position: 200% 0; } }
+.adhd-progress-label { font-size: var(--t-sm); font-weight: 600; color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.adhd-error { padding: 12px 16px; border-radius: 14px; background: var(--danger-soft); font-size: var(--t-sm); }
+
+/* ---- Cards ------------------------------------------------------------ */
+.adhd-card {
+  position: relative;
+  padding: clamp(22px, 5.4vw, 34px);
+  border: 1px solid var(--border);
+  border-radius: var(--adhd-radius);
+  background: var(--surface-sheen), var(--surface);
+  box-shadow: var(--edge-top), var(--shadow);
+}
+
+.adhd-eyebrow { display: inline-flex; align-items: center; gap: 9px; font-size: var(--t-xs); font-weight: 750; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); }
+
+/* ---- Now -------------------------------------------------------------- */
+/* A lit edge and a slow aura behind the one thing that matters. */
+.adhd-now {
+  overflow: hidden;
+  isolation: isolate;
+  border-color: transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(155deg, var(--border-strong), var(--border) 38%, var(--border) 62%, var(--border-strong)) border-box;
+  box-shadow: var(--edge-top), var(--shadow-lg);
+}
+.adhd-now::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -55% -25% auto;
+  height: 130%;
+  background: radial-gradient(closest-side, var(--adhd-glow), transparent 72%);
+  pointer-events: none;
+  animation: adhd-aura 10s ease-in-out infinite alternate;
+}
+@keyframes adhd-aura {
+  from { transform: translate(-14%, -4%) scale(1); }
+  to { transform: translate(14%, 6%) scale(1.18); }
+}
+
+.adhd-now-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.adhd-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--text); animation: adhd-pulse 2.4s var(--ease-out) infinite; }
+@keyframes adhd-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--text) 45%, transparent); }
+  80%, 100% { box-shadow: 0 0 0 9px transparent; }
+}
+.adhd-chip { padding: 5px 11px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--text-muted); font-size: var(--t-xs); font-weight: 650; }
+
+.adhd-now-body { display: flex; align-items: flex-start; gap: var(--s-3); margin-top: var(--s-5); }
+.adhd-now-title {
+  font-size: clamp(27px, 6.2vw, 38px);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  text-decoration: line-through transparent;
+  text-decoration-thickness: 3px;
+  transition: opacity 0.4s var(--ease), text-decoration-color 0.3s var(--ease);
+}
+.adhd-now-body .adhd-check { display: none; width: 38px; height: 38px; margin-top: 2px; }
+
+/* Done: the tick draws, the title is struck, the card lifts away. */
+.adhd-now.is-finishing .adhd-check { display: block; }
+.adhd-now.is-finishing .adhd-now-title { opacity: 0.5; text-decoration-color: var(--text); }
+.adhd-now.is-finishing { animation: adhd-finish 0.72s var(--ease-out) forwards; }
+@keyframes adhd-finish {
+  0% { transform: scale(1); }
+  28% { transform: scale(1.015); }
+  70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: translateY(-10px) scale(0.98); }
+}
+
+.adhd-check circle { fill: transparent; stroke: var(--text); stroke-width: 2.4; stroke-dasharray: 151; stroke-dashoffset: 151; }
+.adhd-check path { fill: none; stroke: var(--text); stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 34; stroke-dashoffset: 34; }
+.adhd-check.is-drawn circle { animation: adhd-draw 0.42s var(--ease-out) forwards, adhd-fill 0.24s 0.34s var(--ease) forwards; }
+.adhd-check.is-drawn path { animation: adhd-draw 0.3s 0.38s var(--ease-out) forwards, adhd-ink 0.01s 0.38s forwards; }
+@keyframes adhd-draw { to { stroke-dashoffset: 0; } }
+@keyframes adhd-fill { to { fill: var(--text); } }
+@keyframes adhd-ink { to { stroke: var(--bg); } }
+
+/* The next step, one at a time. */
+.adhd-step {
+  margin-top: var(--s-5);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--accent-soft);
+  animation: adhd-rise 0.45s var(--ease-out) both;
+}
+.adhd-step.is-leaving { animation: adhd-leave 0.36s var(--ease) forwards; }
+@keyframes adhd-leave { to { opacity: 0; transform: translateX(18px); } }
+.adhd-step-count { font-size: var(--t-xs); font-weight: 750; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-subtle); }
+.adhd-step-title { margin-top: 6px; font-size: 19px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.adhd-step-done {
+  margin-top: var(--s-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--speed) var(--ease), transform var(--speed-fast) var(--ease);
+}
+.adhd-step-done:hover { background: var(--surface-2); }
+.adhd-step-done:active { transform: scale(0.97); }
+.adhd-step-note { margin-top: var(--s-4); color: var(--text-muted); font-size: 15px; }
+
+/* ---- Buttons ---------------------------------------------------------- */
+.adhd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  height: 50px;
+  padding: 0 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--speed-fast) var(--ease), background var(--speed) var(--ease), box-shadow var(--speed) var(--ease), opacity var(--speed) var(--ease);
+}
+.adhd-btn:hover:not(:disabled) { background: var(--surface-hover); }
+.adhd-btn:active:not(:disabled) { transform: scale(0.97); }
+.adhd-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.adhd-btn-primary { border-color: transparent; background: var(--accent-sheen), var(--accent); color: var(--accent-contrast); box-shadow: var(--shadow); }
+.adhd-btn-primary:hover:not(:disabled) { background: var(--accent-sheen), var(--accent); box-shadow: var(--shadow-lg); }
+.adhd-btn-lg { height: 58px; font-size: 16px; }
+
+.adhd-now-actions { margin-top: var(--s-6); display: grid; grid-template-columns: 1.7fr 1fr; gap: var(--s-3); }
+.adhd-now-links { margin-top: var(--s-4); display: flex; justify-content: center; gap: var(--s-2); }
+.adhd-now-links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 650;
+  cursor: pointer;
+  transition: color var(--speed) var(--ease), background var(--speed) var(--ease);
+}
+.adhd-now-links button:hover { color: var(--text); background: var(--accent-soft); }
+
+/* ---- Picker ----------------------------------------------------------- */
+.adhd-picker-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s-4); }
+.adhd-count { font-size: var(--t-sm); font-weight: 750; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.adhd-options { list-style: none; display: flex; flex-direction: column; gap: var(--s-2); }
+.adhd-options li { animation: adhd-rise 0.5s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 35ms); }
+.adhd-option {
+  width: 100%;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease), box-shadow var(--speed) var(--ease), transform var(--speed-fast) var(--ease), opacity var(--speed) var(--ease);
+}
+.adhd-option:hover:not(:disabled) { border-color: var(--border-strong); }
+.adhd-option:active:not(:disabled) { transform: scale(0.99); }
+.adhd-option:disabled { opacity: 0.42; cursor: default; }
+.adhd-option.is-selected { border-color: var(--text); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--text); }
+.adhd-option-mark {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  transition: background var(--speed) var(--ease), border-color var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+.adhd-option.is-selected .adhd-option-mark { border-color: var(--text); background: var(--text); color: var(--bg); animation: adhd-pop 0.4s var(--ease-spring); }
+@keyframes adhd-pop { from { transform: scale(0.55); } }
+.adhd-option-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.adhd-option-title { font-size: 15.5px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.adhd-option-meta { font-size: var(--t-sm); color: var(--text-subtle); }
+.adhd-empty { padding: var(--s-2) 0 var(--s-1); font-size: 15.5px; line-height: 1.5; color: var(--text-muted); }
+
+.adhd-link { margin-top: var(--s-3); padding: 4px 0; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: var(--t-sm); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.adhd-link:hover { color: var(--text); }
+.adhd-link-center { display: block; margin-inline: auto; }
+
+.adhd-add {
+  margin-top: var(--s-4);
+  height: 54px;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 7px 0 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 18px;
+  color: var(--text-subtle);
+  transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease);
+}
+.adhd-add:focus-within { border-style: solid; border-color: var(--text); background: var(--bg); }
+.adhd-home .adhd-add input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15.5px;
+  outline: none;
+}
+.adhd-add-btn { height: 40px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--surface-2); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+.adhd-add-btn:disabled { opacity: 0.4; cursor: default; }
+
+.adhd-picker-actions { margin-top: var(--s-5); display: grid; grid-template-columns: 1fr 1.4fr; gap: var(--s-3); }
+
+/* ---- The rest of today ------------------------------------------------ */
+.adhd-later { padding: 0 var(--s-2); }
+.adhd-later ul { list-style: none; margin-top: var(--s-2); }
+.adhd-later-item { display: flex; align-items: center; gap: var(--s-3); padding: 13px 2px; border-bottom: 1px solid var(--border); font-size: 15.5px; color: var(--text-muted); }
+.adhd-later-item:last-child { border-bottom: 0; }
+.adhd-later-item span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.adhd-later-dot { width: 9px; height: 9px; flex-shrink: 0; border: 1.5px solid var(--text-subtle); border-radius: 50%; }
+.adhd-later-item.is-done { color: var(--text-subtle); }
+.adhd-later-item.is-done span { text-decoration: line-through; }
+
+/* ---- All done --------------------------------------------------------- */
+.adhd-celebrate { overflow: hidden; isolation: isolate; display: flex; flex-direction: column; align-items: center; gap: var(--s-3); padding-block: clamp(36px, 9vw, 60px); text-align: center; }
+.adhd-celebrate .adhd-check { width: 92px; height: 92px; margin-bottom: var(--s-2); }
+.adhd-celebrate h2 { font-size: clamp(30px, 6.4vw, 40px); font-weight: 750; letter-spacing: -0.035em; }
+.adhd-celebrate p { max-width: 32ch; font-size: 16px; line-height: 1.5; color: var(--text-muted); }
+.adhd-celebrate .adhd-picker-actions { width: 100%; max-width: 440px; }
+/* A soft ring of light rolls out from the tick, once. */
+.adhd-celebrate::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: clamp(36px, 9vw, 60px);
+  left: 50%;
+  width: 92px;
+  height: 92px;
+  margin-left: -46px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--border-strong), 0 0 60px 10px var(--adhd-glow);
+  animation: adhd-ring 1.6s 0.4s var(--ease-out) both;
+}
+@keyframes adhd-ring { from { transform: scale(0.6); opacity: 1; } to { transform: scale(5); opacity: 0; } }
+
+/* ---- Profile switch --------------------------------------------------- */
+.adhd-beta { margin-left: 6px; padding: 2px 8px; border: 1px solid var(--border-strong); border-radius: var(--r-pill); font-size: 10.5px; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); vertical-align: 2px; }
+.adhd-switch { position: relative; width: 52px; height: 30px; flex-shrink: 0; border: 0; border-radius: var(--r-pill); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-strong); cursor: pointer; transition: background 0.25s var(--ease), box-shadow 0.25s var(--ease); }
+.adhd-switch span { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--text-muted); box-shadow: var(--shadow-sm); transition: transform 0.32s var(--ease-spring), background 0.25s var(--ease); }
+.adhd-switch.is-on { background: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+.adhd-switch.is-on span { transform: translateX(22px); background: var(--bg); }
+.adhd-toggle-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--s-2); margin-top: var(--s-3); }
+.adhd-toggle-list li { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
+.adhd-toggle-list strong { font-size: var(--t-sm); }
+.adhd-toggle-list span { font-size: var(--t-xs); line-height: 1.45; color: var(--text-muted); }
+
+/* ---- Focus screen: break ideas and "keep going?" ---------------------- */
+.focus-idea {
+  width: min(100%, 380px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  text-align: left;
+  user-select: text;
+  animation: adhd-rise 0.5s var(--ease-out) both;
+}
+.focus-idea small { font-size: 11px; font-weight: 750; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-subtle); }
+.focus-idea p { font-size: 16.5px; font-weight: 650; line-height: 1.35; animation: adhd-rise 0.4s var(--ease-out) both; }
+.focus-idea button { margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.focus-idea button:hover { color: var(--text); }
+.focus-screen.has-idea .focus-ring { width: min(84vw, calc(100dvh - 450px), 560px); }
+
+/* In the flip clock it's one quiet line under the cards, and the cards
+   give up just enough height for it. */
+.focus-b .focus-idea {
+  width: auto;
+  max-width: min(92vw, 560px);
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 8px 8px 8px 18px;
+  border-radius: var(--r-pill);
+}
+.focus-b .focus-idea small { display: none; }
+.focus-b .focus-idea p { font-size: 15px; font-weight: 600; }
+.focus-b .focus-idea button { margin: 0; flex-shrink: 0; width: 36px; height: 36px; justify-content: center; border-radius: 50%; background: var(--surface-2); font-size: 0; }
+.focus-b .focus-idea button svg { font-size: 15px; }
+.focus-screen.has-idea .focus-flip { --cw: min(84vw, calc((100dvh - 280px) / 2.1)); }
+@media (orientation: landscape) {
+  .focus-screen.has-idea .focus-flip { --cw: min(44vw, calc(100dvh - 190px)); }
+  .focus-screen.has-idea .focus-ring { width: min(44vw, calc(100dvh - 96px), 600px); }
+}
+
+.focus-starter {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--s-5);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  animation: focus-in 0.32s var(--ease-out);
+}
+.focus-starter-card {
+  width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  padding: clamp(26px, 6vw, 38px);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--surface-sheen), var(--surface);
+  box-shadow: var(--edge-top), var(--shadow-lg);
+  text-align: center;
+  animation: adhd-rise 0.5s 0.05s var(--ease-out) both;
+}
+.focus-starter-card small { font-size: 11px; font-weight: 750; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-subtle); }
+.focus-starter-card h2 { font-size: clamp(25px, 6vw, 31px); font-weight: 750; letter-spacing: -0.035em; line-height: 1.15; }
+.focus-starter-card p { font-size: 15.5px; line-height: 1.5; color: var(--text-muted); }
+.focus-starter .focus-starter-yes { width: 100%; height: 58px; margin-top: var(--s-2); border-radius: var(--r-pill); font-size: 16px; font-weight: 700; }
+
+/* ---- Tasks page ------------------------------------------------------- */
+.task-just-start { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-bottom: var(--s-1); }
+
+/* ---- Calm screens: what ADHD mode quietens across the app -------------- */
+html[data-adhd="on"] body { font-size: 15px; line-height: 1.6; }
+html[data-adhd="on"] .udo-background,
+html[data-adhd="on"] .adsense-container,
+html[data-adhd="on"] .focus-leaderboard,
+html[data-adhd="on"] .friends-focusing,
+html[data-adhd="on"] .focus-chart-panel,
+html[data-adhd="on"] .habits-social { display: none; }
+html[data-adhd="on"] .habit-sub .state-broken,
+html[data-adhd="on"] .habit-sub .state-recovery { color: var(--text-muted); font-weight: 600; }
+
+@media (max-width: 520px) {
+  .adhd-head { flex-direction: column-reverse; gap: var(--s-3); }
+  .adhd-ghost { align-self: flex-end; height: 34px; }
+  .adhd-now-actions { grid-template-columns: 1fr; }
+  .adhd-picker-actions { grid-template-columns: 1fr 1fr; }
+  .adhd-btn { padding: 0 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adhd-home *,
+  .adhd-home > *,
+  .focus-idea,
+  .focus-idea p,
+  .focus-starter,
+  .focus-starter-card { animation: none !important; transition: none !important; }
+  .adhd-check.is-drawn circle { stroke-dashoffset: 0; fill: var(--text); }
+  .adhd-check.is-drawn path { stroke-dashoffset: 0; stroke: var(--bg); }
+  .adhd-celebrate::before { display: none; }
+}

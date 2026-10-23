@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FocusContext } from "./focusContext";
 import {
   DEFAULT_MINUTES,
+  KEEP_GOING_MINUTES,
+  STARTER_MINUTES,
   addToLog,
   breakMinutesFor,
   cleanMinutes,
@@ -97,6 +99,21 @@ const notify = (title, body) => {
 
 const elapsedMinutes = (session, now) =>
   session?.phase === "focus" ? Math.floor((session.minutes * 60_000 - remainingOf(session, now)) / 60_000) : 0;
+
+/**
+ * "Just start": five minutes, because five minutes is easy to say yes to.
+ * When it ends there's no break — the offer is to keep going for the rest of
+ * a normal round, and it waits, paused, until the person says yes.
+ */
+const afterStarter = (session) => ({
+  phase: "focus",
+  minutes: KEEP_GOING_MINUTES,
+  subject: session.subject,
+  count: 0,
+  paused: true,
+  remainingMs: KEEP_GOING_MINUTES * 60_000,
+  afterStarter: true,
+});
 
 /** A session that ended long ago while the app was closed is settled, not resumed. */
 const STALE_AFTER_MS = 30 * 60_000;
@@ -279,7 +296,12 @@ export function FocusProvider({ children }) {
     if (!session || session.paused || remainingOf(session, now) > 0) return;
 
     const timer = setTimeout(() => {
-      if (session.phase === "focus") {
+      if (session.phase === "focus" && session.starter) {
+        record(session.minutes, session.subject);
+        buzz([60, 80, 60]);
+        notify("Five minutes done", "You started — that's the hard part. Keep going?");
+        setSession(afterStarter(session));
+      } else if (session.phase === "focus") {
         record(session.minutes, session.subject);
         buzz([60, 80, 60]);
         const completed = (session.count || 0) + 1;
@@ -328,11 +350,13 @@ export function FocusProvider({ children }) {
     };
   }, [view, session]);
 
-  const start = useCallback((minutes = setup.minutes, subject = setup.subject) => {
+  /** `starter` runs the five-minute "Just start" round, which leaves the saved length alone. */
+  const start = useCallback((minutes = setup.minutes, subject = setup.subject, { starter = false } = {}) => {
     unlockAudio();
     const clean = String(subject || "").trim().slice(0, 80);
-    setSetupState({ minutes, subject: clean });
-    setSession({ phase: "focus", minutes, subject: clean, count: 0, endsAt: Date.now() + minutes * 60_000, paused: false });
+    const length = starter ? STARTER_MINUTES : minutes;
+    if (!starter) setSetupState({ minutes, subject: clean });
+    setSession({ phase: "focus", minutes: length, subject: clean, count: 0, endsAt: Date.now() + length * 60_000, paused: false, ...(starter ? { starter: true } : {}) });
     setNow(Date.now());
     setView("full");
     goFullscreen();
@@ -344,7 +368,9 @@ export function FocusProvider({ children }) {
 
   const resume = useCallback(() => {
     unlockAudio();
-    setSession((current) => (current?.paused ? { ...current, paused: false, endsAt: Date.now() + current.remainingMs } : current));
+    setSession((current) =>
+      current?.paused ? { ...current, paused: false, afterStarter: undefined, endsAt: Date.now() + current.remainingMs } : current
+    );
     setNow(Date.now());
   }, []);
 
@@ -362,7 +388,10 @@ export function FocusProvider({ children }) {
   /** Ends this phase now. Focus time already spent still counts. */
   const skip = useCallback(() => {
     if (!session) return;
-    if (session.phase === "focus") {
+    if (session.phase === "focus" && session.starter) {
+      record(elapsedMinutes(session, Date.now()), session.subject);
+      setSession(afterStarter(session));
+    } else if (session.phase === "focus") {
       record(elapsedMinutes(session, Date.now()), session.subject);
       const completed = (session.count || 0) + 1;
       const rest = breakMinutesFor(session.minutes, completed);

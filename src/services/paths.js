@@ -78,3 +78,8 @@ export const classesCollection = (uid) => collection(db, "users", uid, "classes"
 export const classDoc = (uid, id) => doc(db, "users", uid, "classes", id);
 export const gradesCollection = (uid) => collection(db, "users", uid, "grades");
 export const gradeDoc = (uid, id) => doc(db, "users", uid, "grades", id);
+
+// Settings that follow the person between devices (ADHD mode for now), and
+// the switch that says whether a feature still being tried is open to them.
+export const adhdPrefsDoc = (uid) => doc(db, "users", uid, "prefs", "adhd");
+export const betaFeatureDoc = (feature) => doc(db, "betaFeatures", feature);
