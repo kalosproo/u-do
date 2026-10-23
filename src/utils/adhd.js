@@ -107,3 +107,29 @@ export const breakIdea = (seed) => {
 
 /** Kind words for coming back to something, instead of counting what was missed. */
 export const gentleDue = (dueDate, today) => (dueDate && dueDate < today ? "From earlier" : dueDate === today ? "Today" : "");
+
+/**
+ * How much of the waking day is left, for people who lose track of time.
+ * The day runs 7am to 11pm; outside that it says so kindly rather than
+ * counting down to zero.
+ */
+export const DAY_START_HOUR = 7;
+export const DAY_END_HOUR = 23;
+
+const hoursLabel = (minutes) => {
+  const halves = Math.round(minutes / 30);
+  const whole = Math.floor(halves / 2);
+  return `${whole}${halves % 2 ? "½" : ""} h`;
+};
+
+export const dayLeft = (date = new Date()) => {
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  const start = DAY_START_HOUR * 60;
+  const end = DAY_END_HOUR * 60;
+  const progress = Math.min(1, Math.max(0, (minutes - start) / (end - start)));
+  const left = Math.max(0, end - minutes);
+  if (minutes < start) return { progress, left, label: "Early. The day hasn't started yet." };
+  if (left === 0) return { progress, left, label: "Late. Rest counts too." };
+  if (left < 60) return { progress, left, label: `About ${left} min left today` };
+  return { progress, left, label: `About ${hoursLabel(left)} left today` };
+};

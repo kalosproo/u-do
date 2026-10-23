@@ -7,6 +7,7 @@ import {
   breakIdea,
   cleanPicks,
   currentStep,
+  dayLeft,
   gentleDue,
   pickForMe,
   picksFor,
@@ -96,4 +97,16 @@ test("gentle due labels never say overdue", () => {
   assert.equal(gentleDue(TODAY, TODAY), "Today");
   assert.equal(gentleDue("2026-11-01", TODAY), "");
   assert.equal(gentleDue("", TODAY), "");
+});
+
+test("day left: hours to the half, kind at either end", () => {
+  const at = (h, m = 0) => new Date(2026, 9, 23, h, m);
+  assert.equal(dayLeft(at(19, 40)).label, "About 3½ h left today");
+  assert.equal(dayLeft(at(20, 0)).label, "About 3 h left today");
+  assert.equal(dayLeft(at(22, 20)).label, "About 40 min left today");
+  assert.equal(dayLeft(at(23, 30)).label, "Late. Rest counts too.");
+  assert.equal(dayLeft(at(5, 0)).label, "Early. The day hasn't started yet.");
+  assert.equal(dayLeft(at(7, 0)).progress, 0);
+  assert.equal(dayLeft(at(15, 0)).progress, 0.5);
+  assert.equal(dayLeft(at(23, 59)).progress, 1);
 });

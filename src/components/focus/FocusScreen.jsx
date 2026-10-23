@@ -76,7 +76,9 @@ function KeepGoing({ onYes, onStop }) {
     <div className="focus-starter" role="alertdialog" aria-label="Five minutes done">
       <div className="focus-starter-card">
         <small>{STARTER_MINUTES} minutes done</small>
-        <h2>You started. That was the hard part.</h2>
+        <h2>
+          You started. That was <em>the hard part.</em>
+        </h2>
         <p>Ride the momentum for {KEEP_GOING_MINUTES} more minutes — or stop here, guilt-free.</p>
         <button type="button" className="focus-btn focus-btn-main focus-starter-yes" onClick={onYes}>
           Keep going · {KEEP_GOING_MINUTES} min
