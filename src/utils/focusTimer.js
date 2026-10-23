@@ -12,6 +12,10 @@ export const MIN_MINUTES = 1;
 // Up to 99 minutes, so the clock is always two cards: MM and SS.
 export const MAX_MINUTES = 99;
 
+// ADHD mode's "Just start": a five-minute round, then the offer of twenty more.
+export const STARTER_MINUTES = 5;
+export const KEEP_GOING_MINUTES = 20;
+
 /** A length someone typed, as whole minutes from 1 to 99, or null if it isn't one. */
 export const cleanMinutes = (value) => {
   const number = Math.round(Number(String(value ?? "").trim()));

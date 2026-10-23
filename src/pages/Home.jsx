@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { getDocs } from "firebase/firestore";
 import { Link } from "react-router-dom";
-import { FiCheck, FiPlus } from "react-icons/fi";
+import { FiArrowLeft, FiCheck, FiPlus } from "react-icons/fi";
 import { createTask, setTaskStatus } from "../services/tasks";
 import { formatDayLabel, formatRelativeDay, todayKey } from "../utils/dateKeys";
 import { quoteFor } from "../utils/quotes";
@@ -22,6 +22,8 @@ import InstallCard from "../components/InstallCard";
 import ExamCountdowns from "../components/ExamCountdowns";
 import AchievementWatcher from "../components/AchievementWatcher";
 import { useFocus } from "../hooks/useFocus";
+import { useAdhd } from "../hooks/useAdhd";
+import AdhdHome from "../components/adhd/AdhdHome";
 import { focusStats } from "../utils/focusStats";
 import { monthlyTotals } from "../utils/financeReport";
 import { formatMoney } from "../utils/money";
@@ -56,6 +58,9 @@ function Home() {
   const [error, setError] = useState("");
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [savingTask, setSavingTask] = useState(false);
+  const adhd = useAdhd();
+  // ADHD mode opens on today's three; "Everything" shows this page as usual.
+  const [showAll, setShowAll] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     if (!user) return;
@@ -173,8 +178,27 @@ function Home() {
     </section>;
   }
 
+  if (user && adhd?.enabled && !showAll) {
+    return (
+      <>
+        <AchievementWatcher stats={badgeStats} ready />
+        <AdhdHome
+          tasks={tasks}
+          onChanged={loadDashboard}
+          onPatch={(id, patch) => setTasks((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)))}
+          onShowAll={() => setShowAll(true)}
+        />
+      </>
+    );
+  }
+
   return (
     <section className="dashboard-page">
+      {adhd?.enabled ? (
+        <button type="button" className="adhd-back" onClick={() => setShowAll(false)}>
+          <FiArrowLeft aria-hidden="true" /> Back to today&apos;s three
+        </button>
+      ) : null}
       <header className="dashboard-header-block">
         <p className="eyebrow">HOME / OVERVIEW</p>
         <h1 className="dashboard-greeting">{greeting}</h1>

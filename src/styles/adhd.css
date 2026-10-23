@@ -1,0 +1,796 @@
+/* =========================================================================
+   ADHD MODE
+   A calmer, one-thing-at-a-time U.Do, switched on per account. Everything
+   here is either a new .adhd-* / .focus-idea / .focus-starter piece, or
+   scoped under html[data-adhd="on"], so nobody else's app changes at all.
+   Loaded after index.css, so it wins ties without !important.
+
+   The look: a dark room lit from somewhere off-screen. Frosted glass over
+   slow light, a fine grain, an editorial serif for the few words that are
+   meant to be felt, and motion that glides rather than jumps. Still only
+   black, white and the greys between.
+   ========================================================================= */
+
+.adhd-home {
+  --adhd-glass: rgba(255, 255, 255, 0.035);
+  --adhd-glass-strong: rgba(255, 255, 255, 0.055);
+  --adhd-fill: rgba(255, 255, 255, 0.06);
+  --adhd-line: rgba(255, 255, 255, 0.085);
+  --adhd-line-strong: rgba(255, 255, 255, 0.16);
+  --adhd-edge: rgba(255, 255, 255, 0.34);
+  --adhd-glow: rgba(255, 255, 255, 0.09);
+  --adhd-depth: 0 40px 90px -40px rgba(0, 0, 0, 0.9), 0 12px 30px -16px rgba(0, 0, 0, 0.7);
+  --adhd-serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --adhd-glide: cubic-bezier(0.22, 1, 0.36, 1);
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  padding: var(--s-2) 0 var(--s-16);
+}
+:root[data-theme="light"] .adhd-home {
+  --adhd-glass: rgba(255, 255, 255, 0.58);
+  --adhd-glass-strong: rgba(255, 255, 255, 0.74);
+  --adhd-fill: rgba(10, 10, 10, 0.04);
+  --adhd-line: rgba(10, 10, 10, 0.07);
+  --adhd-line-strong: rgba(10, 10, 10, 0.14);
+  --adhd-edge: rgba(255, 255, 255, 1);
+  --adhd-glow: rgba(10, 10, 10, 0.05);
+  --adhd-depth: 0 40px 80px -44px rgba(10, 10, 10, 0.32), 0 10px 24px -16px rgba(10, 10, 10, 0.16);
+}
+
+.adhd-home :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+/* Each block settles in a beat after the one above it. */
+.adhd-home > * { animation: adhd-rise 0.8s var(--adhd-glide) both; }
+.adhd-home > :nth-child(2) { animation-delay: 70ms; }
+.adhd-home > :nth-child(3) { animation-delay: 140ms; }
+.adhd-home > :nth-child(4) { animation-delay: 210ms; }
+.adhd-home > :nth-child(5) { animation-delay: 280ms; }
+@keyframes adhd-rise { from { opacity: 0; transform: translateY(14px); filter: blur(4px); } }
+@keyframes adhd-fade-in { from { opacity: 0; } }
+
+/* ---- The room: slow light and grain behind everything ------------------ */
+.adhd-ambient {
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  position: fixed;
+  inset: 0;
+  /* Under everything, whatever wraps the page: just above the page colour. */
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  animation: adhd-fade-in 1.6s ease both;
+}
+.adhd-ambient > span { position: absolute; border-radius: 50%; will-change: transform; }
+.adhd-ambient-a {
+  width: 130vmax;
+  height: 130vmax;
+  left: -50vmax;
+  top: -78vmax;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.045) 42%, transparent 72%);
+  animation: adhd-drift-a 52s ease-in-out infinite alternate;
+}
+.adhd-ambient-b {
+  width: 100vmax;
+  height: 100vmax;
+  right: -52vmax;
+  bottom: -64vmax;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.075), transparent 70%);
+  animation: adhd-drift-b 67s ease-in-out infinite alternate;
+}
+.adhd-ambient > .adhd-ambient-grain { inset: -50%; border-radius: 0; background-image: var(--grain); opacity: 0.055; animation: none; }
+@keyframes adhd-drift-a { to { transform: translate(20vmax, 12vmax) scale(1.08); } }
+@keyframes adhd-drift-b { to { transform: translate(-16vmax, -14vmax) scale(1.14); } }
+:root[data-theme="light"] .adhd-ambient-a { background: radial-gradient(closest-side, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.4) 45%, transparent 72%); }
+:root[data-theme="light"] .adhd-ambient-b { background: radial-gradient(closest-side, rgba(10, 10, 10, 0.06), transparent 70%); }
+:root[data-theme="light"] .adhd-ambient > .adhd-ambient-grain { filter: invert(1); opacity: 0.035; }
+
+/* ---- Header ----------------------------------------------------------- */
+.adhd-head-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.adhd-date { font-size: 11.5px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-subtle); }
+.adhd-hello {
+  margin-top: var(--s-6);
+  font-family: var(--adhd-serif);
+  font-size: clamp(50px, 13.5vw, 88px);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.025em;
+}
+.adhd-hello em,
+.adhd-serif em {
+  padding-right: 0.08em;
+  font-style: italic;
+  background: linear-gradient(180deg, var(--text) 20%, color-mix(in srgb, var(--text) 48%, transparent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.adhd-sub { margin-top: var(--s-4); max-width: 30ch; font-size: 17px; line-height: 1.5; color: var(--text-muted); }
+
+.adhd-ghost,
+.adhd-back {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--adhd-line-strong, var(--border));
+  border-radius: var(--r-pill);
+  background: var(--adhd-glass, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 0.25s var(--ease), border-color 0.25s var(--ease), background 0.25s var(--ease), transform var(--speed-fast) var(--ease);
+}
+.adhd-ghost:hover,
+.adhd-back:hover { color: var(--text); border-color: var(--border-strong); }
+.adhd-ghost:active,
+.adhd-back:active { transform: scale(0.97); }
+.adhd-back { margin-bottom: var(--s-4); }
+
+/* ---- Status tiles: today's ring and the day's track ------------------- */
+.adhd-status { display: grid; grid-template-columns: auto 1fr; gap: var(--s-3); }
+.adhd-status.is-single { grid-template-columns: 1fr; }
+.adhd-tile {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px 12px 14px;
+  border: 1px solid var(--adhd-line);
+  border-radius: 24px;
+  background: var(--adhd-glass);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: var(--edge-top);
+}
+.adhd-tile-day { padding-left: 20px; }
+.adhd-tile-text strong { display: block; font-size: 26px; font-weight: 750; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.adhd-tile-text strong small { font-size: 16px; font-weight: 650; color: var(--text-subtle); letter-spacing: 0; }
+.adhd-tile-text > small { display: block; margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+.adhd-ring { flex-shrink: 0; overflow: visible; }
+.adhd-ring circle { fill: none; stroke: var(--adhd-line-strong); stroke-width: 4.5; stroke-linecap: round; transition: stroke 0.6s var(--ease), filter 0.6s var(--ease); }
+.adhd-ring circle.is-done { stroke: var(--text); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--text) 55%, transparent)); }
+.adhd-ring circle.is-now { animation: adhd-breathe 2.8s ease-in-out infinite; }
+@keyframes adhd-breathe {
+  0%, 100% { stroke: color-mix(in srgb, var(--text) 55%, transparent); }
+  50% { stroke: color-mix(in srgb, var(--text) 22%, transparent); }
+}
+
+.adhd-day { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.adhd-day-track { position: relative; height: 3px; border-radius: var(--r-pill); background: var(--adhd-line-strong); }
+.adhd-day-fill { position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--day) * 100%); border-radius: inherit; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 70%, transparent)); }
+.adhd-day-dot {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--day) * 100%);
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--text) 12%, transparent), 0 0 16px color-mix(in srgb, var(--text) 55%, transparent);
+}
+.adhd-day-label { font-size: 13px; font-weight: 650; color: var(--text-muted); }
+
+.adhd-error { padding: 12px 16px; border: 1px solid var(--adhd-line-strong); border-radius: 16px; background: var(--adhd-glass); font-size: var(--t-sm); }
+
+/* ---- Glass cards ------------------------------------------------------ */
+.adhd-card {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(22px, 5.8vw, 38px);
+  border: 1px solid var(--adhd-line);
+  border-radius: 34px;
+  background: var(--adhd-glass);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  backdrop-filter: blur(30px) saturate(150%);
+  box-shadow: var(--edge-top), var(--adhd-depth);
+}
+/* Frosted glass has texture: the same grain as the room, on the pane. */
+.adhd-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  pointer-events: none;
+}
+:root[data-theme="light"] .adhd-card::after { filter: invert(1); opacity: 0.03; }
+.adhd-stage { view-transition-name: adhd-stage; }
+
+.adhd-eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 11.5px; font-weight: 750; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); }
+
+/* ---- Now -------------------------------------------------------------- */
+.adhd-now { overflow: hidden; border-color: transparent; background: var(--adhd-glass-strong); }
+/* A lit edge: bright where the light falls, almost gone where it doesn't. */
+.adhd-now::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(155deg, var(--adhd-edge), var(--adhd-line) 32%, var(--adhd-line) 68%, color-mix(in srgb, var(--adhd-edge) 50%, transparent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+  transition: opacity 0.5s var(--ease);
+}
+/* The aura: a slow pool of light that never quite sits still. */
+.adhd-now-light {
+  position: absolute;
+  z-index: -1;
+  inset: -60% -30% auto;
+  height: 140%;
+  background: radial-gradient(closest-side, var(--adhd-glow), transparent 72%);
+  pointer-events: none;
+  animation: adhd-aura 14s ease-in-out infinite alternate;
+}
+@keyframes adhd-aura {
+  from { transform: translate(-16%, -4%) scale(1); }
+  to { transform: translate(16%, 8%) scale(1.2); }
+}
+/* With a mouse, a second, smaller light follows the pointer. */
+@media (hover: hover) and (pointer: fine) {
+  .adhd-now { background: radial-gradient(380px circle at var(--mx, 80%) var(--my, -20%), var(--adhd-glow), transparent 65%), var(--adhd-glass-strong); }
+}
+
+.adhd-now-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.adhd-pulse { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--text); box-shadow: 0 0 10px color-mix(in srgb, var(--text) 70%, transparent); }
+.adhd-pulse::after { content: ""; position: absolute; inset: -5px; border: 1px solid var(--text); border-radius: 50%; opacity: 0; animation: adhd-ping 2.6s var(--adhd-glide) infinite; }
+@keyframes adhd-ping { 0% { transform: scale(0.4); opacity: 0.7; } 100% { transform: scale(1.8); opacity: 0; } }
+.adhd-chip { padding: 6px 12px; border: 1px solid var(--adhd-line); border-radius: var(--r-pill); background: var(--adhd-fill); color: var(--text-muted); font-size: 12px; font-weight: 650; }
+
+.adhd-now-body { display: flex; align-items: flex-start; gap: var(--s-3); margin-top: var(--s-6); }
+.adhd-now-title {
+  font-size: clamp(31px, 7.6vw, 46px);
+  font-weight: 750;
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+  text-decoration: line-through transparent;
+  text-decoration-thickness: 3px;
+  transition: opacity 0.45s var(--ease), text-decoration-color 0.35s var(--ease);
+}
+.adhd-now-body .adhd-check { display: none; width: 40px; height: 40px; margin-top: 3px; flex-shrink: 0; }
+.adhd-now.is-finishing .adhd-check { display: block; }
+.adhd-now.is-finishing .adhd-now-title { opacity: 0.5; text-decoration-color: var(--text); }
+.adhd-now.is-finishing::before { background: var(--adhd-edge); }
+
+.adhd-check { overflow: visible; }
+.adhd-check circle { fill: transparent; stroke: var(--text); stroke-width: 2.4; stroke-dasharray: 151; stroke-dashoffset: 151; }
+.adhd-check path { fill: none; stroke: var(--text); stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 34; stroke-dashoffset: 34; }
+.adhd-check.is-drawn circle { animation: adhd-draw 0.42s var(--adhd-glide) forwards, adhd-fill 0.26s 0.34s var(--ease) forwards; }
+.adhd-check.is-drawn path { animation: adhd-draw 0.32s 0.4s var(--adhd-glide) forwards, adhd-ink 0.01s 0.4s forwards; }
+@keyframes adhd-draw { to { stroke-dashoffset: 0; } }
+@keyframes adhd-fill { to { fill: var(--text); } }
+@keyframes adhd-ink { to { stroke: var(--bg); } }
+
+/* The next step, one at a time. */
+.adhd-step {
+  margin-top: var(--s-6);
+  padding: 18px 20px 20px;
+  border: 1px solid var(--adhd-line);
+  border-radius: 24px;
+  background: var(--adhd-fill);
+  animation: adhd-rise 0.55s var(--adhd-glide) both;
+}
+.adhd-step.is-leaving { animation: adhd-leave 0.34s var(--ease) forwards; }
+@keyframes adhd-leave { to { opacity: 0; transform: translateX(22px); filter: blur(3px); } }
+.adhd-step-rail { display: flex; gap: 6px; margin-bottom: 14px; }
+.adhd-step-rail span { flex: 1; max-width: 44px; height: 3px; border-radius: var(--r-pill); background: var(--adhd-line-strong); }
+.adhd-step-rail .is-done { background: var(--text); }
+.adhd-step-rail .is-now { animation: adhd-breathe-fill 2.8s ease-in-out infinite; }
+@keyframes adhd-breathe-fill {
+  0%, 100% { background: color-mix(in srgb, var(--text) 60%, transparent); }
+  50% { background: color-mix(in srgb, var(--text) 25%, transparent); }
+}
+.adhd-step-count { font-size: 11.5px; font-weight: 750; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-subtle); }
+.adhd-step-title { margin-top: 8px; font-size: 20px; font-weight: 650; line-height: 1.32; letter-spacing: -0.015em; overflow-wrap: anywhere; }
+.adhd-step-done {
+  margin-top: var(--s-4);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--adhd-line-strong);
+  border-radius: var(--r-pill);
+  background: var(--adhd-glass-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.25s var(--ease), border-color 0.25s var(--ease), transform var(--speed-fast) var(--ease);
+}
+.adhd-step-done:hover { border-color: var(--border-strong); }
+.adhd-step-done:active { transform: scale(0.97); }
+.adhd-step-note { margin-top: var(--s-5); color: var(--text-muted); font-size: 15px; }
+
+.adhd-now-actions { margin-top: var(--s-6); display: grid; grid-template-columns: 1.35fr 1fr; gap: 12px; }
+
+/* Just start: the one bright thing on the screen. */
+.adhd-start {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 22px 10px 11px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--accent-sheen), var(--accent);
+  color: var(--accent-contrast);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 18px 44px -18px color-mix(in srgb, var(--text) 55%, transparent), 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s var(--adhd-glide), box-shadow 0.3s var(--ease);
+}
+.adhd-start:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 22px 54px -16px color-mix(in srgb, var(--text) 65%, transparent), 0 2px 6px rgba(0, 0, 0, 0.35); }
+.adhd-start:active { transform: scale(0.975); }
+.adhd-start-icon { width: 48px; height: 48px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: var(--accent-contrast); color: var(--accent); font-size: 18px; }
+.adhd-start-icon svg { margin-left: 2px; }
+.adhd-start-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.adhd-start-text strong { font-size: 17px; font-weight: 750; letter-spacing: -0.015em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adhd-start-text small { font-size: 12.5px; font-weight: 600; opacity: 0.58; white-space: nowrap; }
+/* Every so often a glint of light crosses it, slowly. */
+.adhd-start-glint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.5) 50%, transparent 62%);
+  mix-blend-mode: soft-light;
+  transform: translateX(-110%);
+  animation: adhd-glint 8s ease-in-out 2.4s infinite;
+  pointer-events: none;
+}
+@keyframes adhd-glint { 0%, 78% { transform: translateX(-110%); } 100% { transform: translateX(110%); } }
+.adhd-start.is-live .adhd-start-icon { animation: adhd-live 2.4s ease-in-out infinite; }
+@keyframes adhd-live { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent-contrast) 25%, transparent); } }
+
+/* Hold to finish: the fill sweeps across while held, and its own copy of
+   the words turns with it. */
+.adhd-hold-wrap { position: relative; display: grid; }
+.adhd-hold {
+  --hold: 0;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 70px;
+  display: grid;
+  place-items: center;
+  padding: 0 18px;
+  border: 1px solid var(--adhd-line-strong);
+  border-radius: var(--r-pill);
+  background: var(--adhd-fill);
+  color: var(--text);
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.25s var(--adhd-glide), border-color 0.3s var(--ease);
+}
+.adhd-hold:hover { border-color: var(--border-strong); }
+.adhd-hold.is-holding { transform: scale(0.965); }
+.adhd-hold-label { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.adhd-hold-fill {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0 18px;
+  background: var(--text);
+  color: var(--bg);
+  clip-path: inset(0 calc(100% - var(--hold) * 100%) 0 0);
+  transition: clip-path 0.5s var(--adhd-glide);
+}
+.adhd-hold.is-holding .adhd-hold-fill { transition: none; }
+.adhd-hold.is-ready { border-color: var(--text); animation: adhd-ready 2.6s ease-in-out infinite; }
+@keyframes adhd-ready { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--text) 10%, transparent); } }
+.adhd-hold.is-hinting .adhd-hold-label { animation: adhd-nudge 0.45s var(--ease); }
+@keyframes adhd-nudge { 20%, 60% { transform: translateX(-3px); } 40%, 80% { transform: translateX(3px); } }
+
+/* A soft burst of light from the centre of whatever it sits in. */
+.adhd-burst { position: absolute; z-index: 3; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.adhd-burst i {
+  position: absolute;
+  left: calc(var(--s) / -2);
+  top: calc(var(--s) / -2);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--text) 80%, transparent);
+  opacity: 0;
+  animation: adhd-spark 0.95s var(--adhd-glide) forwards;
+}
+@keyframes adhd-spark {
+  0% { opacity: 0; transform: rotate(var(--a)) translateX(6px) scale(0.3); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(1); }
+}
+
+.adhd-now-links { margin-top: var(--s-5); display: flex; justify-content: center; gap: var(--s-2); }
+.adhd-now-links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 0.25s var(--ease), background 0.25s var(--ease), border-color 0.25s var(--ease);
+}
+.adhd-now-links button:hover { color: var(--text); border-color: var(--adhd-line); background: var(--adhd-fill); }
+
+/* ---- Buttons ---------------------------------------------------------- */
+.adhd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  height: 54px;
+  padding: 0 22px;
+  border: 1px solid var(--adhd-line-strong);
+  border-radius: var(--r-pill);
+  background: var(--adhd-fill);
+  color: var(--text);
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--speed-fast) var(--ease), border-color 0.25s var(--ease), box-shadow 0.3s var(--ease), opacity 0.25s var(--ease);
+}
+.adhd-btn:hover:not(:disabled) { border-color: var(--border-strong); }
+.adhd-btn:active:not(:disabled) { transform: scale(0.97); }
+.adhd-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.adhd-btn-primary {
+  border-color: transparent;
+  background: var(--accent-sheen), var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 16px 40px -18px color-mix(in srgb, var(--text) 55%, transparent);
+}
+.adhd-btn-primary:hover:not(:disabled) { border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 20px 50px -16px color-mix(in srgb, var(--text) 65%, transparent); }
+
+/* ---- Picker ----------------------------------------------------------- */
+.adhd-picker-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s-4); }
+.adhd-count { font-family: var(--adhd-serif); font-size: 22px; font-style: italic; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.adhd-tray { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.adhd-slot {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px 8px 10px;
+  border: 1px dashed var(--adhd-line-strong);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text-subtle);
+  font: inherit;
+  text-align: left;
+}
+.adhd-slot-n {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--adhd-line-strong);
+  border-radius: 50%;
+  font-family: var(--adhd-serif);
+  font-size: 20px;
+  font-style: italic;
+  line-height: 1;
+}
+.adhd-slot-empty { font-size: 14px; }
+.adhd-slot.is-filled {
+  border-style: solid;
+  background: var(--adhd-glass-strong);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: var(--edge-top);
+  animation: adhd-slot-in 0.5s var(--ease-spring);
+  transition: border-color 0.25s var(--ease);
+}
+.adhd-slot.is-filled:hover { border-color: var(--border-strong); }
+.adhd-slot.is-filled .adhd-slot-n { border-color: transparent; background: var(--text); color: var(--bg); }
+@keyframes adhd-slot-in { from { opacity: 0; transform: scale(0.94); } }
+.adhd-slot-title { flex: 1; min-width: 0; overflow: hidden; font-size: 15.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.adhd-slot-x { flex-shrink: 0; opacity: 0.45; }
+
+.adhd-list-label { display: flex; margin: var(--s-6) 0 var(--s-3); }
+.adhd-options { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.adhd-options li { animation: adhd-rise 0.6s var(--adhd-glide) both; animation-delay: calc(var(--i, 0) * 40ms + 120ms); }
+.adhd-option {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px 12px 14px;
+  border: 1px solid var(--adhd-line);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.25s var(--ease), background 0.25s var(--ease), transform var(--speed-fast) var(--ease), opacity 0.25s var(--ease);
+}
+.adhd-option:hover:not(:disabled) { border-color: var(--adhd-line-strong); background: var(--adhd-fill); }
+.adhd-option:active:not(:disabled) { transform: scale(0.985); }
+.adhd-option:disabled { opacity: 0.38; cursor: default; }
+.adhd-option.is-selected { border-color: var(--adhd-line-strong); background: var(--adhd-fill); }
+.adhd-option-mark {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--adhd-line-strong);
+  border-radius: 50%;
+  font-size: 15px;
+  transition: background 0.25s var(--ease), border-color 0.25s var(--ease), color 0.25s var(--ease);
+}
+.adhd-option.is-selected .adhd-option-mark { border-color: var(--text); background: var(--text); color: var(--bg); animation: adhd-pop 0.45s var(--ease-spring); }
+@keyframes adhd-pop { from { transform: scale(0.5); } }
+.adhd-option-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.adhd-option-title { font-size: 16px; font-weight: 650; line-height: 1.32; overflow-wrap: anywhere; }
+.adhd-option-meta { font-size: 13px; color: var(--text-subtle); }
+.adhd-empty { margin-top: var(--s-5); font-size: 16px; line-height: 1.5; color: var(--text-muted); }
+
+.adhd-link { margin-top: var(--s-3); padding: 4px 0; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: var(--t-sm); font-weight: 650; text-decoration: underline; text-decoration-color: var(--adhd-line-strong, currentColor); text-underline-offset: 4px; cursor: pointer; }
+.adhd-link:hover { color: var(--text); text-decoration-color: currentColor; }
+.adhd-link-center { display: block; margin-inline: auto; }
+
+.adhd-add {
+  margin-top: var(--s-4);
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 7px 0 18px;
+  border: 1px dashed var(--adhd-line-strong);
+  border-radius: 20px;
+  color: var(--text-subtle);
+  transition: border-color 0.25s var(--ease), background 0.25s var(--ease);
+}
+.adhd-add:focus-within { border-style: solid; border-color: var(--text); background: var(--adhd-fill); }
+.adhd-home .adhd-add input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+}
+.adhd-add-btn { height: 44px; padding: 0 18px; border: 0; border-radius: 14px; background: var(--adhd-fill); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+.adhd-add-btn:disabled { opacity: 0.4; cursor: default; }
+
+.adhd-picker-actions { margin-top: var(--s-5); display: grid; grid-template-columns: 1fr 1.4fr; gap: var(--s-3); }
+
+/* ---- The rest of today ------------------------------------------------ */
+.adhd-later { padding: 0 var(--s-2); }
+.adhd-later ul { list-style: none; margin-top: var(--s-2); }
+.adhd-later-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--adhd-line);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 16px;
+  text-align: left;
+}
+button.adhd-later-item { cursor: pointer; transition: color 0.25s var(--ease); }
+button.adhd-later-item:hover { color: var(--text); }
+.adhd-later li:last-child .adhd-later-item,
+.adhd-later li.adhd-later-item:last-child { border-bottom: 0; }
+.adhd-later-title { min-width: 0; overflow-wrap: anywhere; }
+.adhd-later-dot { width: 10px; height: 10px; flex-shrink: 0; margin: 0 6px; border: 1.5px solid var(--text-subtle); border-radius: 50%; }
+.adhd-later-tick { width: 22px; height: 22px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 12px; }
+.adhd-later-item.is-done { color: var(--text-subtle); }
+.adhd-later-item.is-done .adhd-later-title { text-decoration: line-through; text-decoration-color: var(--adhd-line-strong); }
+.adhd-later-go { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; opacity: 0; transform: translateX(-6px); transition: opacity 0.25s var(--ease), transform 0.25s var(--adhd-glide); }
+button.adhd-later-item:hover .adhd-later-go,
+button.adhd-later-item:focus-visible .adhd-later-go { opacity: 1; transform: none; }
+@media (hover: none) { .adhd-later-go { opacity: 0.45; transform: none; font-size: 0; gap: 0; } .adhd-later-go svg { font-size: 15px; } }
+
+/* ---- All done --------------------------------------------------------- */
+.adhd-celebrate { overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 14px; padding-block: clamp(44px, 10vw, 68px) clamp(28px, 7vw, 44px); text-align: center; }
+.adhd-celebrate-mark { position: relative; width: 108px; height: 108px; margin-bottom: var(--s-3); }
+.adhd-celebrate-mark .adhd-check { width: 100%; height: 100%; filter: drop-shadow(0 0 34px color-mix(in srgb, var(--text) 32%, transparent)); }
+/* A soft ring of light rolls out from the tick, once. */
+.adhd-celebrate-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--adhd-line-strong), 0 0 70px 12px var(--adhd-glow);
+  animation: adhd-ring 1.8s 0.4s var(--adhd-glide) both;
+}
+@keyframes adhd-ring { from { transform: scale(0.6); opacity: 1; } to { transform: scale(4.6); opacity: 0; } }
+.adhd-serif { font-family: var(--adhd-serif); font-size: clamp(46px, 11.5vw, 70px); font-weight: 400; line-height: 0.98; letter-spacing: -0.02em; }
+.adhd-celebrate p { max-width: 32ch; font-size: 16.5px; line-height: 1.5; color: var(--text-muted); }
+.adhd-celebrate .adhd-celebrate-stat { margin-top: 2px; font-size: 11.5px; font-weight: 750; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-subtle); }
+.adhd-celebrate .adhd-picker-actions { width: 100%; max-width: 440px; margin-top: var(--s-4); }
+
+/* ---- Page morphs ------------------------------------------------------ */
+::view-transition-group(*) { animation-duration: 0.55s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: 0.32s; }
+::view-transition-image-pair(adhd-stage) { overflow: clip; border-radius: 34px; }
+::view-transition-old(adhd-stage),
+::view-transition-new(adhd-stage) { height: 100%; object-fit: none; object-position: top center; }
+
+/* ---- Profile switch --------------------------------------------------- */
+.adhd-beta { margin-left: 6px; padding: 2px 8px; border: 1px solid var(--border-strong); border-radius: var(--r-pill); font-size: 10.5px; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); vertical-align: 2px; }
+.adhd-switch { position: relative; width: 52px; height: 30px; flex-shrink: 0; border: 0; border-radius: var(--r-pill); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border-strong); cursor: pointer; transition: background 0.25s var(--ease), box-shadow 0.25s var(--ease); }
+.adhd-switch span { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--text-muted); box-shadow: var(--shadow-sm); transition: transform 0.32s var(--ease-spring), background 0.25s var(--ease); }
+.adhd-switch.is-on { background: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+.adhd-switch.is-on span { transform: translateX(22px); background: var(--bg); }
+.adhd-toggle-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--s-2); margin-top: var(--s-3); }
+.adhd-toggle-list li { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
+.adhd-toggle-list strong { font-size: var(--t-sm); }
+.adhd-toggle-list span { font-size: var(--t-xs); line-height: 1.45; color: var(--text-muted); }
+
+/* ---- Focus screen: break ideas and "keep going?" ---------------------- */
+.focus-idea {
+  width: min(100%, 380px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  text-align: left;
+  user-select: text;
+  animation: adhd-rise 0.5s var(--ease-out) both;
+}
+.focus-idea small { font-size: 11px; font-weight: 750; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-subtle); }
+.focus-idea p { font-size: 16.5px; font-weight: 650; line-height: 1.35; animation: adhd-rise 0.4s var(--ease-out) both; }
+.focus-idea button { margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.focus-idea button:hover { color: var(--text); }
+.focus-screen.has-idea .focus-ring { width: min(84vw, calc(100dvh - 450px), 560px); }
+
+/* In the flip clock it's one quiet line under the cards, and the cards
+   give up just enough height for it. */
+.focus-b .focus-idea {
+  width: auto;
+  max-width: min(92vw, 560px);
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 8px 8px 8px 18px;
+  border-radius: var(--r-pill);
+}
+.focus-b .focus-idea small { display: none; }
+.focus-b .focus-idea p { font-size: 15px; font-weight: 600; }
+.focus-b .focus-idea button { margin: 0; flex-shrink: 0; width: 36px; height: 36px; justify-content: center; border-radius: 50%; background: var(--surface-2); font-size: 0; }
+.focus-b .focus-idea button svg { font-size: 15px; }
+.focus-screen.has-idea .focus-flip { --cw: min(84vw, calc((100dvh - 280px) / 2.1)); }
+@media (orientation: landscape) {
+  .focus-screen.has-idea .focus-flip { --cw: min(44vw, calc(100dvh - 190px)); }
+  .focus-screen.has-idea .focus-ring { width: min(44vw, calc(100dvh - 96px), 600px); }
+}
+
+.focus-starter {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--s-5);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  animation: focus-in 0.32s var(--ease-out);
+}
+.focus-starter-card {
+  width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  padding: clamp(26px, 6vw, 38px);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: var(--surface-sheen), var(--surface);
+  box-shadow: var(--edge-top), var(--shadow-lg);
+  text-align: center;
+  animation: adhd-rise 0.5s 0.05s var(--ease-out) both;
+}
+.focus-starter-card small { font-size: 11px; font-weight: 750; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-subtle); }
+.focus-starter-card h2 { font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif; font-size: clamp(34px, 8.5vw, 44px); font-weight: 400; letter-spacing: -0.02em; line-height: 1.02; }
+.focus-starter-card h2 em { font-style: italic; }
+.focus-starter-card p { font-size: 15.5px; line-height: 1.5; color: var(--text-muted); }
+.focus-starter .focus-starter-yes { width: 100%; height: 58px; margin-top: var(--s-2); border-radius: var(--r-pill); font-size: 16px; font-weight: 700; }
+
+/* ---- Tasks page ------------------------------------------------------- */
+.task-just-start { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-bottom: var(--s-1); }
+
+/* ---- Calm screens: what ADHD mode quietens across the app -------------- */
+html[data-adhd="on"] body { font-size: 15px; line-height: 1.6; }
+html[data-adhd="on"] .udo-background,
+html[data-adhd="on"] .adsense-container,
+html[data-adhd="on"] .focus-leaderboard,
+html[data-adhd="on"] .friends-focusing,
+html[data-adhd="on"] .focus-chart-panel,
+html[data-adhd="on"] .habits-social { display: none; }
+html[data-adhd="on"] .habit-sub .state-broken,
+html[data-adhd="on"] .habit-sub .state-recovery { color: var(--text-muted); font-weight: 600; }
+
+@media (max-width: 520px) {
+  .adhd-home { gap: var(--s-4); }
+  .adhd-ghost { height: 34px; padding: 0 13px; }
+  .adhd-tile { min-height: 70px; padding: 10px 14px 10px 10px; gap: 10px; border-radius: 22px; }
+  .adhd-tile-day { padding-left: 16px; }
+  .adhd-day-label { font-size: 12.5px; }
+  .adhd-card { border-radius: 30px; }
+  .adhd-now-actions { grid-template-columns: 1fr; }
+  .adhd-hold { min-height: 60px; }
+  .adhd-picker-actions { grid-template-columns: 1fr 1fr; }
+  .adhd-btn { padding: 0 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adhd-home *,
+  .adhd-home > *,
+  .adhd-ambient,
+  .adhd-ambient > span,
+  .focus-idea,
+  .focus-idea p,
+  .focus-starter,
+  .focus-starter-card { animation: none !important; transition: none !important; }
+  .adhd-check.is-drawn circle { stroke-dashoffset: 0; fill: var(--text); }
+  .adhd-check.is-drawn path { stroke-dashoffset: 0; stroke: var(--bg); }
+  .adhd-celebrate-mark::before,
+  .adhd-burst,
+  .adhd-start-glint { display: none; }
+}

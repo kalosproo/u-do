@@ -29,7 +29,7 @@ import { KEY_ID, KEY_SECRET, cancelSubscriptionNow } from "../billing/razorpay.j
 const REAUTH_WINDOW_SECONDS = 5 * 60;
 
 /** Workspace subcollections, mirroring WORKSPACE_COLLECTIONS in the app. */
-const WORKSPACE = ["tasks", "planner", "expenses", "habits", "focus", "exams", "classes", "grades"];
+const WORKSPACE = ["tasks", "planner", "expenses", "habits", "focus", "exams", "classes", "grades", "prefs"];
 
 /** Top-level documents keyed by the account's own uid. */
 const OWNED_DOCS = [

@@ -17,6 +17,7 @@ import SecurityCard from "../components/SecurityCard";
 import EmailSummary from "../components/EmailSummary";
 import CalendarSync from "../components/CalendarSync";
 import AchievementsPanel from "../components/AchievementsPanel";
+import AdhdToggle from "../components/adhd/AdhdToggle";
 
 const IMPORT_MODE_OPTIONS = [
   ["merge", "Keep newer", "Existing entries stay if they were changed more recently than the backup."],
@@ -176,6 +177,8 @@ function Profile() {
           </div>
         </div>
       </article>
+
+      <AdhdToggle />
 
       <PlanCard />
 

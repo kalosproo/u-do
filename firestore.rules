@@ -264,6 +264,38 @@ service cloud.firestore {
         allow read, delete: if isOwner(uid);
         allow create, update: if isOwner(uid) && validFocusDay(dayKey, request.resource.data);
       }
+
+      // Settings that follow the person between devices. Only "adhd" so far:
+      // whether ADHD mode is on, and today's three picks.
+      match /prefs/{docId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && docId == 'adhd' && validAdhdPrefs(request.resource.data);
+      }
+    }
+
+    function validAdhdPrefs(data) {
+      return data.keys().hasOnly(['enabled', 'day', 'picks', 'updatedAt'])
+        && data.enabled is bool
+        && (!('day' in data) || (data.day is string && data.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
+        && (!('picks' in data) || (data.picks is list && data.picks.size() <= 3));
+    }
+
+    /**
+     * Features still being tried out. The people trying one are named here,
+     * in the rules, so no address ships in the website's code. A tester can
+     * read betaFeatures/{feature} even when it doesn't exist; anyone else
+     * can't. To give a feature to everyone, create the document in the
+     * console with `everyone: true`.
+     */
+    function betaTester() {
+      return isSignedIn()
+        && request.auth.token.get('email', '').lower() in ['haneeshvarma2006@gmail.com'];
+    }
+
+    match /betaFeatures/{feature} {
+      allow read: if isSignedIn() && feature in ['adhd']
+        && (betaTester() || (resource != null && resource.data.get('everyone', false) == true));
+      allow write: if false;
     }
 
     match /profiles/{uid} {
