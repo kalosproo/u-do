@@ -1,5 +1,6 @@
 import { addDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 
+import { hasRelay, loadIceServers } from "./iceServers";
 import { roomLinkDoc, roomLinkIceCollection, roomLinksCollection } from "./paths";
 import { TIERS, linkIdFor, makesOffer, nextTier } from "../utils/roomCall";
 
@@ -11,10 +12,10 @@ import { TIERS, linkIdFor, makesOffer, nextTier } from "../utils/roomCall";
  * a weak connection gets less — and voice always goes first.
  */
 
-// Free public servers that tell a device its own public address.
-const ICE_SERVERS = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
 const CHECK_MS = 4000;
-const RETRIES = 2;
+// A link that hasn't connected by now isn't going to; say so and try again.
+const CONNECT_TIMEOUT_MS = 15_000;
+const RETRIES = 1;
 
 const AUDIO = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
 const VIDEO = { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } };
@@ -27,6 +28,17 @@ export const SESSION = (() => {
     return Math.random().toString(36).slice(2, 22);
   }
 })();
+
+/** "host", "srflx" or "relay" — what kind of route a candidate offers. */
+const typeOf = (candidate) => /\btyp (\w+)/.exec(candidate || "")?.[1] || null;
+
+/** Why a link didn't connect, in words, from what each side found. */
+const reasonFor = (peer, relay) => {
+  if (!relay) return "Your two networks won't connect directly (common on mobile data), and the relay isn't switched on yet.";
+  if (!peer.remoteTypes.size) return "No answer from their device — they may have lost connection.";
+  if (!peer.localTypes.has("relay")) return "Couldn't reach the relay from this network. Try Wi-Fi.";
+  return "Couldn't connect. Check both internet connections and try again.";
+};
 
 const qualityOf = (height) => (height >= 600 ? "HD" : height >= 300 ? "SD" : height > 0 ? "Low" : null);
 
@@ -50,7 +62,14 @@ export class CallEngine {
     this.preview = null;
     this.peers = new Map();
     this.closed = false;
+    this.wanted = [];
+    this.iceServers = null;
     this.timer = setInterval(() => this.checkQuality(), CHECK_MS);
+    // Links wait for the relay passwords, then connect.
+    loadIceServers().then((servers) => {
+      this.iceServers = servers;
+      this.sync(this.wanted);
+    });
   }
 
   /** What the UI shows: my own tracks, and each other device's stream and state. */
@@ -62,6 +81,7 @@ export class CallEngine {
         session: peer.session,
         stream: peer.stream,
         status: peer.status,
+        reason: peer.status === "failed" ? peer.reason : null,
         sending: TIERS[peer.tier].label,
         receiving: peer.receiving,
       })),
@@ -114,7 +134,8 @@ export class CallEngine {
 
   /** Matches the open links to whoever else is on the call right now. */
   sync(others) {
-    if (this.closed) return;
+    this.wanted = others;
+    if (this.closed || !this.iceServers) return;
     const wanted = new Map(others.map((member) => [linkIdFor(SESSION, member.session), member]));
     for (const [linkId, peer] of this.peers) {
       if (!wanted.has(linkId)) this.drop(linkId, peer, true);
@@ -125,7 +146,7 @@ export class CallEngine {
   }
 
   connect(linkId, member, attempt) {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection({ iceServers: this.iceServers });
     const peer = {
       pc,
       uid: member.uid,
@@ -143,8 +164,17 @@ export class CallEngine {
       linkReady: false,
       offerSdp: null,
       stops: [],
+      // Which kinds of route each side found, to explain a failure.
+      localTypes: new Set(),
+      remoteTypes: new Set(),
+      reason: null,
     };
     this.peers.set(linkId, peer);
+    peer.deadline = setTimeout(() => {
+      if (peer.status === "connected" || this.peers.get(linkId) !== peer) return;
+      if (peer.offerer) this.retry(linkId, peer);
+      else this.fail(peer, "timed out");
+    }, CONNECT_TIMEOUT_MS);
 
     pc.ontrack = (event) => {
       peer.stream.addTrack(event.track);
@@ -154,6 +184,8 @@ export class CallEngine {
     };
     pc.onicecandidate = (event) => {
       if (!event.candidate) return;
+      const type = typeOf(event.candidate.candidate);
+      if (type) peer.localTypes.add(type);
       peer.outbox.push(JSON.stringify(event.candidate.toJSON()));
       this.sendIce(linkId, peer);
     };
@@ -168,6 +200,7 @@ export class CallEngine {
           return;
         }
         peer.status = "failed";
+        peer.reason = reasonFor(peer, hasRelay(this.iceServers || []));
       }
       this.emit();
     };
@@ -263,7 +296,10 @@ export class CallEngine {
         for (const change of snap.docChanges()) {
           if (change.type !== "added") continue;
           try {
-            peer.pending.push(JSON.parse(change.doc.data().c));
+            const candidate = JSON.parse(change.doc.data().c);
+            const type = typeOf(candidate.candidate);
+            if (type) peer.remoteTypes.add(type);
+            peer.pending.push(candidate);
           } catch {
             /* A malformed candidate is just skipped. */
           }
@@ -340,7 +376,7 @@ export class CallEngine {
     this.drop(linkId, peer, true);
     if (peer.attempt + 1 > RETRIES) {
       // Gave up: keep a placeholder so the UI can say why there's no video.
-      this.peers.set(linkId, { ...peer, pc: null, status: "failed", stops: [] });
+      this.peers.set(linkId, { ...peer, pc: null, status: "failed", stops: [], reason: reasonFor(peer, hasRelay(this.iceServers)) });
       this.emit();
       return;
     }
@@ -352,10 +388,20 @@ export class CallEngine {
   fail(peer, error) {
     if (import.meta.env?.DEV) console.warn("call link failed at", peer.step, peer.offerer ? "offerer" : "answerer", String(error).slice(0, 60));
     peer.status = "failed";
+    peer.reason = reasonFor(peer, hasRelay(this.iceServers || []));
     this.emit();
   }
 
+  /** "Try again": forget the links that gave up and connect them afresh. */
+  reconnect() {
+    for (const [linkId, peer] of [...this.peers]) {
+      if (peer.status === "failed") this.drop(linkId, peer, true);
+    }
+    this.sync(this.wanted);
+  }
+
   drop(linkId, peer, clean) {
+    clearTimeout(peer.deadline);
     peer.stops.forEach((stop) => stop());
     peer.pc?.close();
     this.peers.delete(linkId);

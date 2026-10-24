@@ -341,6 +341,7 @@ export function StudyRoomProvider({ children }) {
       setNotice("");
       await shareState({});
     }),
+    retryCall: () => engine.current?.reconnect(),
     toggleCam: () => engine.current && run(async () => {
       await engine.current.setCam(!engine.current.video);
       await shareState({});

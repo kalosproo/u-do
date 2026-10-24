@@ -22,12 +22,22 @@ function Picture({ stream, mirrored }) {
   );
 }
 
-function Tile({ name, stream, mirrored, cam, mic, quality, status }) {
+function Tile({ name, stream, mirrored, cam, mic, quality, status, reason, onRetry }) {
   const showVideo = cam && stream?.getVideoTracks().length;
   return (
     <figure className={`call-tile${showVideo ? "" : " is-off"}`}>
       {showVideo ? <Picture stream={stream} mirrored={mirrored} /> : <span className="call-tile-avatar">{initial(name)}</span>}
-      {status ? <span className="call-tile-status">{status}</span> : null}
+      {status ? (
+        <span className="call-tile-status">
+          {status}
+          {reason ? <small>{reason}</small> : null}
+          {onRetry ? (
+            <button type="button" className="call-tile-retry" onClick={onRetry}>
+              Try again
+            </button>
+          ) : null}
+        </span>
+      ) : null}
       <figcaption>
         {mic ? null : <FiMicOff aria-label="Muted" />}
         <span>{name}</span>
@@ -71,7 +81,7 @@ function RoomCall() {
 
   const peerFor = (member) => call.peers.find((peer) => peer.session === member.session);
   const statusOf = (peer) =>
-    !peer || peer.status === "connecting" ? "Connecting…" : peer.status === "failed" ? "Can't connect on this network" : null;
+    !peer || peer.status === "connecting" ? "Connecting…" : peer.status === "failed" ? "Couldn't connect" : null;
   const canFullscreen = typeof document !== "undefined" && document.fullscreenEnabled;
 
   return (
@@ -89,6 +99,8 @@ function RoomCall() {
               mic={member.mic}
               quality={peer?.receiving}
               status={statusOf(peer)}
+              reason={peer?.reason}
+              onRetry={peer?.status === "failed" ? study.retryCall : null}
             />
           );
         })}

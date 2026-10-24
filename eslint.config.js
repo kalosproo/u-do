@@ -24,7 +24,7 @@ export default defineConfig([
 
   // Cloud Functions are Node ESM, not browser code.
   {
-    files: ['functions/**/*.js', 'scripts/**/*.mjs', '*.mjs'],
+    files: ['functions/**/*.js', 'scripts/**/*.mjs', '*.mjs', 'api/**/*.{js,mjs}'],
     languageOptions: { globals: { ...globals.node } },
   },
   {
