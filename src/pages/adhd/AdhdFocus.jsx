@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FiPlay, FiUsers } from "react-icons/fi";
 
 import { AdhdPage, Chips } from "../../components/adhd/AdhdUI";
+import { useWarm } from "../../components/adhd/useWarm";
 import { useAdhd } from "../../hooks/useAdhd";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
@@ -28,7 +29,8 @@ function AdhdFocus() {
   const focus = useFocus();
   const adhd = useAdhd();
   const [minutes, setMinutes] = useState(() => (LENGTHS.some(([key]) => Number(key) === focus?.setup?.minutes) ? String(focus.setup.minutes) : "15"));
-  const [tasks, setTasks] = useState([]);
+  const [loaded, setTasks] = useWarm(user ? `${user.uid}:tasks` : "");
+  const tasks = useMemo(() => loaded || [], [loaded]);
   const [on, setOn] = useState("");
   const [launching, setLaunching] = useState(false);
 
@@ -41,7 +43,7 @@ function AdhdFocus() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, setTasks]);
 
   // What you might be focusing on: today's Now task and the next one.
   const plan = useMemo(() => todayPlan(tasks, adhd?.picks || []), [tasks, adhd?.picks]);
