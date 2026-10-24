@@ -37,7 +37,7 @@ const salutation = () => {
 /**
  * Home in ADHD mode. One screen, one question at a time: what are today's
  * three, and what's the one thing now? Everything else is a tap away under
- * "Everything", never in the way.
+ * "Full view", never in the way.
  */
 function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatch, onShowAll }) {
   const { user } = useAuth();
@@ -156,7 +156,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
 
   const justStart = (task) => {
     if (focus?.session) focus.open();
-    else focus?.start(STARTER_MINUTES, task.title, { starter: true });
+    else focus?.start(STARTER_MINUTES, task.title, { starter: true, taskId: task.id });
   };
 
   const doNow = (id) => morph(() => adhd.setPicks([id, ...adhd.picks.filter((item) => item !== id)]));
@@ -171,7 +171,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
         <div className="adhd-head-top">
           <p className="adhd-date">{dateLine()}</p>
           <button type="button" className="adhd-ghost" onClick={onShowAll}>
-            <FiGrid aria-hidden="true" /> Everything
+            <FiGrid aria-hidden="true" /> Full view
           </button>
         </div>
         <h1 className="adhd-hello">
@@ -345,7 +345,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
           {focusedToday >= 1 ? <p className="adhd-celebrate-stat">{formatMinutes(focusedToday)} of focus today</p> : null}
           <div className="adhd-picker-actions">
             <button type="button" className="adhd-btn" onClick={onShowAll}>
-              <FiGrid aria-hidden="true" /> Everything
+              <FiGrid aria-hidden="true" /> Full view
             </button>
             <button type="button" className="adhd-btn adhd-btn-primary" onClick={() => openPicker([])}>
               Pick more <FiArrowRight aria-hidden="true" />

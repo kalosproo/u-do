@@ -442,7 +442,7 @@ function Tasks() {
                         <button
                           type="button"
                           className="btn btn-sm btn-primary task-just-start"
-                          onClick={() => (focus?.session ? focus.open() : focus?.start(STARTER_MINUTES, task.title, { starter: true }))}
+                          onClick={() => (focus?.session ? focus.open() : focus?.start(STARTER_MINUTES, task.title, { starter: true, taskId: task.id }))}
                         >
                           <FiPlay aria-hidden="true" /> {focus?.session ? "Back to the timer" : `Just start · ${STARTER_MINUTES} min`}
                         </button>

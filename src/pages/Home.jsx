@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { getDocs } from "firebase/firestore";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FiArrowLeft, FiCheck, FiPlus } from "react-icons/fi";
 import { createTask, setTaskStatus } from "../services/tasks";
 import { formatDayLabel, formatRelativeDay, todayKey } from "../utils/dateKeys";
@@ -60,8 +60,11 @@ function Home() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [savingTask, setSavingTask] = useState(false);
   const adhd = useAdhd();
-  // ADHD mode opens on today's three; "Everything" shows this page as usual.
-  const [showAll, setShowAll] = useState(false);
+  // ADHD mode opens on today's three; "Full view" (/?full=1) shows this page
+  // as usual. Kept in the address, so the dock's Today always comes back.
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const showAll = params.get("full") === "1";
 
   const loadDashboard = useCallback(async () => {
     if (!user) return;
@@ -195,7 +198,7 @@ function Home() {
           onHabitLogs={(id, logs) => setHabits((items) => items.map((item) => (item.id === id ? { ...item, logs } : item)))}
           onChanged={loadDashboard}
           onPatch={(id, patch) => setTasks((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)))}
-          onShowAll={() => setShowAll(true)}
+          onShowAll={() => navigate("/?full=1")}
         />
       </>
     );
@@ -204,7 +207,7 @@ function Home() {
   return (
     <section className="dashboard-page">
       {adhd?.enabled ? (
-        <button type="button" className="adhd-back" onClick={() => setShowAll(false)}>
+        <button type="button" className="adhd-back" onClick={() => navigate("/")}>
           <FiArrowLeft aria-hidden="true" /> Back to today&apos;s three
         </button>
       ) : null}

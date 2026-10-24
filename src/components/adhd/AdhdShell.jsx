@@ -4,6 +4,7 @@ import { FiActivity, FiCalendar, FiCheckCircle, FiCreditCard, FiGrid, FiPlayCirc
 
 import ErrorBoundary from "../ErrorBoundary";
 import OfflineNotice from "../OfflineNotice";
+import VerifyEmailBanner from "../VerifyEmailBanner";
 import { useAuth } from "../../hooks/useAuth";
 import { createTask } from "../../services/tasks";
 import { TASKS_CHANGED, WHEN, dueFor } from "../../utils/adhd";
@@ -43,6 +44,7 @@ function AdhdShell() {
       <OfflineNotice />
 
       <main className="main-content adhd-main">
+        <VerifyEmailBanner />
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>

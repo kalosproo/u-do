@@ -45,7 +45,7 @@ function AdhdFocus() {
   const plan = useMemo(() => todayPlan(tasks, adhd?.picks || []), [tasks, adhd?.picks]);
   const options = useMemo(() => {
     const picked = [plan.now, ...plan.next].filter(Boolean).slice(0, 2);
-    return [...picked.map((task) => [task.title, task.title]), ["", "Just focus"]];
+    return [...picked.map((task) => [task.id, task.title]), ["", "Just focus"]];
   }, [plan]);
 
   const session = focus?.session;
@@ -87,7 +87,14 @@ function AdhdFocus() {
             <Chips options={options} value={options.some(([key]) => key === on) ? on : ""} onChange={setOn} label="On what" size="sm" stack />
           </div>
 
-          <button type="button" className="adhd-focus-go" onClick={() => focus.start(Number(minutes), on)}>
+          <button
+            type="button"
+            className="adhd-focus-go"
+            onClick={() => {
+              const task = options.some(([key]) => key === on) ? tasks.find((item) => item.id === on) : null;
+              focus.start(Number(minutes), task?.title || "", { taskId: task?.id || "" });
+            }}
+          >
             <span className="adhd-focus-go-ring" aria-hidden="true" />
             <span className="adhd-focus-go-inner">
               <FiPlay aria-hidden="true" />

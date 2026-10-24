@@ -710,6 +710,13 @@ button.adhd-later-item:focus-visible .adhd-later-go { opacity: 1; transform: non
 .focus-idea button:hover { color: var(--text); }
 .focus-screen.has-idea .focus-ring { width: min(84vw, calc(100dvh - 450px), 560px); }
 
+/* "Done with it?" — shown where the break idea goes, until it's answered. */
+.focus-taskdone p { display: inline-flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
+.focus-taskdone-actions { display: flex; gap: 8px; margin-top: 8px; }
+.focus-idea .focus-taskdone-actions button { height: 40px; margin: 0; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--r-pill); font-size: 14px; }
+.focus-idea .focus-taskdone-actions button.is-yes { border-color: transparent; background: var(--text); color: var(--bg); }
+
+
 /* In the flip clock it's one quiet line under the cards, and the cards
    give up just enough height for it. */
 .focus-b .focus-idea {
@@ -725,6 +732,20 @@ button.adhd-later-item:focus-visible .adhd-later-go { opacity: 1; transform: non
 .focus-b .focus-idea p { font-size: 15px; font-weight: 600; }
 .focus-b .focus-idea button { margin: 0; flex-shrink: 0; width: 36px; height: 36px; justify-content: center; border-radius: 50%; background: var(--surface-2); font-size: 0; }
 .focus-b .focus-idea button svg { font-size: 15px; }
+.focus-b .focus-idea.focus-taskdone { flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 18px; border-radius: 20px; }
+.focus-b .focus-idea.focus-taskdone small { display: block; }
+.focus-b .focus-idea.focus-taskdone button { width: auto; height: 40px; padding: 0 16px; border-radius: var(--r-pill); background: transparent; font-size: 14px; }
+.focus-b .focus-idea.focus-taskdone button.is-yes { background: var(--text); color: var(--bg); }
+.focus-screen.has-ask .focus-flip { --cw: min(84vw, calc((100dvh - 430px) / 2.1)); }
+.focus-screen.has-ask .focus-b { gap: 10px; }
+@media (orientation: landscape) {
+  /* On its side the question becomes one line under the cards. */
+  .focus-b .focus-idea.focus-taskdone { flex-direction: row; align-items: center; gap: var(--s-3); padding: 8px 8px 8px 18px; border-radius: var(--r-pill); }
+  .focus-b .focus-idea.focus-taskdone small { display: none; }
+  .focus-b .focus-idea.focus-taskdone p { max-width: 36vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .focus-b .focus-taskdone-actions { margin-top: 0; }
+  .focus-screen.has-ask .focus-flip { --cw: min(44vw, calc(100dvh - 200px)); }
+}
 .focus-screen.has-idea .focus-flip { --cw: min(84vw, calc((100dvh - 280px) / 2.1)); }
 @media (orientation: landscape) {
   .focus-screen.has-idea .focus-flip { --cw: min(44vw, calc(100dvh - 190px)); }
@@ -1074,6 +1095,16 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text); }
 .adhd-danger { color: var(--text-subtle); }
 .adhd-danger.is-armed { color: var(--text); font-weight: 750; }
 .adhd-link-center { margin-top: var(--s-5); }
+
+/* The task's name in its sheet: tap to rename. */
+.adhd-sheet-rename { display: flex; align-items: flex-start; gap: 10px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: text; }
+.adhd-sheet-rename svg { flex-shrink: 0; margin-top: 10px; font-size: 16px; color: var(--text-subtle); }
+.adhd-sheet-rename:hover svg { color: var(--text); }
+.adhd-rename { padding-right: 44px; }
+
+/* A clean slate for a pile of old tasks. */
+.adhd-fresh { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: var(--s-3); padding: 16px 18px; border: 1px solid var(--adhd-line); border-radius: 20px; background: var(--adhd-fill); }
+.adhd-fresh p { font-size: 14px; line-height: 1.5; color: var(--text-muted); }
 
 .adhd-steps { list-style: none; display: flex; flex-direction: column; gap: 2px; }
 .adhd-steps li { display: flex; align-items: center; gap: 14px; min-height: 48px; font-size: 15.5px; font-weight: 600; }

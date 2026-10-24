@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FiBell, FiBookOpen, FiChevronDown, FiMaximize, FiMinimize, FiPause, FiPlay, FiRefreshCw, FiSquare, FiUsers } from "react-icons/fi";
+import { FiBell, FiBookOpen, FiCheck, FiChevronDown, FiMaximize, FiMinimize, FiPause, FiPlay, FiRefreshCw, FiSquare, FiUsers } from "react-icons/fi";
 
 import { useAdhd } from "../../hooks/useAdhd";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
 import { useStudyRoom } from "../../hooks/useStudyRoom";
 import { KEEP_GOING_MINUTES, STARTER_MINUTES, formatClock, formatMinutes, lastDays, progressOf } from "../../utils/focusTimer";
-import { breakIdea } from "../../utils/adhd";
+import { TASKS_CHANGED, breakIdea } from "../../utils/adhd";
+import { playDone } from "../../utils/ambient";
+import { celebrate } from "../../utils/feedback";
+import { fetchTasks, setTaskStatus } from "../../services/tasks";
 import { toDateKey } from "../../utils/dateKeys";
 import FlipCard from "./FlipCard";
 import SoundPicker from "./SoundPicker";
@@ -70,8 +73,58 @@ function BreakIdea({ seed }) {
   );
 }
 
+/** Ticks off the task a session was for, wherever its list is on screen. */
+const finishTask = async (uid, taskId) => {
+  const task = (await fetchTasks(uid)).find((item) => item.id === taskId);
+  if (task && task.status !== "done") await setTaskStatus(uid, task, "done");
+  window.dispatchEvent(new Event(TASKS_CHANGED));
+};
+
+/**
+ * ADHD mode, on the break after a round for a task: did it get done? One
+ * tap ticks it off, so the timer ending and the task ending are the same
+ * moment. "Not yet" just lets the break be a break.
+ */
+function TaskDone({ uid, taskId, title, onAnswered }) {
+  const [state, setState] = useState("ask");
+  const yes = async () => {
+    setState("saving");
+    try {
+      await finishTask(uid, taskId);
+      celebrate();
+      playDone();
+      setState("done");
+      setTimeout(onAnswered, 2200);
+    } catch {
+      setState("ask");
+    }
+  };
+  return (
+    <div className="focus-idea focus-taskdone" aria-live="polite">
+      {state === "done" ? (
+        <p>
+          <FiCheck aria-hidden="true" /> Ticked off. Nice work.
+        </p>
+      ) : (
+        <>
+          <small>Done with it?</small>
+          <p>{title}</p>
+          <div className="focus-taskdone-actions">
+            <button type="button" className="is-yes" disabled={state === "saving"} onClick={yes}>
+              <FiCheck aria-hidden="true" /> Yes, done
+            </button>
+            <button type="button" onClick={onAnswered}>
+              Not yet
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** After "Just start": five minutes done, and a no-pressure offer of more. */
-function KeepGoing({ onYes, onStop }) {
+function KeepGoing({ onYes, onStop, onDone }) {
   return (
     <div className="focus-starter" role="alertdialog" aria-label="Five minutes done">
       <div className="focus-starter-card">
@@ -86,6 +139,11 @@ function KeepGoing({ onYes, onStop }) {
         <button type="button" className="focus-link" onClick={onStop}>
           Stop here
         </button>
+        {onDone ? (
+          <button type="button" className="focus-link" onClick={onDone}>
+            It&apos;s done already
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -113,6 +171,8 @@ function FocusScreen() {
   const { session, view, style } = focus || {};
   const visible = Boolean(focus && view === "full" && session);
   const [calm, setCalm] = useState(false);
+  // Which break's "done with it?" has been answered, so it asks once per break.
+  const [answered, setAnswered] = useState("");
   const [isFull, setIsFull] = useState(false);
   const calmTimer = useRef(null);
 
@@ -184,7 +244,13 @@ function FocusScreen() {
   const inRoom = Boolean(session.room && study?.room?.id === session.room);
   const toggle = inRoom && study.isHost && session.phase === "focus" ? study.toggle : focus.toggle;
   const offerMore = Boolean(session.afterStarter && session.paused);
-  const idea = isBreak && adhd?.enabled ? <BreakIdea seed={(session.count || 0) * 5 + new Date().getDate()} /> : null;
+  const breakKey = `${session.taskId || ""}|${session.count || 0}`;
+  const askDone = Boolean(isBreak && adhd?.enabled && session.taskId && user && answered !== breakKey);
+  const idea = askDone ? (
+    <TaskDone key={breakKey} uid={user.uid} taskId={session.taskId} title={session.subject || "That task"} onAnswered={() => setAnswered(breakKey)} />
+  ) : isBreak && adhd?.enabled ? (
+    <BreakIdea seed={(session.count || 0) * 5 + new Date().getDate()} />
+  ) : null;
   const roomNames = inRoom ? study.members.filter((member) => member.uid !== user?.uid).map((member) => member.name.split(" ")[0]) : [];
   const roomLine = roomNames.length
     ? `With ${roomNames.slice(0, 3).join(", ")}${roomNames.length > 3 ? ` +${roomNames.length - 3}` : ""}`
@@ -210,7 +276,7 @@ function FocusScreen() {
 
   return createPortal(
     <div
-      className={`focus-screen focus-style-${style} ${isBreak ? "is-break" : ""} ${quiet ? "is-quiet" : ""} ${inRoom ? "in-room" : ""} ${idea ? "has-idea" : ""}`}
+      className={`focus-screen focus-style-${style} ${isBreak ? "is-break" : ""} ${quiet ? "is-quiet" : ""} ${inRoom ? "in-room" : ""} ${idea ? "has-idea" : ""} ${askDone ? "has-ask" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label="Focus timer"
@@ -334,7 +400,22 @@ function FocusScreen() {
         </div>
       )}
 
-      {offerMore ? <KeepGoing onYes={focus.resume} onStop={cancel} /> : null}
+      {offerMore ? (
+        <KeepGoing
+          onYes={focus.resume}
+          onStop={cancel}
+          onDone={
+            session.taskId && user
+              ? async () => {
+                  celebrate();
+                  playDone();
+                  cancel();
+                  finishTask(user.uid, session.taskId).catch(() => {});
+                }
+              : null
+          }
+        />
+      ) : null}
 
       {inRoom && style === 1 ? (
         <p className="focus-room">

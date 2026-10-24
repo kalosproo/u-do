@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiPlay, FiX } from "react-icons/fi";
+import { FiEdit2, FiPlay, FiX } from "react-icons/fi";
 
 import { AddBar, AdhdPage, Chips, Fold, Sheet, Tick, Toast } from "../../components/adhd/AdhdUI";
 import { useToast } from "../../components/adhd/useToast";
@@ -9,10 +9,14 @@ import { useFocus } from "../../hooks/useFocus";
 import { createTask, deleteTask, fetchTasks, setSubtasks, setTaskStatus, updateTask } from "../../services/tasks";
 import { TASKS_CHANGED, WHEN, dueFor, gentleDue, groupTasks } from "../../utils/adhd";
 import { formatRelativeDay, todayKey } from "../../utils/dateKeys";
+import { isRepeating } from "../../utils/recurrence";
 import { STARTER_MINUTES } from "../../utils/focusTimer";
 import { addSubtask, removeSubtask, subtaskProgress, toggleSubtask } from "../../utils/subtasks";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Past this many, older tasks fold away instead of crowding today. */
+const EARLIER_INLINE = 3;
 
 const whenOf = (task, today) => {
   if (!task.dueDate) return "someday";
@@ -148,10 +152,44 @@ function AdhdTasks() {
     });
   };
 
+  const rename = async (task, title) => {
+    patch(task.id, { title });
+    try {
+      await updateTask(user.uid, task.id, { title });
+    } catch {
+      setError("Couldn't rename that.");
+      load();
+    }
+  };
+
+  // Moves a pile of old tasks to Someday in one go: a clean slate, nothing
+  // lost. Repeating tasks stay, because a repeat needs its date.
+  const freshStart = async (list) => {
+    const moving = list.filter((task) => !isRepeating(task.repeat));
+    if (!moving.length) return;
+    const before = new Map(moving.map((task) => [task.id, task.dueDate]));
+    setTasks((current) => (current || []).map((task) => (before.has(task.id) ? { ...task, dueDate: "" } : task)));
+    showToast(`${moving.length} moved to Someday. Fresh start.`, async () => {
+      hideToast();
+      setTasks((current) => (current || []).map((task) => (before.has(task.id) ? { ...task, dueDate: before.get(task.id) } : task)));
+      try {
+        await Promise.all([...before].map(([id, dueDate]) => updateTask(user.uid, id, { dueDate })));
+      } finally {
+        load();
+      }
+    });
+    try {
+      await Promise.all(moving.map((task) => updateTask(user.uid, task.id, { dueDate: "" })));
+    } catch {
+      setError("Couldn't move all of them.");
+      load();
+    }
+  };
+
   const start = (task) => {
     setOpenId(null);
     if (focus?.session) focus.open();
-    else focus?.start(STARTER_MINUTES, task.title, { starter: true });
+    else focus?.start(STARTER_MINUTES, task.title, { starter: true, taskId: task.id });
   };
 
   const row = (task, meta) => {
@@ -170,7 +208,11 @@ function AdhdTasks() {
     );
   };
 
-  const count = groups.today.length;
+  // A few old tasks sit with today's; a pile of them folds away on its own.
+  const earlier = groups.today.filter((task) => task.dueDate < today);
+  const foldEarlier = earlier.length > EARLIER_INLINE;
+  const todayRows = foldEarlier ? groups.today.filter((task) => task.dueDate >= today) : groups.today;
+  const count = todayRows.length;
 
   return (
     <AdhdPage
@@ -206,12 +248,24 @@ function AdhdTasks() {
         <>
           <section className="adhd-list-block">
             <p className="adhd-eyebrow">Today</p>
-            {groups.today.length ? (
-              <ul className="adhd-rows">{groups.today.map((task) => row(task, task.dueDate < today ? gentleDue(task.dueDate, today) : ""))}</ul>
+            {todayRows.length ? (
+              <ul className="adhd-rows">{todayRows.map((task) => row(task, task.dueDate < today ? gentleDue(task.dueDate, today) : ""))}</ul>
             ) : (
               <p className="adhd-empty">Clear. Add something above, or pull one from below.</p>
             )}
           </section>
+
+          {foldEarlier ? (
+            <Fold title="From earlier" count={earlier.length}>
+              <div className="adhd-fresh">
+                <p>These have waited a while. No guilt — move them out of the way and start fresh.</p>
+                <button type="button" className="adhd-btn adhd-btn-sm" onClick={() => freshStart(earlier)}>
+                  Fresh start: move to Someday
+                </button>
+              </div>
+              <ul className="adhd-rows">{earlier.map((task) => row(task, formatRelativeDay(task.dueDate)))}</ul>
+            </Fold>
+          ) : null}
 
           {groups.soon.length ? (
             <Fold title="Coming up" count={groups.soon.length}>
@@ -242,6 +296,7 @@ function AdhdTasks() {
             onStart={() => start(selected)}
             onMove={(key) => move(selected, key)}
             onSteps={(steps) => changeSteps(selected, steps)}
+            onRename={(title) => rename(selected, title)}
             onDelete={() => remove(selected)}
           />
         ) : null}
@@ -252,12 +307,40 @@ function AdhdTasks() {
   );
 }
 
-function TaskSheet({ task, today, timerRunning, onStart, onMove, onSteps, onDelete }) {
+function TaskSheet({ task, today, timerRunning, onStart, onMove, onSteps, onRename, onDelete }) {
   const done = task.status === "done";
   const when = whenOf(task, today);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task.title);
+
+  const save = (event) => {
+    event.preventDefault();
+    const title = draft.trim();
+    if (title && title !== task.title) onRename(title);
+    setEditing(false);
+  };
+
   return (
     <div className="adhd-task-sheet">
-      <h2 className="adhd-sheet-title adhd-sheet-task">{task.title}</h2>
+      {editing ? (
+        <form className="adhd-rename" onSubmit={save}>
+          <input
+            className="adhd-quick-input"
+            value={draft}
+            maxLength={200}
+            aria-label="Task name"
+            enterKeyHint="done"
+            autoFocus
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={save}
+          />
+        </form>
+      ) : (
+        <button type="button" className="adhd-sheet-rename" onClick={() => { setDraft(task.title); setEditing(true); }} aria-label={`Rename ${task.title}`}>
+          <h2 className="adhd-sheet-title adhd-sheet-task">{task.title}</h2>
+          <FiEdit2 aria-hidden="true" />
+        </button>
+      )}
       <p className="adhd-sheet-meta">
         {done ? "Done" : task.dueDate ? gentleDue(task.dueDate, today) || formatRelativeDay(task.dueDate) : "Someday"}
       </p>
