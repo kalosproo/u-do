@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useSearchParams } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
+import { useAdhd } from "./hooks/useAdhd";
 
 // Keep route-only code (especially charts) out of the first app payload.
 // Each page stays intact; Vite simply fetches it when its route is visited.
@@ -17,6 +18,15 @@ const Terms = lazy(() => import("./pages/Terms"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Focus = lazy(() => import("./pages/Focus"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+// ADHD mode's own app: only ever downloaded by someone who has it switched on.
+const AdhdShell = lazy(() => import("./components/adhd/AdhdShell"));
+const AdhdTasks = lazy(() => import("./pages/adhd/AdhdTasks"));
+const AdhdHabits = lazy(() => import("./pages/adhd/AdhdHabits"));
+const AdhdFocus = lazy(() => import("./pages/adhd/AdhdFocus"));
+const AdhdPlanner = lazy(() => import("./pages/adhd/AdhdPlanner"));
+const AdhdMoney = lazy(() => import("./pages/adhd/AdhdMoney"));
+const AdhdFriends = lazy(() => import("./pages/adhd/AdhdFriends"));
+const AdhdYou = lazy(() => import("./pages/adhd/AdhdYou"));
 import Sidebar from "./components/Sidebar";
 import BrandLogo from "./components/BrandLogo";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -36,10 +46,23 @@ import { usePlan } from "./hooks/usePlan";
 import KeyboardShortcuts from "./components/KeyboardShortcuts";
 import CoachMarks from "./components/CoachMarks";
 
+/**
+ * ADHD mode swaps each page for its calm version. "?full=1" opens the normal
+ * page instead, inside the same calm shell, for anything the calm one leaves out.
+ */
+function Calm({ normal, calm }) {
+  const adhd = useAdhd();
+  const [params] = useSearchParams();
+  return adhd?.enabled && params.get("full") !== "1" ? calm : normal;
+}
+
 /** The signed-in chrome. Login sits outside it, on its own full-page canvas. */
 function AppLayout() {
   const { user } = useAuth();
   const { adsEnabled: showAds } = usePlan();
+  const adhd = useAdhd();
+
+  if (adhd?.enabled) return <AdhdShell />;
 
   return (
     <>
@@ -78,12 +101,12 @@ function AppRoutes() {
         {/* Browsable signed out: a guest sees the page and is sent to login
             only when they try to change something. */}
         {user ? <Route path="/" element={<Home />} /> : null}
-        <Route path="/finance" element={<Finance />} />
-        <Route path="/planner" element={<Planner />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/habits" element={<Habits />} />
-        <Route path="/focus" element={<Focus />} />
-        <Route path="/friends" element={<Friends />} />
+        <Route path="/finance" element={<Calm normal={<Finance />} calm={<AdhdMoney />} />} />
+        <Route path="/planner" element={<Calm normal={<Planner />} calm={<AdhdPlanner />} />} />
+        <Route path="/tasks" element={<Calm normal={<Tasks />} calm={<AdhdTasks />} />} />
+        <Route path="/habits" element={<Calm normal={<Habits />} calm={<AdhdHabits />} />} />
+        <Route path="/focus" element={<Calm normal={<Focus />} calm={<AdhdFocus />} />} />
+        <Route path="/friends" element={<Calm normal={<Friends />} calm={<AdhdFriends />} />} />
 
         {/* Readable signed out, and readable while the consent prompt is up:
             someone deciding whether to accept has to be able to read it. */}
@@ -95,7 +118,7 @@ function AppRoutes() {
           path="/profile"
           element={
             <ProtectedRoute>
-              <Profile />
+              <Calm normal={<Profile />} calm={<AdhdYou />} />
             </ProtectedRoute>
           }
         />
@@ -122,6 +145,8 @@ function RouteLoading() {
 
 function App() {
   const { loading } = useAuth();
+  // The tour and the arrows point at the full app's controls, which ADHD mode doesn't show.
+  const calm = Boolean(useAdhd()?.enabled);
 
   // Hold the whole app until Firebase has restored any existing session,
   // otherwise a protected route redirects a signed-in user on every reload.
@@ -157,10 +182,10 @@ function App() {
       <FocusScreen />
 
       {/* Before the consent prompt, so the prompt renders above it. */}
-      <WelcomeTour />
+      {calm ? null : <WelcomeTour />}
 
       {/* One-time arrows pointing at the main controls. */}
-      <CoachMarks />
+      {calm ? null : <CoachMarks />}
 
       {/* Outside the routes so it covers every page, and portalled to the body
           so it sits above the background layer. */}

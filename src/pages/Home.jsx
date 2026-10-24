@@ -24,6 +24,7 @@ import AchievementWatcher from "../components/AchievementWatcher";
 import { useFocus } from "../hooks/useFocus";
 import { useAdhd } from "../hooks/useAdhd";
 import AdhdHome from "../components/adhd/AdhdHome";
+import { TASKS_CHANGED } from "../utils/adhd";
 import { focusStats } from "../utils/focusStats";
 import { monthlyTotals } from "../utils/financeReport";
 import { formatMoney } from "../utils/money";
@@ -96,6 +97,12 @@ function Home() {
   useEffect(() => {
     const timer = setTimeout(loadDashboard, 0);
     return () => clearTimeout(timer);
+  }, [loadDashboard]);
+
+  // ADHD mode's quick add can add a task from anywhere, this page included.
+  useEffect(() => {
+    window.addEventListener(TASKS_CHANGED, loadDashboard);
+    return () => window.removeEventListener(TASKS_CHANGED, loadDashboard);
   }, [loadDashboard]);
 
   const tasksSummary = useMemo(() => taskStats(tasks), [tasks]);
@@ -184,6 +191,8 @@ function Home() {
         <AchievementWatcher stats={badgeStats} ready />
         <AdhdHome
           tasks={tasks}
+          habits={habits}
+          onHabitLogs={(id, logs) => setHabits((items) => items.map((item) => (item.id === id ? { ...item, logs } : item)))}
           onChanged={loadDashboard}
           onPatch={(id, patch) => setTasks((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)))}
           onShowAll={() => setShowAll(true)}
