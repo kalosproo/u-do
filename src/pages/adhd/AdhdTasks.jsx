@@ -5,6 +5,7 @@ import { FiEdit2, FiPlay, FiX } from "react-icons/fi";
 import { Confetti } from "../../components/adhd/AdhdBits";
 import { AddBar, AdhdPage, Chips, Fold, Sheet, Swipe, Tick, Toast } from "../../components/adhd/AdhdUI";
 import { useToast } from "../../components/adhd/useToast";
+import { useWarm } from "../../components/adhd/useWarm";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
 import { createTask, deleteTask, fetchTasks, setSubtasks, setTaskStatus, updateTask } from "../../services/tasks";
@@ -34,7 +35,7 @@ function AdhdTasks() {
   const { user } = useAuth();
   const focus = useFocus();
   const today = todayKey();
-  const [tasks, setTasks] = useState(null);
+  const [tasks, setTasks] = useWarm(user ? `${user.uid}:tasks` : "");
   const [when, setWhen] = useState("today");
   const [openId, setOpenId] = useState(null);
   const [leaving, setLeaving] = useState(() => new Set());
@@ -53,7 +54,7 @@ function AdhdTasks() {
       setTasks((current) => current ?? []);
       setError("Couldn't load your tasks. Pull down or come back in a moment.");
     }
-  }, [user]);
+  }, [user, setTasks]);
 
   useEffect(() => {
     const timer = setTimeout(load, 0);
@@ -73,7 +74,7 @@ function AdhdTasks() {
     deleteTask(pending.uid, pending.task.id)
       .then(() => setTasks((list) => (list || []).filter((task) => task.id !== pending.task.id)))
       .catch(() => {});
-  }, []);
+  }, [setTasks]);
   useEffect(() => finishDelete, [finishDelete]);
 
   const visible = useMemo(() => (tasks || []).filter((task) => task.id !== doomedId), [tasks, doomedId]);

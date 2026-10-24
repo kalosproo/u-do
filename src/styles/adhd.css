@@ -51,16 +51,43 @@ html[data-adhd="on"][data-theme="light"] {
 html[data-adhd="on"] :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 
 /* Each block settles in a beat after the one above it. */
-.adhd-home > *,
+.adhd-home-side > *,
+.adhd-home-main > *,
 .adhd-page > * { animation: adhd-rise 0.8s var(--adhd-glide) both; }
-.adhd-home > :nth-child(2),
+.adhd-home-side > :nth-child(2),
 .adhd-page > :nth-child(2) { animation-delay: 70ms; }
-.adhd-home > :nth-child(3),
+.adhd-home-main > *,
 .adhd-page > :nth-child(3) { animation-delay: 140ms; }
-.adhd-home > :nth-child(4),
+.adhd-home-main > :nth-child(n + 2),
 .adhd-page > :nth-child(4) { animation-delay: 210ms; }
-.adhd-home > :nth-child(5),
+.adhd-home-side > :nth-child(3),
 .adhd-page > :nth-child(5) { animation-delay: 280ms; }
+
+/* Today: one column on a phone (the habits strip last), two on a wide screen. */
+.adhd-home-side,
+.adhd-home-main { display: contents; }
+.adhd-home-side > .adhd-strip { order: 1; }
+@media (min-width: 1000px) {
+  .adhd-home {
+    max-width: 1120px;
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    column-gap: clamp(40px, 5vw, 72px);
+    align-items: start;
+  }
+  .adhd-home-side,
+  .adhd-home-main { min-width: 0; display: flex; flex-direction: column; gap: var(--s-5); }
+  .adhd-home-side { position: sticky; top: var(--s-6); }
+  .adhd-home-side > .adhd-strip { order: 0; }
+  .adhd-home .adhd-hello { font-size: clamp(56px, 5.4vw, 84px); }
+}
+
+/* Today's first load in ADHD mode: its own quiet shapes, not the full app's. */
+.adhd-skeleton.is-today { gap: var(--s-4); }
+.adhd-skeleton.is-today .is-line { width: 46%; height: 14px; border-radius: 8px; }
+.adhd-skeleton.is-today .is-title { width: 78%; height: 120px; border-radius: 24px; }
+.adhd-skeleton.is-today .is-tiles { height: 72px; border-radius: 24px; }
+.adhd-skeleton.is-today .is-card { height: 340px; border-radius: 34px; }
 @keyframes adhd-rise { from { opacity: 0; transform: translate3d(0, 14px, 0); } }
 @keyframes adhd-fade-in { from { opacity: 0; } }
 
@@ -791,10 +818,28 @@ html[data-adhd="on"] .habit-sub .state-recovery { color: var(--text-muted); font
 /* ---- Shell ------------------------------------------------------------ */
 .main-content.adhd-main {
   min-height: 100dvh;
+  /* Nothing pokes out sideways, not even mid-slide: no sideways scroll, and
+     on Android no page that briefly grows wider and drags the dock with it. */
+  overflow-x: clip;
   padding: calc(var(--s-6) + env(safe-area-inset-top, 0px)) var(--s-5) calc(140px + env(safe-area-inset-bottom, 0px));
 }
 html[data-adhd="on"] .focus-pill { bottom: calc(108px + env(safe-area-inset-bottom, 0px)); }
 body.adhd-sheet-open { overflow: hidden; }
+/* Room for the scrollbar is always kept, so screens don't shift sideways when
+   one is long enough to scroll and the next isn't (Windows, mostly). */
+html[data-adhd="on"] { scrollbar-gutter: stable; }
+html[data-adhd="on"] body { overflow-x: clip; }
+/* What scrolls under the dock fades out instead of being cut off by it. */
+.adhd-fade {
+  position: fixed;
+  z-index: 55;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(118px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--bg) 88%, transparent) 60%);
+  pointer-events: none;
+}
 html[data-adhd="on"] a.adhd-ghost { text-decoration: none; }
 
 /* The dock: four places and a plus, floating above everything. */
@@ -1105,9 +1150,10 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text); }
   transition: opacity 0.4s var(--ease), transform 0.5s var(--adhd-glide);
 }
 .adhd-row:last-child { border-bottom: 0; }
-/* A little wider than the list, so a row lifted into a card keeps its round corners. */
-.adhd-row-item { margin: 0 -10px; border-bottom: 1px solid var(--adhd-line); }
-.adhd-row-item:last-child { border-bottom: 0; }
+/* A little wider than the list, so a row lifted into a card keeps its round
+   corners; the lines between rows still line up with the text. */
+.adhd-row-item { position: relative; margin: 0 -10px; }
+.adhd-row-item + .adhd-row-item::before { content: ""; position: absolute; top: 0; left: 10px; right: 10px; height: 1px; background: var(--adhd-line); pointer-events: none; }
 .adhd-row-item .adhd-row { padding: 0 10px; border-bottom: 0; }
 .adhd-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 14px 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .adhd-row-title { font-size: 16.5px; font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; transition: color 0.3s var(--ease); }
@@ -1221,6 +1267,17 @@ html[data-adhd="on"] a.adhd-link { display: inline-block; }
 .adhd-focus-go:hover { transform: scale(1.02); }
 .adhd-focus-go:active { transform: scale(0.96); }
 .adhd-focus-go:disabled { cursor: default; }
+/* On a short phone the Start button shrinks a little, so it clears the dock. */
+@media (max-width: 520px) and (max-height: 860px) {
+  .adhd-focus-go { width: min(52vw, 196px); margin: var(--s-6) auto var(--s-4); }
+}
+/* On a wide screen the choices sit left and the big Start right, both in view. */
+@media (min-width: 1000px) {
+  .adhd-page:has(> .adhd-focus-card) { max-width: 1000px; }
+  .adhd-focus-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 56px; align-items: start; }
+  .adhd-focus-card > * { grid-column: 1; }
+  .adhd-focus-card > .adhd-focus-go { grid-column: 2; grid-row: 1 / span 3; align-self: center; margin: 0 20px; }
+}
 .adhd-focus-go.is-launching { transform: scale(1.14); opacity: 0; transition: transform 0.26s var(--adhd-glide), opacity 0.26s ease-in; }
 .adhd-focus-go.is-launching .adhd-focus-go-ring { animation: adhd-ring-out 0.3s var(--adhd-glide) forwards; }
 @keyframes adhd-ring-out { to { transform: scale(1.5); opacity: 0; } }
@@ -1279,6 +1336,9 @@ html[data-adhd="on"] .adhd-money-amount input { flex: 1; min-width: 0; height: 7
 .adhd-person-name strong { font-size: 16.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .adhd-person-name small { font-size: 13px; color: var(--text-subtle); }
 .adhd-person-actions { display: flex; gap: 8px; }
+/* A request keeps room for the name; the buttons drop below it if they must. */
+.adhd-person.is-request .adhd-person-name { flex: 1 1 130px; }
+.adhd-person.is-request .adhd-person-actions { margin-left: auto; }
 .adhd-btn.adhd-btn-sm { height: 42px; padding: 0 16px; font-size: 14px; }
 .adhd-you { display: flex; align-items: center; gap: 18px; }
 .adhd-you span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -1393,9 +1453,9 @@ html[data-adhd="on"] button.adhd-link.adhd-link-center { display: flex; }
 
 /* Screens come in from the side you moved towards along the dock. */
 .adhd-main[data-dir="next"] .adhd-page > :not(.adhd-toast),
-.adhd-main[data-dir="next"] .adhd-home > * { animation-name: adhd-in-next; }
+.adhd-main[data-dir="next"] :is(.adhd-home-side, .adhd-home-main) > * { animation-name: adhd-in-next; }
 .adhd-main[data-dir="prev"] .adhd-page > :not(.adhd-toast),
-.adhd-main[data-dir="prev"] .adhd-home > * { animation-name: adhd-in-prev; }
+.adhd-main[data-dir="prev"] :is(.adhd-home-side, .adhd-home-main) > * { animation-name: adhd-in-prev; }
 @keyframes adhd-in-next { from { opacity: 0; transform: translate3d(32px, 0, 0); } }
 @keyframes adhd-in-prev { from { opacity: 0; transform: translate3d(-32px, 0, 0); } }
 

@@ -25,6 +25,7 @@ import { useFocus } from "../hooks/useFocus";
 import { useAdhd } from "../hooks/useAdhd";
 import AdhdHome from "../components/adhd/AdhdHome";
 import { TASKS_CHANGED } from "../utils/adhd";
+import { keepWarm, readWarm } from "../utils/warm";
 import { focusStats } from "../utils/focusStats";
 import { monthlyTotals } from "../utils/financeReport";
 import { formatMoney } from "../utils/money";
@@ -51,15 +52,19 @@ const money = (minor) => formatMoney(minor);
 
 function Home() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(() => Boolean(user));
-  const [tasks, setTasks] = useState([]);
-  const [plans, setPlans] = useState([]);
-  const [expenses, setExpenses] = useState([]);
-  const [habits, setHabits] = useState([]);
+  const adhd = useAdhd();
+  // In ADHD mode, coming back to Today shows what it showed last time at
+  // once, and refreshes behind it, rather than flashing a loading screen.
+  const warmKey = adhd?.enabled && user ? `${user.uid}:home` : "";
+  const [warm] = useState(() => readWarm(warmKey));
+  const [loading, setLoading] = useState(() => Boolean(user) && !warm);
+  const [tasks, setTasks] = useState(() => warm?.tasks || []);
+  const [plans, setPlans] = useState(() => warm?.plans || []);
+  const [expenses, setExpenses] = useState(() => warm?.expenses || []);
+  const [habits, setHabits] = useState(() => warm?.habits || []);
   const [error, setError] = useState("");
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [savingTask, setSavingTask] = useState(false);
-  const adhd = useAdhd();
   // ADHD mode opens on today's three; "Full view" (/?full=1) shows this page
   // as usual. Kept in the address, so the dock's Today always comes back.
   const [params] = useSearchParams();
@@ -101,6 +106,10 @@ function Home() {
     const timer = setTimeout(loadDashboard, 0);
     return () => clearTimeout(timer);
   }, [loadDashboard]);
+
+  useEffect(() => {
+    if (warmKey && !loading) keepWarm(warmKey, { tasks, plans, expenses, habits });
+  }, [warmKey, loading, tasks, plans, expenses, habits]);
 
   // ADHD mode's quick add can add a task from anywhere, this page included.
   useEffect(() => {
@@ -179,6 +188,19 @@ function Home() {
     try { await setTaskStatus(user.uid, task, "done"); await loadDashboard(); }
     catch (saveError) { setError(saveError?.message || "Couldn't complete that task."); await loadDashboard(); }
   };
+
+  if (loading && adhd?.enabled && !showAll) {
+    return (
+      <section className="adhd-home adhd-home-loading" aria-busy="true" aria-label="Loading today">
+        <div className="adhd-skeleton is-today">
+          <span className="is-line" />
+          <span className="is-title" />
+          <span className="is-tiles" />
+          <span className="is-card" />
+        </div>
+      </section>
+    );
+  }
 
   if (loading) {
     return <section className="dashboard-page dashboard-skeleton" aria-busy="true" aria-label="Loading dashboard">

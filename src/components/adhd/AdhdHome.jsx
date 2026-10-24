@@ -170,246 +170,252 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
 
   return (
     <section className="adhd-home" aria-label="Today">
-      <header className="adhd-head">
-        <div className="adhd-head-top">
-          <p className="adhd-date">{dateLine()}</p>
-          <button type="button" className="adhd-ghost" onClick={onShowAll}>
-            <FiGrid aria-hidden="true" /> Full view
-          </button>
-        </div>
-        <h1 className="adhd-hello">
-          {firstName ? (
-            <>
-              {salutation()},<br />
-              <em>{firstName}.</em>
-            </>
-          ) : (
-            `${salutation()}.`
-          )}
-        </h1>
-        <p className="adhd-sub">
-          {picking
-            ? "What matters today? Pick up to three. Fewer is fine."
-            : allDone
-              ? "Everything you picked is done."
-              : "One thing at a time. That's the whole plan."}
-        </p>
-      </header>
-
-      <div className={`adhd-status${!picking && plan.picked.length ? "" : " is-single"}`}>
-        {!picking && plan.picked.length ? (
-          <div className="adhd-tile adhd-tile-ring" role="img" aria-label={`${plan.done} of ${plan.picked.length} done`}>
-            <ProgressRing states={ringStates} />
-            <span className="adhd-tile-text">
-              <strong>
-                <span key={plan.done} className="adhd-roll">
-                  {plan.done}
-                </span>
-                <small>/{plan.picked.length}</small>
-              </strong>
-              <small>done today</small>
-            </span>
-          </div>
-        ) : null}
-        <div className="adhd-tile adhd-tile-day">
-          <DayTrack />
-        </div>
-      </div>
-
-      {error ? (
-        <p className="adhd-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      {picking ? (
-        <article className="adhd-card adhd-stage adhd-picker">
-          <div className="adhd-picker-head">
-            <p className="adhd-eyebrow">Your three</p>
-            <span className="adhd-count">
-              {chosen.length}/{MAX_PICKS}
-            </span>
-          </div>
-
-          <ol className="adhd-tray">
-            {Array.from({ length: MAX_PICKS }, (_, index) => {
-              const task = byId.get(chosen[index]);
-              return (
-                <li key={task ? task.id : `empty-${index}`}>
-                  {task ? (
-                    <button type="button" className="adhd-slot is-filled" onClick={() => choose(task.id)} aria-label={`Remove ${task.title}`}>
-                      <span className="adhd-slot-n">{index + 1}</span>
-                      <span className="adhd-slot-title" style={{ viewTransitionName: morphName(task.id) }}>
-                        {task.title}
-                      </span>
-                      <FiX aria-hidden="true" className="adhd-slot-x" />
-                    </button>
-                  ) : (
-                    <span className="adhd-slot">
-                      <span className="adhd-slot-n">{index + 1}</span>
-                      <span className="adhd-slot-empty">{index === chosen.length ? "Tap a task below" : ""}</span>
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-
-          {ranked.length ? (
-            <>
-              <p className="adhd-eyebrow adhd-list-label">Your list</p>
-              <ul className="adhd-options">
-                {(showAllTasks ? ranked : ranked.slice(0, SHORT_LIST)).map((task, index) => {
-                  const position = chosen.indexOf(task.id);
-                  const selected = position !== -1;
-                  const due = gentleDue(task.dueDate, today) || (task.dueDate ? formatRelativeDay(task.dueDate) : "");
-                  return (
-                    <li key={task.id} style={{ "--i": index }}>
-                      <button
-                        type="button"
-                        className={`adhd-option${selected ? " is-selected" : ""}`}
-                        aria-pressed={selected}
-                        disabled={!selected && room === 0}
-                        onClick={() => choose(task.id)}
-                      >
-                        <span className="adhd-option-mark" aria-hidden="true">
-                          {selected ? <FiCheck /> : null}
-                        </span>
-                        <span className="adhd-option-text">
-                          <span className="adhd-option-title">{task.title}</span>
-                          {due || task.subtasks.length ? (
-                            <span className="adhd-option-meta">
-                              {due}
-                              {due && task.subtasks.length ? " · " : ""}
-                              {task.subtasks.length ? `${task.subtasks.length} steps` : ""}
-                            </span>
-                          ) : null}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          ) : (
-            <p className="adhd-empty">Your list is empty. Add the one thing you want to get done today.</p>
-          )}
-
-          {ranked.length > SHORT_LIST && !showAllTasks ? (
-            <button type="button" className="adhd-link" onClick={() => setShowAllTasks(true)}>
-              Show all {ranked.length}
-            </button>
-          ) : null}
-
-          <form className="adhd-add" onSubmit={addTask}>
-            <FiPlus aria-hidden="true" />
-            <input
-              value={newTitle}
-              maxLength={200}
-              placeholder="Add something for today"
-              aria-label="New task for today"
-              onChange={(event) => setNewTitle(event.target.value)}
-            />
-            <button type="submit" className="adhd-add-btn" disabled={!newTitle.trim() || adding}>
-              Add
-            </button>
-          </form>
-
-          <div className="adhd-picker-actions">
-            <button type="button" className="adhd-btn" disabled={!ranked.length || room === 0} onClick={pickSlowly}>
-              <FiZap aria-hidden="true" /> Pick for me
-            </button>
-            <button type="button" className="adhd-btn adhd-btn-primary" disabled={!chosen.length} onClick={() => savePicks(chosen)}>
-              {plan.picked.length ? "Save" : "Start my day"} <FiArrowRight aria-hidden="true" />
-            </button>
-          </div>
-          {draft !== null && plan.picked.length ? (
-            <button type="button" className="adhd-link adhd-link-center" onClick={() => morph(() => setDraft(null))}>
-              Keep what I had
-            </button>
-          ) : null}
-        </article>
-      ) : allDone ? (
-        <article className="adhd-card adhd-stage adhd-celebrate">
-          <div className="adhd-celebrate-mark">
-            <Check drawn />
-            <Burst />
-          </div>
-          <h2 className="adhd-serif">
-            {plan.picked.length === 1 ? (
-              <>
-                That one&apos;s <em>done.</em>
-              </>
-            ) : (
-              <>
-                All {COUNT_WORDS[plan.picked.length] || plan.picked.length}, <em>done.</em>
-              </>
-            )}
-          </h2>
-          <p>That&apos;s a real day. Rest now — or pick more if you&apos;ve still got the spark.</p>
-          {focusedToday >= 1 ? <p className="adhd-celebrate-stat">{formatMinutes(focusedToday)} of focus today</p> : null}
-          <div className="adhd-picker-actions">
-            <button type="button" className="adhd-btn" onClick={onShowAll}>
+      {/* Two columns on a wide screen: where you are on the left, what to do
+          on the right. On a phone they read as one column, in this order. */}
+      <div className="adhd-home-side">
+        <header className="adhd-head">
+          <div className="adhd-head-top">
+            <p className="adhd-date">{dateLine()}</p>
+            <button type="button" className="adhd-ghost" onClick={onShowAll}>
               <FiGrid aria-hidden="true" /> Full view
             </button>
-            <button type="button" className="adhd-btn adhd-btn-primary" onClick={() => openPicker([])}>
-              Pick more <FiArrowRight aria-hidden="true" />
-            </button>
           </div>
-        </article>
-      ) : (
-        <NowCard
-          task={plan.now}
-          today={today}
-          finishing={finishing === plan.now.id}
-          stepLeaving={stepLeaving}
-          timer={timer}
-          canSwap={plan.next.length > 0}
-          onStart={() => justStart(plan.now)}
-          onDone={() => finish(plan.now)}
-          onStep={(step) => finishStep(plan.now, step)}
-          onSwap={() => morph(() => adhd.setPicks(swapNow(adhd.picks, tasks)))}
-          onSkip={() => morph(() => adhd.setPicks(adhd.picks.filter((id) => id !== plan.now.id)))}
-        />
-      )}
+          <h1 className="adhd-hello">
+            {firstName ? (
+              <>
+                {salutation()},<br />
+                <em>{firstName}.</em>
+              </>
+            ) : (
+              `${salutation()}.`
+            )}
+          </h1>
+          <p className="adhd-sub">
+            {picking
+              ? "What matters today? Pick up to three. Fewer is fine."
+              : allDone
+                ? "Everything you picked is done."
+                : "One thing at a time. That's the whole plan."}
+          </p>
+        </header>
 
-      {!picking && (plan.next.length || donePicked.length) ? (
-        <section className="adhd-later" aria-label="The rest of today">
-          {plan.next.length ? <p className="adhd-eyebrow">Up next</p> : null}
-          <ul>
-            {plan.next.map((task) => (
-              <li key={task.id}>
-                <button type="button" className="adhd-later-item" onClick={() => doNow(task.id)} aria-label={`Do ${task.title} now`}>
-                  <span className="adhd-later-dot" aria-hidden="true" />
+        <div className={`adhd-status${!picking && plan.picked.length ? "" : " is-single"}`}>
+          {!picking && plan.picked.length ? (
+            <div className="adhd-tile adhd-tile-ring" role="img" aria-label={`${plan.done} of ${plan.picked.length} done`}>
+              <ProgressRing states={ringStates} />
+              <span className="adhd-tile-text">
+                <strong>
+                  <span key={plan.done} className="adhd-roll">
+                    {plan.done}
+                  </span>
+                  <small>/{plan.picked.length}</small>
+                </strong>
+                <small>done today</small>
+              </span>
+            </div>
+          ) : null}
+          <div className="adhd-tile adhd-tile-day">
+            <DayTrack />
+          </div>
+        </div>
+
+        <HabitStrip habits={habits} onLogs={onHabitLogs} />
+      </div>
+
+      <div className="adhd-home-main">
+        {error ? (
+          <p className="adhd-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        {picking ? (
+          <article className="adhd-card adhd-stage adhd-picker">
+            <div className="adhd-picker-head">
+              <p className="adhd-eyebrow">Your three</p>
+              <span className="adhd-count">
+                {chosen.length}/{MAX_PICKS}
+              </span>
+            </div>
+
+            <ol className="adhd-tray">
+              {Array.from({ length: MAX_PICKS }, (_, index) => {
+                const task = byId.get(chosen[index]);
+                return (
+                  <li key={task ? task.id : `empty-${index}`}>
+                    {task ? (
+                      <button type="button" className="adhd-slot is-filled" onClick={() => choose(task.id)} aria-label={`Remove ${task.title}`}>
+                        <span className="adhd-slot-n">{index + 1}</span>
+                        <span className="adhd-slot-title" style={{ viewTransitionName: morphName(task.id) }}>
+                          {task.title}
+                        </span>
+                        <FiX aria-hidden="true" className="adhd-slot-x" />
+                      </button>
+                    ) : (
+                      <span className="adhd-slot">
+                        <span className="adhd-slot-n">{index + 1}</span>
+                        <span className="adhd-slot-empty">{index === chosen.length ? "Tap a task below" : ""}</span>
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+
+            {ranked.length ? (
+              <>
+                <p className="adhd-eyebrow adhd-list-label">Your list</p>
+                <ul className="adhd-options">
+                  {(showAllTasks ? ranked : ranked.slice(0, SHORT_LIST)).map((task, index) => {
+                    const position = chosen.indexOf(task.id);
+                    const selected = position !== -1;
+                    const due = gentleDue(task.dueDate, today) || (task.dueDate ? formatRelativeDay(task.dueDate) : "");
+                    return (
+                      <li key={task.id} style={{ "--i": index }}>
+                        <button
+                          type="button"
+                          className={`adhd-option${selected ? " is-selected" : ""}`}
+                          aria-pressed={selected}
+                          disabled={!selected && room === 0}
+                          onClick={() => choose(task.id)}
+                        >
+                          <span className="adhd-option-mark" aria-hidden="true">
+                            {selected ? <FiCheck /> : null}
+                          </span>
+                          <span className="adhd-option-text">
+                            <span className="adhd-option-title">{task.title}</span>
+                            {due || task.subtasks.length ? (
+                              <span className="adhd-option-meta">
+                                {due}
+                                {due && task.subtasks.length ? " · " : ""}
+                                {task.subtasks.length ? `${task.subtasks.length} steps` : ""}
+                              </span>
+                            ) : null}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            ) : (
+              <p className="adhd-empty">Your list is empty. Add the one thing you want to get done today.</p>
+            )}
+
+            {ranked.length > SHORT_LIST && !showAllTasks ? (
+              <button type="button" className="adhd-link" onClick={() => setShowAllTasks(true)}>
+                Show all {ranked.length}
+              </button>
+            ) : null}
+
+            <form className="adhd-add" onSubmit={addTask}>
+              <FiPlus aria-hidden="true" />
+              <input
+                value={newTitle}
+                maxLength={200}
+                placeholder="Add something for today"
+                aria-label="New task for today"
+                onChange={(event) => setNewTitle(event.target.value)}
+              />
+              <button type="submit" className="adhd-add-btn" disabled={!newTitle.trim() || adding}>
+                Add
+              </button>
+            </form>
+
+            <div className="adhd-picker-actions">
+              <button type="button" className="adhd-btn" disabled={!ranked.length || room === 0} onClick={pickSlowly}>
+                <FiZap aria-hidden="true" /> Pick for me
+              </button>
+              <button type="button" className="adhd-btn adhd-btn-primary" disabled={!chosen.length} onClick={() => savePicks(chosen)}>
+                {plan.picked.length ? "Save" : "Start my day"} <FiArrowRight aria-hidden="true" />
+              </button>
+            </div>
+            {draft !== null && plan.picked.length ? (
+              <button type="button" className="adhd-link adhd-link-center" onClick={() => morph(() => setDraft(null))}>
+                Keep what I had
+              </button>
+            ) : null}
+          </article>
+        ) : allDone ? (
+          <article className="adhd-card adhd-stage adhd-celebrate">
+            <div className="adhd-celebrate-mark">
+              <Check drawn />
+              <Burst />
+            </div>
+            <h2 className="adhd-serif">
+              {plan.picked.length === 1 ? (
+                <>
+                  That one&apos;s <em>done.</em>
+                </>
+              ) : (
+                <>
+                  All {COUNT_WORDS[plan.picked.length] || plan.picked.length}, <em>done.</em>
+                </>
+              )}
+            </h2>
+            <p>That&apos;s a real day. Rest now — or pick more if you&apos;ve still got the spark.</p>
+            {focusedToday >= 1 ? <p className="adhd-celebrate-stat">{formatMinutes(focusedToday)} of focus today</p> : null}
+            <div className="adhd-picker-actions">
+              <button type="button" className="adhd-btn" onClick={onShowAll}>
+                <FiGrid aria-hidden="true" /> Full view
+              </button>
+              <button type="button" className="adhd-btn adhd-btn-primary" onClick={() => openPicker([])}>
+                Pick more <FiArrowRight aria-hidden="true" />
+              </button>
+            </div>
+          </article>
+        ) : (
+          <NowCard
+            task={plan.now}
+            today={today}
+            finishing={finishing === plan.now.id}
+            stepLeaving={stepLeaving}
+            timer={timer}
+            canSwap={plan.next.length > 0}
+            onStart={() => justStart(plan.now)}
+            onDone={() => finish(plan.now)}
+            onStep={(step) => finishStep(plan.now, step)}
+            onSwap={() => morph(() => adhd.setPicks(swapNow(adhd.picks, tasks)))}
+            onSkip={() => morph(() => adhd.setPicks(adhd.picks.filter((id) => id !== plan.now.id)))}
+          />
+        )}
+
+        {!picking && (plan.next.length || donePicked.length) ? (
+          <section className="adhd-later" aria-label="The rest of today">
+            {plan.next.length ? <p className="adhd-eyebrow">Up next</p> : null}
+            <ul>
+              {plan.next.map((task) => (
+                <li key={task.id}>
+                  <button type="button" className="adhd-later-item" onClick={() => doNow(task.id)} aria-label={`Do ${task.title} now`}>
+                    <span className="adhd-later-dot" aria-hidden="true" />
+                    <span className="adhd-later-title" style={{ viewTransitionName: morphName(task.id) }}>
+                      {task.title}
+                    </span>
+                    <span className="adhd-later-go" aria-hidden="true">
+                      Do now <FiArrowRight />
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {donePicked.map((task) => (
+                <li key={task.id} className="adhd-later-item is-done">
+                  <span className="adhd-later-tick" aria-hidden="true">
+                    <FiCheck />
+                  </span>
                   <span className="adhd-later-title" style={{ viewTransitionName: morphName(task.id) }}>
                     {task.title}
                   </span>
-                  <span className="adhd-later-go" aria-hidden="true">
-                    Do now <FiArrowRight />
-                  </span>
-                </button>
-              </li>
-            ))}
-            {donePicked.map((task) => (
-              <li key={task.id} className="adhd-later-item is-done">
-                <span className="adhd-later-tick" aria-hidden="true">
-                  <FiCheck />
-                </span>
-                <span className="adhd-later-title" style={{ viewTransitionName: morphName(task.id) }}>
-                  {task.title}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {!allDone ? (
-            <button type="button" className="adhd-link" onClick={() => openPicker(plan.picked.filter(isOpen).map((task) => task.id))}>
-              Change today&apos;s picks
-            </button>
-          ) : null}
-        </section>
-      ) : null}
-
-      <HabitStrip habits={habits} onLogs={onHabitLogs} />
+                </li>
+              ))}
+            </ul>
+            {!allDone ? (
+              <button type="button" className="adhd-link" onClick={() => openPicker(plan.picked.filter(isOpen).map((task) => task.id))}>
+                Change today&apos;s picks
+              </button>
+            ) : null}
+          </section>
+        ) : null}
+      </div>
       {party ? <Confetti key={party} /> : null}
     </section>
   );

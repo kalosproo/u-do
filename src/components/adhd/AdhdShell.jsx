@@ -92,6 +92,7 @@ function AdhdShell() {
           <Outlet />
         </ErrorBoundary>
       </main>
+      <div className="adhd-fade" aria-hidden="true" />
 
       <nav ref={dockRef} className="adhd-dock" aria-label="Main">
         <span ref={pillRef} className="adhd-dock-pill" aria-hidden="true" />

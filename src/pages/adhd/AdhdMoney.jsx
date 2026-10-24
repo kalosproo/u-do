@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { AdhdPage, Chips, Toast } from "../../components/adhd/AdhdUI";
 import { useToast } from "../../components/adhd/useToast";
+import { useWarm } from "../../components/adhd/useWarm";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../../config/financeCategories";
 import { useAuth } from "../../hooks/useAuth";
 import { addExpense, fetchExpenses } from "../../services/finance";
@@ -32,7 +33,7 @@ const topCategories = (entries, kind) => {
  */
 function AdhdMoney() {
   const { user } = useAuth();
-  const [entries, setEntries] = useState(null);
+  const [entries, setEntries] = useWarm(user ? `${user.uid}:money` : "");
   const [kind, setKind] = useState("expense");
   const [amount, setAmount] = useState("");
   const [title, setTitle] = useState("");
@@ -44,7 +45,7 @@ function AdhdMoney() {
   const load = useCallback(async () => {
     if (!user) return;
     setEntries(await fetchExpenses(user.uid));
-  }, [user]);
+  }, [user, setEntries]);
 
   useEffect(() => {
     const timer = setTimeout(load, 0);

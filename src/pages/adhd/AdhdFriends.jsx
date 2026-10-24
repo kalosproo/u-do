@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FiUserPlus } from "react-icons/fi";
 
 import { AdhdPage } from "../../components/adhd/AdhdUI";
+import { useWarm } from "../../components/adhd/useWarm";
 import { useAuth } from "../../hooks/useAuth";
 import { readPresence } from "../../services/focusSync";
 import { acceptFriendRequest, declineFriendRequest, listFriends, listIncomingRequests } from "../../services/friends";
@@ -20,9 +21,11 @@ function Avatar({ name, photo }) {
  */
 function AdhdFriends() {
   const { user } = useAuth();
-  const [friends, setFriends] = useState(null);
-  const [requests, setRequests] = useState([]);
-  const [focusing, setFocusing] = useState({});
+  const [friends, setFriends] = useWarm(user ? `${user.uid}:friends` : "");
+  const [incoming, setRequests] = useWarm(user ? `${user.uid}:requests` : "");
+  const [presence, setFocusing] = useWarm(user ? `${user.uid}:focusing` : "");
+  const requests = incoming || [];
+  const focusing = presence || {};
   const [busy, setBusy] = useState("");
 
   const load = useCallback(async () => {
@@ -32,7 +35,7 @@ function AdhdFriends() {
     setRequests(incoming);
     const live = await Promise.all(people.map(async (person) => [person.uid, Boolean(await readPresence(person.uid))]));
     setFocusing(Object.fromEntries(live));
-  }, [user]);
+  }, [user, setFocusing, setFriends, setRequests]);
 
   useEffect(() => {
     const timer = setTimeout(load, 0);
