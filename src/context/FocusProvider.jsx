@@ -113,6 +113,7 @@ const afterStarter = (session) => ({
   paused: true,
   remainingMs: KEEP_GOING_MINUTES * 60_000,
   afterStarter: true,
+  ...(session.taskId ? { taskId: session.taskId } : {}),
 });
 
 /** A session that ended long ago while the app was closed is settled, not resumed. */
@@ -350,13 +351,26 @@ export function FocusProvider({ children }) {
     };
   }, [view, session]);
 
-  /** `starter` runs the five-minute "Just start" round, which leaves the saved length alone. */
-  const start = useCallback((minutes = setup.minutes, subject = setup.subject, { starter = false } = {}) => {
+  /**
+   * `starter` runs the five-minute "Just start" round, which leaves the saved
+   * length alone. `taskId` ties the session to a task, so ADHD mode can ask
+   * at the end whether it got done.
+   */
+  const start = useCallback((minutes = setup.minutes, subject = setup.subject, { starter = false, taskId = "" } = {}) => {
     unlockAudio();
     const clean = String(subject || "").trim().slice(0, 80);
     const length = starter ? STARTER_MINUTES : minutes;
     if (!starter) setSetupState({ minutes, subject: clean });
-    setSession({ phase: "focus", minutes: length, subject: clean, count: 0, endsAt: Date.now() + length * 60_000, paused: false, ...(starter ? { starter: true } : {}) });
+    setSession({
+      phase: "focus",
+      minutes: length,
+      subject: clean,
+      count: 0,
+      endsAt: Date.now() + length * 60_000,
+      paused: false,
+      ...(starter ? { starter: true } : {}),
+      ...(taskId ? { taskId } : {}),
+    });
     setNow(Date.now());
     setView("full");
     goFullscreen();

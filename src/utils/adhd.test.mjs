@@ -8,6 +8,9 @@ import {
   cleanPicks,
   currentStep,
   dayLeft,
+  dueFor,
+  groupTasks,
+  streakWords,
   gentleDue,
   pickForMe,
   picksFor,
@@ -106,7 +109,39 @@ test("day left: hours to the half, kind at either end", () => {
   assert.equal(dayLeft(at(22, 20)).label, "About 40 min left today");
   assert.equal(dayLeft(at(23, 30)).label, "Late. Rest counts too.");
   assert.equal(dayLeft(at(5, 0)).label, "Early. The day hasn't started yet.");
+  assert.equal(dayLeft(at(0, 40)).label, "Late. Rest counts too.");
   assert.equal(dayLeft(at(7, 0)).progress, 0);
   assert.equal(dayLeft(at(15, 0)).progress, 0.5);
   assert.equal(dayLeft(at(23, 59)).progress, 1);
+});
+
+test("when: today, tomorrow (across a month end) or no date", () => {
+  const at = new Date(2026, 9, 31, 22, 0);
+  assert.equal(dueFor("today", at), "2026-10-31");
+  assert.equal(dueFor("tomorrow", at), "2026-11-01");
+  assert.equal(dueFor("someday", at), "");
+});
+
+test("tasks group into today, coming up, someday and done", () => {
+  const tasks = [
+    task("late", { dueDate: "2026-10-20" }),
+    task("now", { dueDate: TODAY, priority: "high" }),
+    task("now-low", { dueDate: TODAY, priority: "low" }),
+    task("later", { dueDate: "2026-11-02" }),
+    task("whenever"),
+    task("old-done", { status: "done", completedAt: { seconds: 100 } }),
+    task("new-done", { status: "done", completedAt: "2026-10-23T09:00:00Z" }),
+  ];
+  const groups = groupTasks(tasks, TODAY);
+  assert.deepEqual(groups.today.map((t) => t.id), ["late", "now", "now-low"]);
+  assert.deepEqual(groups.soon.map((t) => t.id), ["later"]);
+  assert.deepEqual(groups.someday.map((t) => t.id), ["whenever"]);
+  assert.deepEqual(groups.done.map((t) => t.id), ["new-done", "old-done"]);
+});
+
+test("streak words only ever say something good", () => {
+  assert.equal(streakWords(0), "");
+  assert.equal(streakWords(1), "");
+  assert.equal(streakWords(4), "4 days in a row");
+  assert.equal(streakWords(3, "weekly"), "3 weeks in a row");
 });

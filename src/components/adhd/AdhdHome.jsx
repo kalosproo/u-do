@@ -12,7 +12,11 @@ import { celebrate } from "../../utils/feedback";
 import { STARTER_MINUTES, formatClock, formatMinutes } from "../../utils/focusTimer";
 import { morph, morphName } from "../../utils/morph";
 import { toggleSubtask } from "../../utils/subtasks";
-import { Ambient, Burst, Check, DayTrack, HoldButton, ProgressRing } from "./AdhdBits";
+import { Burst, Check, Confetti, DayTrack, HoldButton, ProgressRing } from "./AdhdBits";
+import { Tick } from "./AdhdUI";
+import { enrichHabit, toggledLogs } from "./habitBits";
+import { setHabitLogs } from "../../services/habits";
+import { Link } from "react-router-dom";
 
 /** How many open tasks the picker shows before "Show all". */
 const SHORT_LIST = 8;
@@ -33,9 +37,9 @@ const salutation = () => {
 /**
  * Home in ADHD mode. One screen, one question at a time: what are today's
  * three, and what's the one thing now? Everything else is a tap away under
- * "Everything", never in the way.
+ * "Full view", never in the way.
  */
-function AdhdHome({ tasks: rawTasks, onChanged, onPatch, onShowAll }) {
+function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatch, onShowAll }) {
   const { user } = useAuth();
   const adhd = useAdhd();
   const focus = useFocus();
@@ -52,6 +56,7 @@ function AdhdHome({ tasks: rawTasks, onChanged, onPatch, onShowAll }) {
   const [finishing, setFinishing] = useState(null);
   const [stepLeaving, setStepLeaving] = useState(null);
   const [error, setError] = useState("");
+  const [party, setParty] = useState(0);
 
   const firstName = user?.displayName?.trim()?.split(/\s+/)[0] || "";
   const picking = draft !== null || plan.picked.length === 0;
@@ -117,7 +122,9 @@ function AdhdHome({ tasks: rawTasks, onChanged, onPatch, onShowAll }) {
     if (!user || finishing) return;
     setFinishing(task.id);
     playDone();
+    const last = plan.now?.id === task.id && !plan.next.length;
     await wait(FINISH_MS);
+    if (last) setParty((n) => n + 1);
     morph(() => {
       onPatch(task.id, { status: "done", completed: true });
       setFinishing(null);
@@ -152,7 +159,7 @@ function AdhdHome({ tasks: rawTasks, onChanged, onPatch, onShowAll }) {
 
   const justStart = (task) => {
     if (focus?.session) focus.open();
-    else focus?.start(STARTER_MINUTES, task.title, { starter: true });
+    else focus?.start(STARTER_MINUTES, task.title, { starter: true, taskId: task.id });
   };
 
   const doNow = (id) => morph(() => adhd.setPicks([id, ...adhd.picks.filter((item) => item !== id)]));
@@ -163,13 +170,11 @@ function AdhdHome({ tasks: rawTasks, onChanged, onPatch, onShowAll }) {
 
   return (
     <section className="adhd-home" aria-label="Today">
-      <Ambient />
-
       <header className="adhd-head">
         <div className="adhd-head-top">
           <p className="adhd-date">{dateLine()}</p>
           <button type="button" className="adhd-ghost" onClick={onShowAll}>
-            <FiGrid aria-hidden="true" /> Everything
+            <FiGrid aria-hidden="true" /> Full view
           </button>
         </div>
         <h1 className="adhd-hello">
@@ -197,7 +202,9 @@ function AdhdHome({ tasks: rawTasks, onChanged, onPatch, onShowAll }) {
             <ProgressRing states={ringStates} />
             <span className="adhd-tile-text">
               <strong>
-                {plan.done}
+                <span key={plan.done} className="adhd-roll">
+                  {plan.done}
+                </span>
                 <small>/{plan.picked.length}</small>
               </strong>
               <small>done today</small>
@@ -343,7 +350,7 @@ function AdhdHome({ tasks: rawTasks, onChanged, onPatch, onShowAll }) {
           {focusedToday >= 1 ? <p className="adhd-celebrate-stat">{formatMinutes(focusedToday)} of focus today</p> : null}
           <div className="adhd-picker-actions">
             <button type="button" className="adhd-btn" onClick={onShowAll}>
-              <FiGrid aria-hidden="true" /> Everything
+              <FiGrid aria-hidden="true" /> Full view
             </button>
             <button type="button" className="adhd-btn adhd-btn-primary" onClick={() => openPicker([])}>
               Pick more <FiArrowRight aria-hidden="true" />
@@ -401,6 +408,9 @@ function AdhdHome({ tasks: rawTasks, onChanged, onPatch, onShowAll }) {
           ) : null}
         </section>
       ) : null}
+
+      <HabitStrip habits={habits} onLogs={onHabitLogs} />
+      {party ? <Confetti key={party} /> : null}
     </section>
   );
 }
@@ -486,6 +496,49 @@ function NowCard({ task, today, finishing, stepLeaving, timer, canSwap, onStart,
         </button>
       </div>
     </article>
+  );
+}
+
+/** Little things today: the habits, as ticks, under the day's tasks. */
+function HabitStrip({ habits, onLogs }) {
+  const { user } = useAuth();
+  const today = useMemo(() => new Date(), []);
+  const list = useMemo(() => habits.map((habit) => enrichHabit(habit, today)), [habits, today]);
+  const [party, setParty] = useState(0);
+  if (!list.length) return null;
+  const shown = list.slice(0, 4);
+  const done = list.filter((habit) => habit.doneNow).length;
+
+  const toggle = (habit) => {
+    const logs = toggledLogs(habit, today);
+    if (!habit.doneNow && done === list.length - 1) setParty((n) => n + 1);
+    onLogs?.(habit.id, logs);
+    if (user) setHabitLogs(user.uid, habit.id, logs).catch(() => onLogs?.(habit.id, habit.logs || {}));
+  };
+
+  return (
+    <section className="adhd-strip" aria-label="Little things today">
+      <div className="adhd-strip-head">
+        <p className="adhd-eyebrow">Little things today</p>
+        <span className="adhd-count">
+          {done}/{list.length}
+        </span>
+      </div>
+      <ul>
+        {shown.map((habit) => (
+          <li key={habit.id} className={habit.doneNow ? "is-done" : ""}>
+            <Tick size="sm" done={habit.doneNow} onToggle={() => toggle(habit)} label={habit.doneNow ? `Untick ${habit.title}` : `Tick ${habit.title}`} />
+            <span>{habit.title}</span>
+          </li>
+        ))}
+      </ul>
+      {list.length > shown.length ? (
+        <Link to="/habits" className="adhd-link">
+          All {list.length} habits
+        </Link>
+      ) : null}
+      {party ? <Confetti key={party} /> : null}
+    </section>
   );
 }
 

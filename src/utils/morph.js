@@ -1,5 +1,10 @@
 import { flushSync } from "react-dom";
 
+/** True when the system asks for less motion, or ADHD mode is set to calm. */
+export const quietMotion = () =>
+  typeof window !== "undefined" &&
+  (Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) || document.documentElement.dataset.motion === "calm");
+
 /**
  * Runs a state change as a view transition, so what moves glides to its new
  * place instead of jumping: a task rising from "Up next" into "Now", a
@@ -7,7 +12,7 @@ import { flushSync } from "react-dom";
  * transitions, and anyone who asked for less motion, get the change at once.
  */
 export const morph = (update) => {
-  const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const reduce = typeof window !== "undefined" && quietMotion();
   if (typeof document === "undefined" || !document.startViewTransition || reduce) {
     update();
     return;

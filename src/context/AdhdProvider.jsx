@@ -16,6 +16,16 @@ import { todayKey } from "../utils/dateKeys";
  */
 
 const CACHE_KEY = "u_do_adhd";
+// Lively or calm motion: a feel for this device, so it lives here, not on the account.
+const MOTION_KEY = "u_do_motion";
+
+const readMotion = () => {
+  try {
+    return localStorage.getItem(MOTION_KEY) === "calm" ? "calm" : "lively";
+  } catch {
+    return "lively";
+  }
+};
 const OFF = { uid: null, available: false, enabled: false, day: "", picks: [] };
 
 const readCache = (uid) => {
@@ -79,6 +89,22 @@ export function AdhdProvider({ children }) {
     else delete document.documentElement.dataset.adhd;
   }, [on]);
 
+  const [motion, setMotionState] = useState(readMotion);
+  // Only ADHD mode reads it, so nobody else's page carries it.
+  useEffect(() => {
+    if (on) document.documentElement.dataset.motion = motion;
+    else delete document.documentElement.dataset.motion;
+  }, [on, motion]);
+  const setMotion = useCallback((next) => {
+    const value = next === "calm" ? "calm" : "lively";
+    setMotionState(value);
+    try {
+      localStorage.setItem(MOTION_KEY, value);
+    } catch {
+      /* A convenience only. */
+    }
+  }, []);
+
   const update = useCallback(
     (patch) => {
       if (!uid) return;
@@ -103,8 +129,10 @@ export function AdhdProvider({ children }) {
       setEnabled,
       picks,
       setPicks,
+      motion,
+      setMotion,
     }),
-    [uid, current.available, on, setEnabled, picks, setPicks]
+    [uid, current.available, on, setEnabled, picks, setPicks, motion, setMotion]
   );
 
   return <AdhdContext.Provider value={value}>{children}</AdhdContext.Provider>;

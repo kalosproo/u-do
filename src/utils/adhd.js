@@ -128,8 +128,62 @@ export const dayLeft = (date = new Date()) => {
   const end = DAY_END_HOUR * 60;
   const progress = Math.min(1, Math.max(0, (minutes - start) / (end - start)));
   const left = Math.max(0, end - minutes);
+  // Past midnight is still last night, not an early morning.
+  if (minutes < 5 * 60) return { progress: 1, left: 0, label: "Late. Rest counts too." };
   if (minutes < start) return { progress, left, label: "Early. The day hasn't started yet." };
   if (left === 0) return { progress, left, label: "Late. Rest counts too." };
   if (left < 60) return { progress, left, label: `About ${left} min left today` };
   return { progress, left, label: `About ${hoursLabel(left)} left today` };
 };
+
+/** The only three answers to "when?" in ADHD mode. */
+export const WHEN = [
+  ["today", "Today"],
+  ["tomorrow", "Tomorrow"],
+  ["someday", "Someday"],
+];
+
+const keyOf = (date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+/** The due date a "when" stands for: today's key, tomorrow's, or none. */
+export const dueFor = (when, now = new Date()) => {
+  if (when === "today") return keyOf(now);
+  if (when === "tomorrow") return keyOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+  return "";
+};
+
+const doneAt = (task) => {
+  const value = task.completedAt;
+  if (!value) return 0;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (typeof value.seconds === "number") return value.seconds * 1000;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+/**
+ * Tasks in the three places ADHD mode keeps them: today (anything due today
+ * or before), coming up (dated later), someday (no date). Plus the most
+ * recently finished, newest first.
+ */
+export const groupTasks = (tasks, today) => {
+  const open = (tasks || []).filter(isOpen);
+  const byDate = (a, b) =>
+    (a.dueDate || "").localeCompare(b.dueDate || "") || (PRIORITY[a.priority] ?? 1) - (PRIORITY[b.priority] ?? 1);
+  return {
+    today: open.filter((task) => task.dueDate && task.dueDate <= today).sort(byDate),
+    soon: open.filter((task) => task.dueDate && task.dueDate > today).sort(byDate),
+    someday: open.filter((task) => !task.dueDate),
+    done: (tasks || []).filter((task) => !isOpen(task)).sort((a, b) => doneAt(b) - doneAt(a)).slice(0, 20),
+  };
+};
+
+/** Only ever good news: a run worth mentioning, or nothing at all. */
+export const streakWords = (streak, frequency = "daily") => {
+  if (!(streak >= 2)) return "";
+  return `${streak} ${frequency === "weekly" ? "weeks" : "days"} in a row`;
+};
+
+/** Sent after a quick add, so whatever list is on screen reads itself again. */
+export const TASKS_CHANGED = "udo:tasks-changed";
