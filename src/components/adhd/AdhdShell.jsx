@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { FiActivity, FiCalendar, FiCheckCircle, FiCreditCard, FiGrid, FiPlayCircle, FiPlus, FiSun, FiUser, FiUsers } from "react-icons/fi";
 
@@ -30,6 +30,49 @@ function AdhdShell() {
   const [more, setMore] = useState(false);
   const [adding, setAdding] = useState(false);
   const inMore = MORE.some(([path]) => location.pathname.startsWith(path));
+  const dockRef = useRef(null);
+  const pillRef = useRef(null);
+  const mainRef = useRef(null);
+  const placeRef = useRef(null);
+
+  // Where you are, left to right along the dock; More's places count as More.
+  const place = location.pathname === "/" ? 0 : location.pathname.startsWith("/tasks") ? 1 : location.pathname.startsWith("/focus") ? 2 : 3;
+
+  // The highlight slides to the active tab, and the new screen comes in from
+  // the side you moved towards. Written straight to the elements before the
+  // first paint, so nothing re-renders for it.
+  useLayoutEffect(() => {
+    const previous = placeRef.current;
+    placeRef.current = place;
+    if (mainRef.current && previous !== null && previous !== place) {
+      mainRef.current.dataset.dir = place > previous ? "next" : "prev";
+    }
+    const active = dockRef.current?.querySelector(".active");
+    const pill = pillRef.current;
+    if (!pill) return;
+    if (!active) {
+      pill.style.opacity = "0";
+      return;
+    }
+    pill.style.opacity = "1";
+    pill.style.width = `${active.offsetWidth}px`;
+    pill.style.transform = `translate3d(${active.offsetLeft}px, 0, 0)`;
+    // Placed without a slide the first time; it glides from then on.
+    if (!pill.dataset.ready) requestAnimationFrame(() => (pill.dataset.ready = "1"));
+  }, [place, location.pathname]);
+
+  // Keep the highlight lined up if the dock changes size (rotating a phone).
+  useEffect(() => {
+    const onResize = () => {
+      const active = dockRef.current?.querySelector(".active");
+      if (active && pillRef.current) {
+        pillRef.current.style.width = `${active.offsetWidth}px`;
+        pillRef.current.style.transform = `translate3d(${active.offsetLeft}px, 0, 0)`;
+      }
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // The app's usual "capture" shortcut opens the quick add here too.
   useEffect(() => {
@@ -43,14 +86,15 @@ function AdhdShell() {
       <Ambient />
       <OfflineNotice />
 
-      <main className="main-content adhd-main">
+      <main ref={mainRef} className="main-content adhd-main">
         <VerifyEmailBanner />
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
       </main>
 
-      <nav className="adhd-dock" aria-label="Main">
+      <nav ref={dockRef} className="adhd-dock" aria-label="Main">
+        <span ref={pillRef} className="adhd-dock-pill" aria-hidden="true" />
         <NavLink to="/" end>
           <FiSun aria-hidden="true" />
           <span>Today</span>
@@ -59,7 +103,7 @@ function AdhdShell() {
           <FiCheckCircle aria-hidden="true" />
           <span>Tasks</span>
         </NavLink>
-        <button type="button" className="adhd-dock-add" aria-label="Add something" onClick={() => setAdding(true)}>
+        <button type="button" className={`adhd-dock-add${adding ? " is-open" : ""}`} aria-label="Add something" onClick={() => setAdding(true)}>
           <FiPlus aria-hidden="true" />
         </button>
         <NavLink to="/focus">

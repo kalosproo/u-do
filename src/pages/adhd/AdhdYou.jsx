@@ -14,6 +14,11 @@ const THEMES = [
   ["light", "Light"],
 ];
 
+const MOTIONS = [
+  ["lively", "Lively"],
+  ["calm", "Calm"],
+];
+
 /**
  * You, in ADHD mode: the switch that brings the full app back, the theme,
  * and a way out. Everything else on the full profile page is one tap away.
@@ -58,6 +63,13 @@ function AdhdYou() {
             <small>Whatever is easier on your eyes</small>
           </span>
           <Chips options={THEMES} value={theme} onChange={setTheme} label="Theme" size="sm" />
+        </div>
+        <div className="adhd-toggle-row">
+          <span>
+            <strong>Motion</strong>
+            <small>{adhd?.motion === "calm" ? "Still and quiet. No confetti." : "Confetti, sparks and swoops for every win"}</small>
+          </span>
+          <Chips options={MOTIONS} value={adhd?.motion || "lively"} onChange={(value) => adhd?.setMotion(value)} label="Motion" size="sm" />
         </div>
       </div>
 

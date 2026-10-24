@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FiEdit2, FiPlay, FiX } from "react-icons/fi";
 
-import { AddBar, AdhdPage, Chips, Fold, Sheet, Tick, Toast } from "../../components/adhd/AdhdUI";
+import { Confetti } from "../../components/adhd/AdhdBits";
+import { AddBar, AdhdPage, Chips, Fold, Sheet, Swipe, Tick, Toast } from "../../components/adhd/AdhdUI";
 import { useToast } from "../../components/adhd/useToast";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
@@ -41,6 +42,8 @@ function AdhdTasks() {
   const [toast, showToast, hideToast] = useToast(5000);
   const doomed = useRef(null);
   const [doomedId, setDoomedId] = useState(null);
+  const [party, setParty] = useState(0);
+  const todayIds = useRef([]);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -93,6 +96,8 @@ function AdhdTasks() {
   const complete = async (task) => {
     setLeaving((set) => new Set(set).add(task.id));
     await wait(560);
+    // The last one off today's list gets the confetti.
+    if (todayIds.current.length === 1 && todayIds.current[0] === task.id) setParty((n) => n + 1);
     patch(task.id, { status: "done", completed: true, completedAt: new Date().toISOString() });
     setLeaving((set) => {
       const next = new Set(set);
@@ -118,8 +123,7 @@ function AdhdTasks() {
     }
   };
 
-  const move = async (task, key) => {
-    const dueDate = dueFor(key);
+  const setDue = async (task, dueDate) => {
     patch(task.id, { dueDate });
     try {
       await updateTask(user.uid, task.id, { dueDate });
@@ -127,6 +131,17 @@ function AdhdTasks() {
       setError("Couldn't move that.");
       load();
     }
+  };
+  const move = (task, key) => setDue(task, dueFor(key));
+
+  // Swiped left: tomorrow's problem, with a way back.
+  const later = (task) => {
+    const before = task.dueDate || "";
+    showToast("Moved to tomorrow.", () => {
+      hideToast();
+      setDue(task, before);
+    });
+    setDue(task, dueFor("tomorrow"));
   };
 
   const changeSteps = async (task, subtasks) => {
@@ -197,13 +212,24 @@ function AdhdTasks() {
     const going = leaving.has(task.id);
     const done = task.status === "done";
     const extra = [meta, steps.total ? `${steps.done} of ${steps.total} steps` : ""].filter(Boolean).join(" · ");
+    const tomorrow = task.dueDate === dueFor("tomorrow");
     return (
-      <li key={task.id} className={`adhd-row${going ? " is-leaving" : ""}${done ? " is-done" : ""}`}>
-        <Tick done={done || going} onToggle={() => (done ? reopen(task) : complete(task))} label={done ? `Not done: ${task.title}` : `Finish ${task.title}`} />
-        <button type="button" className="adhd-row-main" onClick={() => setOpenId(task.id)}>
-          <span className="adhd-row-title">{task.title}</span>
-          {extra ? <span className="adhd-row-meta">{extra}</span> : null}
-        </button>
+      <li key={task.id} className="adhd-row-item">
+        <Swipe
+          onRight={() => complete(task)}
+          onLeft={tomorrow ? undefined : () => later(task)}
+          rightLabel="Done"
+          leftLabel="Tomorrow"
+          disabled={done || going}
+        >
+          <div className={`adhd-row${going ? " is-leaving" : ""}${done ? " is-done" : ""}`}>
+            <Tick done={done || going} onToggle={() => (done ? reopen(task) : complete(task))} label={done ? `Not done: ${task.title}` : `Finish ${task.title}`} />
+            <button type="button" className="adhd-row-main" onClick={() => setOpenId(task.id)}>
+              <span className="adhd-row-title">{task.title}</span>
+              {extra ? <span className="adhd-row-meta">{extra}</span> : null}
+            </button>
+          </div>
+        </Swipe>
       </li>
     );
   };
@@ -213,6 +239,9 @@ function AdhdTasks() {
   const foldEarlier = earlier.length > EARLIER_INLINE;
   const todayRows = foldEarlier ? groups.today.filter((task) => task.dueDate >= today) : groups.today;
   const count = todayRows.length;
+  useEffect(() => {
+    todayIds.current = todayRows.map((task) => task.id);
+  });
 
   return (
     <AdhdPage
@@ -303,6 +332,7 @@ function AdhdTasks() {
       </Sheet>
 
       <Toast message={toast?.message} onUndo={toast?.onUndo} />
+      {party ? <Confetti key={party} /> : null}
     </AdhdPage>
   );
 }

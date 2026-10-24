@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { Confetti } from "../../components/adhd/AdhdBits";
 import { AddBar, AdhdPage, Chips, Sheet, Tick, Toast } from "../../components/adhd/AdhdUI";
 import { enrichHabit, toggledLogs } from "../../components/adhd/habitBits";
 import { useToast } from "../../components/adhd/useToast";
@@ -40,6 +41,7 @@ function AdhdHabits() {
   const list = useMemo(() => (habits || []).map((habit) => enrichHabit(habit, today)), [habits, today]);
   const done = list.filter((habit) => habit.doneNow).length;
   const selected = list.find((habit) => habit.id === openId) || null;
+  const [party, setParty] = useState(0);
 
   const toggle = async (habit) => {
     const logs = toggledLogs(habit, today);
@@ -47,6 +49,7 @@ function AdhdHabits() {
     if (!habit.doneNow) {
       const left = list.filter((item) => !item.doneNow && item.id !== habit.id).length;
       showToast(left ? "Ticked. Lovely." : "All done for today.");
+      if (!left) setParty((n) => n + 1);
     }
     try {
       await setHabitLogs(user.uid, habit.id, logs);
@@ -165,6 +168,7 @@ function AdhdHabits() {
       </Sheet>
 
       <Toast message={toast?.message} />
+      {party ? <Confetti key={party} /> : null}
     </AdhdPage>
   );
 }

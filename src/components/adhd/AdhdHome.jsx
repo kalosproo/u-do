@@ -12,7 +12,7 @@ import { celebrate } from "../../utils/feedback";
 import { STARTER_MINUTES, formatClock, formatMinutes } from "../../utils/focusTimer";
 import { morph, morphName } from "../../utils/morph";
 import { toggleSubtask } from "../../utils/subtasks";
-import { Burst, Check, DayTrack, HoldButton, ProgressRing } from "./AdhdBits";
+import { Burst, Check, Confetti, DayTrack, HoldButton, ProgressRing } from "./AdhdBits";
 import { Tick } from "./AdhdUI";
 import { enrichHabit, toggledLogs } from "./habitBits";
 import { setHabitLogs } from "../../services/habits";
@@ -56,6 +56,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
   const [finishing, setFinishing] = useState(null);
   const [stepLeaving, setStepLeaving] = useState(null);
   const [error, setError] = useState("");
+  const [party, setParty] = useState(0);
 
   const firstName = user?.displayName?.trim()?.split(/\s+/)[0] || "";
   const picking = draft !== null || plan.picked.length === 0;
@@ -121,7 +122,9 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
     if (!user || finishing) return;
     setFinishing(task.id);
     playDone();
+    const last = plan.now?.id === task.id && !plan.next.length;
     await wait(FINISH_MS);
+    if (last) setParty((n) => n + 1);
     morph(() => {
       onPatch(task.id, { status: "done", completed: true });
       setFinishing(null);
@@ -199,7 +202,9 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
             <ProgressRing states={ringStates} />
             <span className="adhd-tile-text">
               <strong>
-                {plan.done}
+                <span key={plan.done} className="adhd-roll">
+                  {plan.done}
+                </span>
                 <small>/{plan.picked.length}</small>
               </strong>
               <small>done today</small>
@@ -405,6 +410,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
       ) : null}
 
       <HabitStrip habits={habits} onLogs={onHabitLogs} />
+      {party ? <Confetti key={party} /> : null}
     </section>
   );
 }
@@ -498,12 +504,14 @@ function HabitStrip({ habits, onLogs }) {
   const { user } = useAuth();
   const today = useMemo(() => new Date(), []);
   const list = useMemo(() => habits.map((habit) => enrichHabit(habit, today)), [habits, today]);
+  const [party, setParty] = useState(0);
   if (!list.length) return null;
   const shown = list.slice(0, 4);
   const done = list.filter((habit) => habit.doneNow).length;
 
   const toggle = (habit) => {
     const logs = toggledLogs(habit, today);
+    if (!habit.doneNow && done === list.length - 1) setParty((n) => n + 1);
     onLogs?.(habit.id, logs);
     if (user) setHabitLogs(user.uid, habit.id, logs).catch(() => onLogs?.(habit.id, habit.logs || {}));
   };
@@ -529,6 +537,7 @@ function HabitStrip({ habits, onLogs }) {
           All {list.length} habits
         </Link>
       ) : null}
+      {party ? <Confetti key={party} /> : null}
     </section>
   );
 }

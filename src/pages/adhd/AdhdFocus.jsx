@@ -8,6 +8,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
 import { fetchTasks } from "../../services/tasks";
 import { todayPlan } from "../../utils/adhd";
+import { quietMotion } from "../../utils/morph";
 import { toDateKey } from "../../utils/dateKeys";
 import { formatClock, formatMinutes } from "../../utils/focusTimer";
 
@@ -29,6 +30,7 @@ function AdhdFocus() {
   const [minutes, setMinutes] = useState(() => (LENGTHS.some(([key]) => Number(key) === focus?.setup?.minutes) ? String(focus.setup.minutes) : "15"));
   const [tasks, setTasks] = useState([]);
   const [on, setOn] = useState("");
+  const [launching, setLaunching] = useState(false);
 
   useEffect(() => {
     if (!user) return undefined;
@@ -89,10 +91,19 @@ function AdhdFocus() {
 
           <button
             type="button"
-            className="adhd-focus-go"
+            className={`adhd-focus-go${launching ? " is-launching" : ""}`}
+            disabled={launching}
             onClick={() => {
               const task = options.some(([key]) => key === on) ? tasks.find((item) => item.id === on) : null;
-              focus.start(Number(minutes), task?.title || "", { taskId: task?.id || "" });
+              // The button swells into the timer before it opens.
+              setLaunching(true);
+              setTimeout(
+                () => {
+                  setLaunching(false);
+                  focus.start(Number(minutes), task?.title || "", { taskId: task?.id || "" });
+                },
+                quietMotion() ? 0 : 260
+              );
             }}
           >
             <span className="adhd-focus-go-ring" aria-hidden="true" />

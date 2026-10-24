@@ -2,14 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { dayLeft } from "../../utils/adhd";
+import { buzz } from "../../utils/feedback";
+import { quietMotion } from "../../utils/morph";
 
-const buzz = (pattern) => {
-  try {
-    if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) navigator.vibrate?.(pattern);
-  } catch {
-    /* No motor, no matter. */
-  }
-};
 
 /**
  * Today's picks as one ring cut into equal arcs: lit when done, breathing
@@ -72,11 +67,14 @@ const SPARKS = Array.from({ length: 18 }, (_, i) => {
   return { angle: i * 20 + wobble, distance: 70 + ((i * 53) % 5) * 14, size: 3 + ((i * 29) % 3), delay: (i % 4) * 18 };
 });
 
+// The tick's own burst: fewer, smaller, closer.
+const SMALL_SPARKS = Array.from({ length: 8 }, (_, i) => ({ angle: i * 45 + ((i * 17) % 9) - 4, distance: 22 + ((i * 7) % 3) * 6, size: 3, delay: 0 }));
+
 /** A soft burst of light from the centre of whatever it sits in. Re-key it to fire again. */
-export function Burst() {
+export function Burst({ small = false }) {
   return (
-    <span className="adhd-burst" aria-hidden="true">
-      {SPARKS.map((spark, i) => (
+    <span className={`adhd-burst${small ? " is-small" : ""}`} aria-hidden="true">
+      {(small ? SMALL_SPARKS : SPARKS).map((spark, i) => (
         <i
           key={i}
           style={{
@@ -91,6 +89,62 @@ export function Burst() {
   );
 }
 
+/** Deterministic scatter, so a burst looks random but renders the same twice. */
+const scatter = (i, salt) => {
+  const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+const PIECES = Array.from({ length: 44 }, (_, i) => {
+  const shape = i % 3;
+  return {
+    dx: Math.round((scatter(i, 1) - 0.5) * 120),
+    up: Math.round(-18 - scatter(i, 2) * 26),
+    spin: Math.round((scatter(i, 3) - 0.5) * 1080),
+    duration: 1300 + Math.round(scatter(i, 4) * 900),
+    delay: Math.round(scatter(i, 5) * 120),
+    width: shape === 2 ? 3 : shape === 1 ? 8 : 7,
+    height: shape === 2 ? 16 : shape === 1 ? 8 : 12,
+    round: shape === 1,
+    tone: i % 4,
+  };
+});
+
+/**
+ * Monochrome confetti for the big wins: a pop from the middle of the screen
+ * that arcs up and falls away. Only transforms and fades, so the GPU does all
+ * of it, and it tidies itself away. Nothing at all in calm motion.
+ */
+export function Confetti({ x = 50, y = 42 }) {
+  const [quiet] = useState(() => quietMotion());
+  const [live, setLive] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setLive(false), 2600);
+    return () => clearTimeout(timer);
+  }, []);
+  if (quiet || !live || typeof document === "undefined") return null;
+  return createPortal(
+    <div className="adhd-confetti" style={{ "--ox": `${x}%`, "--oy": `${y}%` }} aria-hidden="true">
+      {PIECES.map((piece, i) => (
+        <i
+          key={i}
+          className={`tone-${piece.tone}${piece.round ? " is-round" : ""}`}
+          style={{
+            "--dx": `${piece.dx}vw`,
+            "--up": `${piece.up}vh`,
+            "--spin": `${piece.spin}deg`,
+            "--w": `${piece.width}px`,
+            "--h": `${piece.height}px`,
+            animationDuration: `${piece.duration}ms`,
+            animationDelay: `${piece.delay}ms`,
+          }}
+        />
+      ))}
+    </div>,
+    document.body
+  );
+}
+
 /**
  * Press and hold to finish: a fill sweeps across while held, and lets go
  * if you do. A deliberate moment, and no more ticking things by accident.
@@ -101,6 +155,7 @@ export function HoldButton({ onComplete, label, className = "", children, ms = 6
   const frame = useRef(0);
   const started = useRef(0);
   const finished = useRef(false);
+  const halfway = useRef(false);
   const hintTimer = useRef(0);
   const [hint, setHint] = useState(false);
 
@@ -127,6 +182,11 @@ export function HoldButton({ onComplete, label, className = "", children, ms = 6
   const tick = (time) => {
     const progress = Math.min(1, Math.max(0, (time - started.current) / ms));
     set(progress);
+    // A tap halfway through, so you can feel it getting there.
+    if (progress >= 0.5 && !halfway.current) {
+      halfway.current = true;
+      buzz(8);
+    }
     if (progress >= 1) complete();
     else frame.current = requestAnimationFrame(tick);
   };
@@ -135,6 +195,7 @@ export function HoldButton({ onComplete, label, className = "", children, ms = 6
     if (finished.current || event.button > 0) return;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     started.current = event.timeStamp;
+    halfway.current = false;
     ref.current?.classList.add("is-holding");
     setHint(false);
     buzz(6);

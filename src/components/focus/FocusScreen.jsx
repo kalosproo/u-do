@@ -12,6 +12,7 @@ import { playDone } from "../../utils/ambient";
 import { celebrate } from "../../utils/feedback";
 import { fetchTasks, setTaskStatus } from "../../services/tasks";
 import { toDateKey } from "../../utils/dateKeys";
+import { Confetti } from "../adhd/AdhdBits";
 import FlipCard from "./FlipCard";
 import SoundPicker from "./SoundPicker";
 import RoomReactions from "./RoomReactions";
@@ -85,7 +86,7 @@ const finishTask = async (uid, taskId) => {
  * tap ticks it off, so the timer ending and the task ending are the same
  * moment. "Not yet" just lets the break be a break.
  */
-function TaskDone({ uid, taskId, title, onAnswered }) {
+function TaskDone({ uid, taskId, title, party = false, onAnswered }) {
   const [state, setState] = useState("ask");
   const yes = async () => {
     setState("saving");
@@ -104,6 +105,7 @@ function TaskDone({ uid, taskId, title, onAnswered }) {
       {state === "done" ? (
         <p>
           <FiCheck aria-hidden="true" /> Ticked off. Nice work.
+          {party ? <Confetti y={38} /> : null}
         </p>
       ) : (
         <>
@@ -247,7 +249,7 @@ function FocusScreen() {
   const breakKey = `${session.taskId || ""}|${session.count || 0}`;
   const askDone = Boolean(isBreak && adhd?.enabled && session.taskId && user && answered !== breakKey);
   const idea = askDone ? (
-    <TaskDone key={breakKey} uid={user.uid} taskId={session.taskId} title={session.subject || "That task"} onAnswered={() => setAnswered(breakKey)} />
+    <TaskDone key={breakKey} uid={user.uid} taskId={session.taskId} title={session.subject || "That task"} party={Boolean(adhd?.enabled)} onAnswered={() => setAnswered(breakKey)} />
   ) : isBreak && adhd?.enabled ? (
     <BreakIdea seed={(session.count || 0) * 5 + new Date().getDate()} />
   ) : null;

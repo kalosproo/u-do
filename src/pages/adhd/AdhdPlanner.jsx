@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { Confetti } from "../../components/adhd/AdhdBits";
 import { AddBar, AdhdPage, Chips, Sheet, Tick } from "../../components/adhd/AdhdUI";
 import { useAuth } from "../../hooks/useAuth";
 import { createPlan, deletePlan, fetchPlans, persistPlanOrder, setPlanCompleted } from "../../services/planner";
@@ -22,6 +23,7 @@ function AdhdPlanner() {
   const [day, setDay] = useState("today");
   const [openId, setOpenId] = useState(null);
   const [error, setError] = useState("");
+  const [party, setParty] = useState(0);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -48,6 +50,7 @@ function AdhdPlanner() {
 
   const toggle = async (plan) => {
     const completed = !plan.completed;
+    if (completed && left === 1) setParty((n) => n + 1);
     setPlans((current) => (current || []).map((item) => (item.id === plan.id ? { ...item, completed } : item)));
     try {
       await setPlanCompleted(user.uid, plan.id, completed, plan.order || 0);
@@ -150,6 +153,7 @@ function AdhdPlanner() {
           </div>
         ) : null}
       </Sheet>
+      {party ? <Confetti key={party} /> : null}
     </AdhdPage>
   );
 }
