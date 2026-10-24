@@ -326,3 +326,20 @@ export const scheduleChime = (inSeconds, kind = "break") => {
     },
   };
 };
+
+/**
+ * A soft two-note "done" for ticking something off: quiet, short, round.
+ * Called from the tap itself, so the audio context can start on iOS too.
+ */
+export const playDone = () => {
+  const c = audioContext();
+  if (!c) return;
+  if (c.state === "suspended") c.resume().catch(() => {});
+  const out = c.createGain();
+  out.gain.value = 1;
+  out.connect(c.destination);
+  const at = c.currentTime + 0.02;
+  bell(out, midi(84), at, 0.16);
+  bell(out, midi(91), at + 0.11, 0.13);
+  setTimeout(() => out.disconnect(), 3200);
+};

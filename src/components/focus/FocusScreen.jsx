@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FiBell, FiBookOpen, FiChevronDown, FiMaximize, FiMinimize, FiPause, FiPlay, FiSquare, FiUsers } from "react-icons/fi";
+import { FiBell, FiBookOpen, FiChevronDown, FiMaximize, FiMinimize, FiPause, FiPlay, FiRefreshCw, FiSquare, FiUsers } from "react-icons/fi";
 
+import { useAdhd } from "../../hooks/useAdhd";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
 import { useStudyRoom } from "../../hooks/useStudyRoom";
-import { formatClock, formatMinutes, lastDays, progressOf } from "../../utils/focusTimer";
+import { KEEP_GOING_MINUTES, STARTER_MINUTES, formatClock, formatMinutes, lastDays, progressOf } from "../../utils/focusTimer";
+import { breakIdea } from "../../utils/adhd";
 import { toDateKey } from "../../utils/dateKeys";
 import FlipCard from "./FlipCard";
 import SoundPicker from "./SoundPicker";
@@ -54,6 +56,41 @@ const flipCards = (ms) => {
   return [pad(Math.floor(total / 60)), pad(total % 60)];
 };
 
+/** ADHD mode, on a break: one small thing to do that rests the brain. */
+function BreakIdea({ seed }) {
+  const [extra, setExtra] = useState(0);
+  return (
+    <div className="focus-idea" aria-live="polite">
+      <small>Break idea</small>
+      <p key={extra}>{breakIdea(seed + extra)}</p>
+      <button type="button" onClick={() => setExtra((n) => n + 1)} aria-label="Another idea" title="Another idea">
+        <FiRefreshCw aria-hidden="true" /> <span>Another idea</span>
+      </button>
+    </div>
+  );
+}
+
+/** After "Just start": five minutes done, and a no-pressure offer of more. */
+function KeepGoing({ onYes, onStop }) {
+  return (
+    <div className="focus-starter" role="alertdialog" aria-label="Five minutes done">
+      <div className="focus-starter-card">
+        <small>{STARTER_MINUTES} minutes done</small>
+        <h2>
+          You started. That was <em>the hard part.</em>
+        </h2>
+        <p>Ride the momentum for {KEEP_GOING_MINUTES} more minutes — or stop here, guilt-free.</p>
+        <button type="button" className="focus-btn focus-btn-main focus-starter-yes" onClick={onYes}>
+          Keep going · {KEEP_GOING_MINUTES} min
+        </button>
+        <button type="button" className="focus-link" onClick={onStop}>
+          Stop here
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const endsAt = (ms) =>
   new Date(Date.now() + ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
@@ -71,6 +108,7 @@ const endsAt = (ms) =>
 function FocusScreen() {
   const focus = useFocus();
   const study = useStudyRoom();
+  const adhd = useAdhd();
   const { user } = useAuth();
   const { session, view, style } = focus || {};
   const visible = Boolean(focus && view === "full" && session);
@@ -145,6 +183,8 @@ function FocusScreen() {
   // In a study room the host's pause pauses everyone.
   const inRoom = Boolean(session.room && study?.room?.id === session.room);
   const toggle = inRoom && study.isHost && session.phase === "focus" ? study.toggle : focus.toggle;
+  const offerMore = Boolean(session.afterStarter && session.paused);
+  const idea = isBreak && adhd?.enabled ? <BreakIdea seed={(session.count || 0) * 5 + new Date().getDate()} /> : null;
   const roomNames = inRoom ? study.members.filter((member) => member.uid !== user?.uid).map((member) => member.name.split(" ")[0]) : [];
   const roomLine = roomNames.length
     ? `With ${roomNames.slice(0, 3).join(", ")}${roomNames.length > 3 ? ` +${roomNames.length - 3}` : ""}`
@@ -170,7 +210,7 @@ function FocusScreen() {
 
   return createPortal(
     <div
-      className={`focus-screen focus-style-${style} ${isBreak ? "is-break" : ""} ${quiet ? "is-quiet" : ""} ${inRoom ? "in-room" : ""}`}
+      className={`focus-screen focus-style-${style} ${isBreak ? "is-break" : ""} ${quiet ? "is-quiet" : ""} ${inRoom ? "in-room" : ""} ${idea ? "has-idea" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label="Focus timer"
@@ -188,7 +228,13 @@ function FocusScreen() {
           ) : null}
         </div>
         <span className="eyebrow focus-top-label">
-          {isBreak ? (session.longBreak ? "LONG BREAK" : "BREAK") : `SESSION ${((sessionNo - 1) % 4) + 1} OF 4`}
+          {isBreak
+            ? session.longBreak
+              ? "LONG BREAK"
+              : "BREAK"
+            : session.starter
+              ? `JUST ${STARTER_MINUTES} MINUTES`
+              : `SESSION ${((sessionNo - 1) % 4) + 1} OF 4`}
         </span>
         <div className="focus-top-right">
           {style === 2 ? (
@@ -247,9 +293,10 @@ function FocusScreen() {
           </div>
 
           <div className="focus-a-side">
+            {idea}
             {controls}
             <button type="button" className="focus-link" onClick={focus.skip}>
-              {isBreak ? "Skip break" : "Finish early and take a break"}
+              {isBreak ? "Skip break" : session.starter ? "Warmed up — skip ahead" : "Finish early and take a break"}
             </button>
             <footer className="focus-stats">
               <div>
@@ -283,8 +330,11 @@ function FocusScreen() {
           <p className="focus-b-line focus-b-caps">
             {session.paused ? "Paused" : `Ends ${ends}`}
           </p>
+          {idea}
         </div>
       )}
+
+      {offerMore ? <KeepGoing onYes={focus.resume} onStop={cancel} /> : null}
 
       {inRoom && style === 1 ? (
         <p className="focus-room">

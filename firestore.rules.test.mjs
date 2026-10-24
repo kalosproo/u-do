@@ -493,6 +493,31 @@ await t("a total must be positive", () => assertFails(setDoc(doc(alice, "users",
 await t("extra fields are refused", () => assertFails(setDoc(doc(alice, "users", ALICE, "grades", "g4"), grade({ teacherComment: "x" }))));
 await t("a stranger cannot read someone's grades", () => assertFails(getDoc(doc(mallory, "users", ALICE, "grades", "g1"))));
 
+console.log("\n=== ADHD mode: testers only, settings owner only ===");
+const tester = env.authenticatedContext("tester_uid", { email: "HaneeshVarma2006@gmail.com" }).firestore();
+await t("a tester can see the feature before it exists", () => assertSucceeds(getDoc(doc(tester, "betaFeatures", "adhd"))));
+await t("anyone else cannot", () => assertFails(getDoc(doc(alice, "betaFeatures", "adhd"))));
+await t("signed out cannot", () => assertFails(getDoc(doc(anon, "betaFeatures", "adhd"))));
+await t("a tester cannot see features that aren't listed", () => assertFails(getDoc(doc(tester, "betaFeatures", "other"))));
+await t("nobody can switch a feature on from the app", () => assertFails(setDoc(doc(tester, "betaFeatures", "adhd"), { everyone: true })));
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "betaFeatures", "adhd"), { everyone: false }));
+await t("everyone: false still keeps it to testers", () => assertFails(getDoc(doc(alice, "betaFeatures", "adhd"))));
+await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), "betaFeatures", "adhd"), { everyone: true }));
+await t("everyone: true gives it to every account", () => assertSucceeds(getDoc(doc(alice, "betaFeatures", "adhd"))));
+await t("...but still not to the signed out", () => assertFails(getDoc(doc(anon, "betaFeatures", "adhd"))));
+
+const prefs = (patch = {}) => ({ enabled: true, day: "2026-10-23", picks: ["t1", "t2"], updatedAt: new Date(), ...patch });
+await t("owner saves ADHD settings", () => assertSucceeds(setDoc(doc(alice, "users", ALICE, "prefs", "adhd"), prefs())));
+await t("owner reads them back", () => assertSucceeds(getDoc(doc(alice, "users", ALICE, "prefs", "adhd"))));
+await t("a stranger cannot read them", () => assertFails(getDoc(doc(mallory, "users", ALICE, "prefs", "adhd"))));
+await t("a stranger cannot write them", () => assertFails(setDoc(doc(mallory, "users", ALICE, "prefs", "adhd"), prefs())));
+await t("at most three picks", () => assertFails(setDoc(doc(alice, "users", ALICE, "prefs", "adhd"), prefs({ picks: ["a", "b", "c", "d"] }))));
+await t("enabled must be true or false", () => assertFails(setDoc(doc(alice, "users", ALICE, "prefs", "adhd"), prefs({ enabled: "yes" }))));
+await t("the day must be a date", () => assertFails(setDoc(doc(alice, "users", ALICE, "prefs", "adhd"), prefs({ day: "today" }))));
+await t("extra fields are refused", () => assertFails(setDoc(doc(alice, "users", ALICE, "prefs", "adhd"), prefs({ notes: "x" }))));
+await t("no other settings documents", () => assertFails(setDoc(doc(alice, "users", ALICE, "prefs", "theme"), prefs())));
+await t("owner can delete them", () => assertSucceeds(deleteDoc(doc(alice, "users", ALICE, "prefs", "adhd"))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);
