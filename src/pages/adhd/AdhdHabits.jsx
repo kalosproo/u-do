@@ -5,6 +5,7 @@ import { Confetti } from "../../components/adhd/AdhdBits";
 import { AddBar, AdhdPage, Chips, Sheet, Tick, Toast } from "../../components/adhd/AdhdUI";
 import { enrichHabit, toggledLogs } from "../../components/adhd/habitBits";
 import { useToast } from "../../components/adhd/useToast";
+import { useWarm } from "../../components/adhd/useWarm";
 import { useAuth } from "../../hooks/useAuth";
 import { createHabit, deleteHabit, fetchHabits, setHabitLogs, updateHabit } from "../../services/habits";
 import { streakWords } from "../../utils/adhd";
@@ -21,7 +22,7 @@ const HOW_OFTEN = [
  */
 function AdhdHabits() {
   const { user } = useAuth();
-  const [habits, setHabits] = useState(null);
+  const [habits, setHabits] = useWarm(user ? `${user.uid}:habits` : "");
   const [often, setOften] = useState("daily");
   const [openId, setOpenId] = useState(null);
   const [error, setError] = useState("");
@@ -30,7 +31,7 @@ function AdhdHabits() {
   const load = useCallback(async () => {
     if (!user) return;
     setHabits(await fetchHabits(user));
-  }, [user]);
+  }, [user, setHabits]);
 
   useEffect(() => {
     const timer = setTimeout(load, 0);

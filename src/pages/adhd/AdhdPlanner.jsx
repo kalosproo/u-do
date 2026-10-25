@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { Confetti } from "../../components/adhd/AdhdBits";
 import { AddBar, AdhdPage, Chips, Sheet, Tick } from "../../components/adhd/AdhdUI";
+import { useWarm } from "../../components/adhd/useWarm";
 import { useAuth } from "../../hooks/useAuth";
 import { createPlan, deletePlan, fetchPlans, persistPlanOrder, setPlanCompleted } from "../../services/planner";
 import { dueFor } from "../../utils/adhd";
@@ -19,7 +20,7 @@ const DAYS = [
  */
 function AdhdPlanner() {
   const { user } = useAuth();
-  const [plans, setPlans] = useState(null);
+  const [plans, setPlans] = useWarm(user ? `${user.uid}:plans` : "");
   const [day, setDay] = useState("today");
   const [openId, setOpenId] = useState(null);
   const [error, setError] = useState("");
@@ -33,7 +34,7 @@ function AdhdPlanner() {
       setPlans((current) => current ?? []);
       setError("Couldn't load your plan.");
     }
-  }, [user]);
+  }, [user, setPlans]);
 
   useEffect(() => {
     const timer = setTimeout(load, 0);
