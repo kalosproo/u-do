@@ -12,6 +12,7 @@ import {
   dueFor,
   firstSteps,
   groupTasks,
+  keepLocalPrefs,
   streakWords,
   gentleDue,
   pickForMe,
@@ -50,6 +51,18 @@ test("picks are for one day only", () => {
   assert.deepEqual(picksFor({ day: TODAY, picks: ["a"] }, TODAY), ["a"]);
   assert.deepEqual(picksFor({ day: "2026-10-22", picks: ["a"] }, TODAY), []);
   assert.deepEqual(picksFor(null, TODAY), []);
+});
+
+test("picks saved with no signal beat the server's older copy, but not a newer one", () => {
+  const stamp = (ms) => ({ toMillis: () => ms });
+  const local = { unsynced: true, editedAt: 2_000 };
+  assert.equal(keepLocalPrefs(local, { updatedAt: stamp(1_000) }), true);
+  assert.equal(keepLocalPrefs(local, null), true);
+  // The server read failed, so the "server" copy is this device's own.
+  assert.equal(keepLocalPrefs(local, local), true);
+  assert.equal(keepLocalPrefs(local, { updatedAt: stamp(3_000) }), false);
+  assert.equal(keepLocalPrefs({ ...local, unsynced: false }, { updatedAt: stamp(1_000) }), false);
+  assert.equal(keepLocalPrefs(null, { updatedAt: stamp(1_000) }), false);
 });
 
 test("clean picks: strings, no repeats, at most three", () => {

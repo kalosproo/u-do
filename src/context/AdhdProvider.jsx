@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AdhdContext } from "./adhdContext";
 import { useAuth } from "../hooks/useAuth";
 import { hasBeta, loadAdhdPrefs, saveAdhdPrefs } from "../services/adhd";
-import { cleanPicks, picksFor, planDay } from "../utils/adhd";
+import { cleanPicks, keepLocalPrefs, picksFor, planDay } from "../utils/adhd";
 
 /**
  * ADHD mode: a calmer, one-thing-at-a-time version of the app, for the
@@ -54,6 +54,16 @@ export function AdhdProvider({ children }) {
   // them can tell that what it brings back is already out of date.
   const edits = useRef(0);
 
+  // A change stays marked unsynced until the server has it, so one made with
+  // no signal is still this device's to send next time, not lost to the older copy.
+  const save = useCallback((next) => {
+    saveAdhdPrefs(next.uid, next)
+      .then(() =>
+        setState((now) => (now.uid === next.uid && now.editedAt === next.editedAt ? { ...now, unsynced: false } : now))
+      )
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!uid) return undefined;
     let cancelled = false;
@@ -81,6 +91,15 @@ export function AdhdProvider({ children }) {
         });
         return;
       }
+      // Picked last time with no signal, and the app closed before the save
+      // got out? Then the server's copy is the older one: keep this device's
+      // and send it again, unless another device has saved since.
+      if (available && keepLocalPrefs(cached, prefs)) {
+        const kept = { ...cached, uid, available };
+        setState(kept);
+        save(kept);
+        return;
+      }
       setState({
         uid,
         available,
@@ -92,7 +111,7 @@ export function AdhdProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [uid]);
+  }, [uid, save]);
 
   useEffect(() => writeCache(current), [current]);
 
@@ -123,12 +142,13 @@ export function AdhdProvider({ children }) {
     (patch) => {
       if (!uid) return;
       edits.current += 1;
-      const next = { ...current, ...patch, uid };
+      // Never the same stamp twice, even for two changes in one millisecond.
+      const editedAt = Math.max(Date.now(), (Number(current.editedAt) || 0) + 1);
+      const next = { ...current, ...patch, uid, editedAt, unsynced: true };
       setState(next);
-      // Kept here if the save fails; the next change tries again.
-      saveAdhdPrefs(uid, next).catch(() => {});
+      save(next);
     },
-    [uid, current]
+    [uid, current, save]
   );
 
   const setEnabled = useCallback((enabled) => update({ enabled: Boolean(enabled) }), [update]);

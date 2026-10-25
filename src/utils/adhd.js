@@ -43,6 +43,16 @@ export const cleanPicks = (picks) =>
 /** The picks that apply today: none if they were made on another day. */
 export const picksFor = (prefs, today) => (prefs?.day === today ? cleanPicks(prefs.picks) : []);
 
+const millisOf = (time) => (typeof time?.toMillis === "function" ? time.toMillis() : Number(time) || 0);
+
+/**
+ * Whether this device's copy of the prefs beats the one the server sent: only
+ * when a change made here never reached the server (the app closed with no
+ * signal, say) and no other device has saved since.
+ */
+export const keepLocalPrefs = (local, server) =>
+  Boolean(local?.unsynced) && (Number(local.editedAt) || 0) > millisOf(server?.updatedAt);
+
 /**
  * Today's plan from the picks: the picked tasks that still exist, in order,
  * how many are done, and the one to do now (the first that isn't).
