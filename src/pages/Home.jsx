@@ -2,7 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { getDocs } from "firebase/firestore";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FiArrowLeft, FiCheck, FiPlus } from "react-icons/fi";
-import { createTask, setTaskStatus } from "../services/tasks";
+import { createTask, normalizeTask, setTaskStatus } from "../services/tasks";
+import { normalizeHabit } from "../services/habits";
 import { formatDayLabel, formatRelativeDay, todayKey } from "../utils/dateKeys";
 import { quoteFor } from "../utils/quotes";
 import { useAuth } from "../hooks/useAuth";
@@ -55,13 +56,19 @@ function Home() {
   const adhd = useAdhd();
   // In ADHD mode, coming back to Today shows what it showed last time at
   // once, and refreshes behind it, rather than flashing a loading screen.
-  const warmKey = adhd?.enabled && user ? `${user.uid}:home` : "";
-  const [warm] = useState(() => readWarm(warmKey));
-  const [loading, setLoading] = useState(() => Boolean(user) && !warm);
+  // Tasks and habits are the same copies the Tasks and Habits screens keep,
+  // so a tick on one screen is already there on the other.
+  const warmUid = adhd?.enabled && user ? user.uid : "";
+  const [warm] = useState(() =>
+    warmUid ? { tasks: readWarm(`${warmUid}:tasks`), habits: readWarm(`${warmUid}:habits`), rest: readWarm(`${warmUid}:home`) } : null
+  );
+  // Tasks are what Today is made of; habits can arrive a moment later.
+  const [loading, setLoading] = useState(() => Boolean(user) && !warm?.tasks);
   const [tasks, setTasks] = useState(() => warm?.tasks || []);
-  const [plans, setPlans] = useState(() => warm?.plans || []);
-  const [expenses, setExpenses] = useState(() => warm?.expenses || []);
+  const [plans, setPlans] = useState(() => warm?.rest?.plans || []);
+  const [expenses, setExpenses] = useState(() => warm?.rest?.expenses || []);
   const [habits, setHabits] = useState(() => warm?.habits || []);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [savingTask, setSavingTask] = useState(false);
@@ -92,6 +99,7 @@ function Home() {
       setPlans(nextPlans);
       setExpenses(nextExpenses);
       setHabits(nextHabits);
+      setLoaded(true);
       setError("");
     } catch (loadError) {
       setError(loadError?.message || "Couldn't load your dashboard.");
@@ -107,9 +115,14 @@ function Home() {
     return () => clearTimeout(timer);
   }, [loadDashboard]);
 
+  // Kept only once this screen has loaded for itself, so a start from the
+  // Tasks screen's copy never stores empty habits as if they were real.
   useEffect(() => {
-    if (warmKey && !loading) keepWarm(warmKey, { tasks, plans, expenses, habits });
-  }, [warmKey, loading, tasks, plans, expenses, habits]);
+    if (!warmUid || !loaded) return;
+    keepWarm(`${warmUid}:tasks`, tasks.map(normalizeTask));
+    keepWarm(`${warmUid}:habits`, habits.map(normalizeHabit));
+    keepWarm(`${warmUid}:home`, { plans, expenses });
+  }, [warmUid, loaded, tasks, plans, expenses, habits]);
 
   // ADHD mode's quick add can add a task from anywhere, this page included.
   useEffect(() => {
@@ -220,6 +233,7 @@ function Home() {
           onHabitLogs={(id, logs) => setHabits((items) => items.map((item) => (item.id === id ? { ...item, logs } : item)))}
           onChanged={loadDashboard}
           onPatch={(id, patch) => setTasks((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)))}
+          onAdd={(task) => setTasks((items) => (items.some((item) => item.id === task.id) ? items : [...items, task]))}
           onShowAll={() => navigate("/?full=1")}
         />
       </>

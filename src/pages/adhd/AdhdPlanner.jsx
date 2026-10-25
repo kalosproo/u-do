@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 
 import { Confetti } from "../../components/adhd/AdhdBits";
-import { AddBar, AdhdPage, Chips, Sheet, Tick } from "../../components/adhd/AdhdUI";
+import { AddBar, AdhdPage, Chips, FullView, Sheet, Tick } from "../../components/adhd/AdhdUI";
 import { useWarm } from "../../components/adhd/useWarm";
 import { useAuth } from "../../hooks/useAuth";
 import { createPlan, deletePlan, fetchPlans, persistPlanOrder, setPlanCompleted } from "../../services/planner";
@@ -100,15 +99,9 @@ function AdhdPlanner() {
 
   return (
     <AdhdPage
-      eyebrow="Planner"
-      title="Your"
-      italic="plan."
+      title="Planner"
       sub={plans === null ? " " : list.length ? (left ? `${left} still to go ${day === "today" ? "today" : "tomorrow"}.` : "All of it done.") : "Nothing planned. That's allowed."}
-      action={
-        <Link to="/planner?full=1" className="adhd-ghost">
-          Full view
-        </Link>
-      }
+      action={<FullView to="/planner?full=1" />}
     >
       <Chips options={DAYS} value={day} onChange={setDay} label="Day" />
 
@@ -124,7 +117,7 @@ function AdhdPlanner() {
           <span />
         </div>
       ) : list.length ? (
-        <ul className="adhd-rows adhd-card adhd-rows-card">
+        <ul className="adhd-rows adhd-card adhd-group adhd-rows-card">
           {list.map((plan) => (
             <li key={plan.id} className={`adhd-row${plan.completed ? " is-done" : ""}`}>
               <Tick done={plan.completed} onToggle={() => toggle(plan)} label={plan.completed ? `Not done: ${plan.title}` : `Done: ${plan.title}`} />

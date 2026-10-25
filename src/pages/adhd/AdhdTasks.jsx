@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { FiEdit2, FiPlay, FiX } from "react-icons/fi";
+import { FiEdit2, FiPlay, FiPlus, FiX } from "react-icons/fi";
 
 import { Confetti } from "../../components/adhd/AdhdBits";
-import { AddBar, AdhdPage, Chips, Fold, Sheet, Swipe, Tick, Toast } from "../../components/adhd/AdhdUI";
+import { AddBar, AdhdPage, Chips, Fold, FullView, Sheet, Swipe, Tick, Toast } from "../../components/adhd/AdhdUI";
 import { useToast } from "../../components/adhd/useToast";
 import { useWarm } from "../../components/adhd/useWarm";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
 import { createTask, deleteTask, fetchTasks, setSubtasks, setTaskStatus, updateTask } from "../../services/tasks";
-import { TASKS_CHANGED, WHEN, dueFor, gentleDue, groupTasks } from "../../utils/adhd";
+import { TASKS_CHANGED, WHEN, dueFor, firstSteps, gentleDue, groupTasks } from "../../utils/adhd";
 import { formatRelativeDay, todayKey } from "../../utils/dateKeys";
 import { isRepeating } from "../../utils/recurrence";
 import { STARTER_MINUTES } from "../../utils/focusTimer";
@@ -246,15 +245,9 @@ function AdhdTasks() {
 
   return (
     <AdhdPage
-      eyebrow="Tasks"
-      title="What's"
-      italic="next?"
+      title="Tasks"
       sub={tasks === null ? " " : count ? `${count} for today. Start with the top one.` : "Nothing for today. Add one, or enjoy it."}
-      action={
-        <Link to="/tasks?full=1" className="adhd-ghost">
-          Full view
-        </Link>
-      }
+      action={<FullView to="/tasks?full=1" />}
     >
       <div className="adhd-card adhd-tasks-add">
         <AddBar placeholder="What needs doing?" onAdd={add}>
@@ -403,7 +396,17 @@ function TaskSheet({ task, today, timerRunning, onStart, onMove, onSteps, onRena
             ))}
           </ul>
         ) : (
-          <p className="adhd-hint">Big task? Break it into tiny steps. The first one should take two minutes.</p>
+          <>
+            <p className="adhd-hint">Big task? Break it into tiny steps. The first one should take two minutes.</p>
+            {/* Stuck on where to begin: three small first moves that fit this task. */}
+            <div className="adhd-stuck" aria-label="Ideas for a first step">
+              {firstSteps(task.title).map((idea) => (
+                <button key={idea} type="button" onClick={() => onSteps(addSubtask(task.subtasks, idea))}>
+                  <FiPlus aria-hidden="true" /> {idea}
+                </button>
+              ))}
+            </div>
+          </>
         )}
         <AddBar placeholder={task.subtasks.length ? "Add another step" : "First tiny step"} onAdd={async (title) => onSteps(addSubtask(task.subtasks, title))} />
       </div>

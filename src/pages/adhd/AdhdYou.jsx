@@ -1,6 +1,6 @@
 import { signOut } from "firebase/auth";
 import { Link } from "react-router-dom";
-import { FiLogOut, FiSettings } from "react-icons/fi";
+import { FiChevronRight, FiLogOut, FiSettings } from "react-icons/fi";
 
 import { AdhdPage, Chips } from "../../components/adhd/AdhdUI";
 import { useAdhd } from "../../hooks/useAdhd";
@@ -31,7 +31,7 @@ function AdhdYou() {
   const photo = resolveUserPhoto(user);
 
   return (
-    <AdhdPage eyebrow="You" title="Hello," italic={`${name.split(" ")[0]}.`} sub={user?.email}>
+    <AdhdPage title="You" sub={user?.email}>
       <div className="adhd-card adhd-you">
         {photo ? <img className="adhd-avatar is-big" src={photo} alt="" referrerPolicy="no-referrer" /> : <span className="adhd-avatar is-big">{name.charAt(0).toUpperCase()}</span>}
         <span>
@@ -79,6 +79,7 @@ function AdhdYou() {
           <strong>All settings</strong>
           <small>Reminders, emails, your data, your account</small>
         </span>
+        <FiChevronRight className="adhd-link-card-go" aria-hidden="true" />
       </Link>
 
       <button type="button" className="adhd-link adhd-link-center" onClick={() => signOut(auth)}>

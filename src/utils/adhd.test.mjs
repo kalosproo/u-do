@@ -8,12 +8,16 @@ import {
   cleanPicks,
   currentStep,
   dayLeft,
+  dayRun,
   dueFor,
+  firstSteps,
   groupTasks,
+  keepLocalPrefs,
   streakWords,
   gentleDue,
   pickForMe,
   picksFor,
+  planDay,
   rankTasks,
   swapNow,
   todayPlan,
@@ -47,6 +51,18 @@ test("picks are for one day only", () => {
   assert.deepEqual(picksFor({ day: TODAY, picks: ["a"] }, TODAY), ["a"]);
   assert.deepEqual(picksFor({ day: "2026-10-22", picks: ["a"] }, TODAY), []);
   assert.deepEqual(picksFor(null, TODAY), []);
+});
+
+test("picks saved with no signal beat the server's older copy, but not a newer one", () => {
+  const stamp = (ms) => ({ toMillis: () => ms });
+  const local = { unsynced: true, editedAt: 2_000 };
+  assert.equal(keepLocalPrefs(local, { updatedAt: stamp(1_000) }), true);
+  assert.equal(keepLocalPrefs(local, null), true);
+  // The server read failed, so the "server" copy is this device's own.
+  assert.equal(keepLocalPrefs(local, local), true);
+  assert.equal(keepLocalPrefs(local, { updatedAt: stamp(3_000) }), false);
+  assert.equal(keepLocalPrefs({ ...local, unsynced: false }, { updatedAt: stamp(1_000) }), false);
+  assert.equal(keepLocalPrefs(null, { updatedAt: stamp(1_000) }), false);
 });
 
 test("clean picks: strings, no repeats, at most three", () => {
@@ -115,6 +131,16 @@ test("day left: hours to the half, kind at either end", () => {
   assert.equal(dayLeft(at(23, 59)).progress, 1);
 });
 
+test("picks belong to a day that turns over at 5am, not midnight", () => {
+  assert.equal(planDay(new Date(2026, 9, 24, 0, 40)), "2026-10-23");
+  assert.equal(planDay(new Date(2026, 9, 24, 4, 59)), "2026-10-23");
+  assert.equal(planDay(new Date(2026, 9, 24, 5, 0)), "2026-10-24");
+  assert.equal(planDay(new Date(2026, 9, 24, 23, 59)), "2026-10-24");
+  // Half past midnight on the 1st is still the last night of the month before.
+  assert.equal(planDay(new Date(2026, 10, 1, 0, 30)), "2026-10-31");
+  assert.equal(planDay(new Date(2027, 0, 1, 2, 0)), "2026-12-31");
+});
+
 test("when: today, tomorrow (across a month end) or no date", () => {
   const at = new Date(2026, 9, 31, 22, 0);
   assert.equal(dueFor("today", at), "2026-10-31");
@@ -144,4 +170,33 @@ test("streak words only ever say something good", () => {
   assert.equal(streakWords(1), "");
   assert.equal(streakWords(4), "4 days in a row");
   assert.equal(streakWords(3, "weekly"), "3 weeks in a row");
+});
+
+test("first steps fit what the task is about, and there are always three", () => {
+  assert.equal(firstSteps("Write the history essay intro")[0], "Open a blank page and type the title");
+  assert.equal(firstSteps("Maths worksheet, questions 1-10")[1], "Do only the first question");
+  // Study wins over reading when a task is both.
+  assert.equal(firstSteps("Revise organic chemistry chapter 12")[0], "Get your notes and a pen out");
+  assert.equal(firstSteps("Reply to the club EMAIL")[1], "Write just the first line");
+  assert.equal(firstSteps("Call grandma")[2], "Press call");
+  assert.equal(firstSteps("Book a dentist appointment")[0], "Find the website or the number");
+  assert.equal(firstSteps("Return library book")[0], "Put it by the door now");
+  assert.equal(firstSteps("Read chapter 4 of the novel")[1], "Read one page");
+  assert.equal(firstSteps("Renew bus pass")[0], "Open the website or app");
+  // "already" isn't "read", "test" inside a word isn't a test.
+  assert.equal(firstSteps("Already sorted, contest prize")[0], "Get what you need in front of you");
+  for (const title of ["", "Fix bike light", "Sort photos", undefined]) assert.equal(firstSteps(title).length, 3);
+});
+
+test("a run of days counts tasks, habits and focus, and survives a quiet morning", () => {
+  const at = new Date(2026, 9, 25, 9, 0);
+  const done = (day) => ({ status: "done", completedAt: new Date(2026, 9, day, 18, 0).toISOString() });
+  // Done something on the 22nd (a task), 23rd (a habit) and 24th (focus): three in a row, nothing yet today.
+  const run = dayRun({ tasks: [done(22)], habits: [{ logs: { "2026-10-23": true } }], focusLog: { "2026-10-24": { minutes: 12 } } }, at);
+  assert.deepEqual(run, { days: 3, today: false });
+  // Something today makes it four.
+  assert.deepEqual(dayRun({ tasks: [done(22), done(25)], habits: [{ logs: { "2026-10-23": true } }], focusLog: { "2026-10-24": { minutes: 12 } } }, at), { days: 4, today: true });
+  // A gap starts it again; open tasks, unticked logs and no focus don't count.
+  assert.deepEqual(dayRun({ tasks: [done(21), { status: "todo", completedAt: null }], habits: [{ logs: { "2026-10-24": false } }], focusLog: { "2026-10-24": { minutes: 0 } } }, at), { days: 0, today: false });
+  assert.deepEqual(dayRun({}, at), { days: 0, today: false });
 });

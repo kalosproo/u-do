@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AdhdContext } from "./adhdContext";
 import { useAuth } from "../hooks/useAuth";
 import { hasBeta, loadAdhdPrefs, saveAdhdPrefs } from "../services/adhd";
-import { cleanPicks, picksFor } from "../utils/adhd";
-import { todayKey } from "../utils/dateKeys";
+import { cleanPicks, keepLocalPrefs, picksFor, planDay } from "../utils/adhd";
 
 /**
  * ADHD mode: a calmer, one-thing-at-a-time version of the app, for the
@@ -51,10 +50,24 @@ export function AdhdProvider({ children }) {
   const [state, setState] = useState(() => readCache(uid));
   // Another account's state never shows, even for the moment before it reloads.
   const current = useMemo(() => (state.uid === uid ? state : uid ? readCache(uid) : OFF), [state, uid]);
+  // Counts changes made on this device, so a load that started before one of
+  // them can tell that what it brings back is already out of date.
+  const edits = useRef(0);
+
+  // A change stays marked unsynced until the server has it, so one made with
+  // no signal is still this device's to send next time, not lost to the older copy.
+  const save = useCallback((next) => {
+    saveAdhdPrefs(next.uid, next)
+      .then(() =>
+        setState((now) => (now.uid === next.uid && now.editedAt === next.editedAt ? { ...now, unsynced: false } : now))
+      )
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!uid) return undefined;
     let cancelled = false;
+    const editsAtStart = edits.current;
     (async () => {
       const cached = readCache(uid);
       const available = await hasBeta("adhd", cached.available);
@@ -67,6 +80,26 @@ export function AdhdProvider({ children }) {
         }
       }
       if (cancelled) return;
+      // Picked something while that was loading (easy on a slow phone)? Then
+      // this device has the newer picks and has already saved them: keep them,
+      // and only learn whether the account may use ADHD mode at all. Without
+      // this, the older copy landed late and the picker came back.
+      if (edits.current !== editsAtStart) {
+        setState((now) => {
+          const base = now.uid === uid ? now : readCache(uid);
+          return { ...base, uid, available, enabled: available && base.enabled };
+        });
+        return;
+      }
+      // Picked last time with no signal, and the app closed before the save
+      // got out? Then the server's copy is the older one: keep this device's
+      // and send it again, unless another device has saved since.
+      if (available && keepLocalPrefs(cached, prefs)) {
+        const kept = { ...cached, uid, available };
+        setState(kept);
+        save(kept);
+        return;
+      }
       setState({
         uid,
         available,
@@ -78,7 +111,7 @@ export function AdhdProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [uid]);
+  }, [uid, save]);
 
   useEffect(() => writeCache(current), [current]);
 
@@ -108,19 +141,21 @@ export function AdhdProvider({ children }) {
   const update = useCallback(
     (patch) => {
       if (!uid) return;
-      const next = { ...current, ...patch, uid };
+      edits.current += 1;
+      // Never the same stamp twice, even for two changes in one millisecond.
+      const editedAt = Math.max(Date.now(), (Number(current.editedAt) || 0) + 1);
+      const next = { ...current, ...patch, uid, editedAt, unsynced: true };
       setState(next);
-      // Kept here if the save fails; the next change tries again.
-      saveAdhdPrefs(uid, next).catch(() => {});
+      save(next);
     },
-    [uid, current]
+    [uid, current, save]
   );
 
   const setEnabled = useCallback((enabled) => update({ enabled: Boolean(enabled) }), [update]);
-  const setPicks = useCallback((picks) => update({ day: todayKey(), picks: cleanPicks(picks) }), [update]);
+  const setPicks = useCallback((picks) => update({ day: planDay(), picks: cleanPicks(picks) }), [update]);
 
-  const today = todayKey();
-  const picks = useMemo(() => picksFor(current, today), [current, today]);
+  const day = planDay();
+  const picks = useMemo(() => picksFor(current, day), [current, day]);
 
   const value = useMemo(
     () => ({
