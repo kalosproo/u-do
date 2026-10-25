@@ -8,6 +8,7 @@ import { useFocus } from "../../hooks/useFocus";
 import { useStudyRoom } from "../../hooks/useStudyRoom";
 import { KEEP_GOING_MINUTES, STARTER_MINUTES, formatClock, formatMinutes, lastDays, progressOf } from "../../utils/focusTimer";
 import { TASKS_CHANGED, breakIdea } from "../../utils/adhd";
+import { patchWarm } from "../../utils/warm";
 import { playDone } from "../../utils/ambient";
 import { celebrate } from "../../utils/feedback";
 import { fetchTasks, setTaskStatus } from "../../services/tasks";
@@ -78,6 +79,8 @@ function BreakIdea({ seed }) {
 const finishTask = async (uid, taskId) => {
   const task = (await fetchTasks(uid)).find((item) => item.id === taskId);
   if (task && task.status !== "done") await setTaskStatus(uid, task, "done");
+  // So Today and Tasks don't show it as still open for a moment on the way back.
+  patchWarm(`${uid}:tasks`, (list) => list.map((item) => (item.id === taskId ? { ...item, status: "done", completed: true } : item)));
   window.dispatchEvent(new Event(TASKS_CHANGED));
 };
 

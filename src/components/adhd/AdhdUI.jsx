@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FiChevronDown, FiPlus, FiX } from "react-icons/fi";
+import { Link } from "react-router-dom";
+import { FiChevronDown, FiLayout, FiPlus, FiX } from "react-icons/fi";
 
 import { playDone } from "../../utils/ambient";
 import { buzz, celebrate } from "../../utils/feedback";
@@ -13,28 +14,38 @@ import { Burst } from "./AdhdBits";
  * way to add. Fewer kinds of thing is most of what makes it calm.
  */
 
-/** A screen: a small line on top, a serif title with one word in italic, a line under it. */
-export function AdhdPage({ eyebrow, title, italic, sub, action, className = "", children }) {
+/** A screen: its name, one line on where things stand, and at most one action beside the name. */
+export function AdhdPage({ title, sub, action, className = "", children }) {
   return (
     <section className={`adhd-page ${className}`}>
       <header className="adhd-page-head">
         <div className="adhd-head-top">
-          <p className="adhd-date">{eyebrow}</p>
+          <h1 className="adhd-title">{title}</h1>
           {action}
         </div>
-        <h1 className="adhd-title">
-          {title}
-          {italic ? (
-            <>
-              {" "}
-              <em>{italic}</em>
-            </>
-          ) : null}
-        </h1>
         {sub ? <p className="adhd-sub">{sub}</p> : null}
       </header>
       {children}
     </section>
+  );
+}
+
+/** The way out to the full page, the same on every screen. */
+export function FullView({ to, onClick }) {
+  const inner = (
+    <>
+      <FiLayout aria-hidden="true" />
+      <span>Full view</span>
+    </>
+  );
+  return to ? (
+    <Link to={to} className="adhd-ghost">
+      {inner}
+    </Link>
+  ) : (
+    <button type="button" className="adhd-ghost" onClick={onClick}>
+      {inner}
+    </button>
   );
 }
 
@@ -67,6 +78,27 @@ export function Sheet({ open, onClose, label, children }) {
       quietMotion() ? 0 : 220
     );
   }, []);
+
+  // Above the on-screen keyboard, not behind it: phones shrink only the
+  // visible part of the page when it opens, so the sheet follows that.
+  useEffect(() => {
+    const viewport = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!open || !viewport) return undefined;
+    const fit = () => {
+      const layer = panelRef.current?.parentElement;
+      if (!layer) return;
+      const covered = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      layer.style.setProperty("--kb", `${Math.round(covered)}px`);
+      layer.style.setProperty("--vvh", `${Math.round(viewport.height)}px`);
+    };
+    fit();
+    viewport.addEventListener("resize", fit);
+    viewport.addEventListener("scroll", fit);
+    return () => {
+      viewport.removeEventListener("resize", fit);
+      viewport.removeEventListener("scroll", fit);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -283,10 +315,20 @@ export function Swipe({ onRight, onLeft, rightLabel, leftLabel, disabled = false
   );
 }
 
-/** Two or three choices in a row, one of them picked. Never more than three. */
+/**
+ * Two or three choices in a row, one of them picked. Never more than three.
+ * The picked one sits on a raised piece that slides across to the next pick.
+ */
 export function Chips({ options, value, onChange, label, size = "md", stack = false }) {
+  const index = options.findIndex(([key]) => key === value);
   return (
-    <div className={`adhd-chips is-${size}${stack ? " is-stack" : ""}`} role="radiogroup" aria-label={label}>
+    <div
+      className={`adhd-chips is-${size}${stack ? " is-stack" : ""}`}
+      role="radiogroup"
+      aria-label={label}
+      style={{ "--n": options.length, "--i": Math.max(0, index) }}
+    >
+      {index >= 0 ? <span className="adhd-chips-thumb" aria-hidden="true" /> : null}
       {options.map(([key, text]) => (
         <button
           key={key}

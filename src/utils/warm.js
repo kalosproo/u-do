@@ -11,3 +11,8 @@ export const readWarm = (key) => (key ? kept.get(key) : undefined);
 export const keepWarm = (key, value) => {
   if (key && value != null) kept.set(key, value);
 };
+
+/** Changes what's kept without loading anything, when a change happens off screen. */
+export const patchWarm = (key, change) => {
+  if (key && kept.has(key)) kept.set(key, change(kept.get(key)));
+};

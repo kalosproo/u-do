@@ -1,11 +1,11 @@
-import { useMemo, useRef, useState } from "react";
-import { FiArrowRight, FiCheck, FiGrid, FiMoon, FiPlay, FiPlus, FiRepeat, FiX, FiZap } from "react-icons/fi";
+import { useMemo, useState } from "react";
+import { FiArrowRight, FiCheck, FiLayout, FiMoon, FiPlay, FiPlus, FiRepeat, FiX, FiZap } from "react-icons/fi";
 
 import { useAdhd } from "../../hooks/useAdhd";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
 import { createTask, normalizeTask, setSubtasks, setTaskStatus } from "../../services/tasks";
-import { MAX_PICKS, currentStep, gentleDue, isOpen, pickForMe, rankTasks, swapNow, todayPlan, togglePick } from "../../utils/adhd";
+import { MAX_PICKS, currentStep, dayRun, gentleDue, isOpen, pickForMe, rankTasks, streakWords, swapNow, todayPlan, togglePick } from "../../utils/adhd";
 import { playDone } from "../../utils/ambient";
 import { formatRelativeDay, todayKey } from "../../utils/dateKeys";
 import { celebrate } from "../../utils/feedback";
@@ -13,7 +13,8 @@ import { STARTER_MINUTES, formatClock, formatMinutes } from "../../utils/focusTi
 import { morph, morphName } from "../../utils/morph";
 import { toggleSubtask } from "../../utils/subtasks";
 import { Burst, Check, Confetti, DayTrack, HoldButton, ProgressRing } from "./AdhdBits";
-import { Tick } from "./AdhdUI";
+import { FullView, Tick } from "./AdhdUI";
+import ComingUp from "./ComingUp";
 import { enrichHabit, toggledLogs } from "./habitBits";
 import { setHabitLogs } from "../../services/habits";
 import { Link } from "react-router-dom";
@@ -39,7 +40,7 @@ const salutation = () => {
  * three, and what's the one thing now? Everything else is a tap away under
  * "Full view", never in the way.
  */
-function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatch, onShowAll }) {
+function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatch, onAdd, onShowAll }) {
   const { user } = useAuth();
   const adhd = useAdhd();
   const focus = useFocus();
@@ -57,6 +58,8 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
   const [stepLeaving, setStepLeaving] = useState(null);
   const [error, setError] = useState("");
   const [party, setParty] = useState(0);
+  // Bumped when a finish fails to save, so the hold button is fresh again.
+  const [holdTry, setHoldTry] = useState(0);
 
   const firstName = user?.displayName?.trim()?.split(/\s+/)[0] || "";
   const picking = draft !== null || plan.picked.length === 0;
@@ -65,6 +68,9 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
   // Done first, then the one now, then the rest: the ring fills clockwise.
   const ringStates = [...donePicked.map(() => "done"), ...(plan.now ? ["now"] : []), ...plan.next.map(() => "")];
   const focusedToday = focus?.log?.[today]?.minutes || 0;
+  // Days in a row with something done: only said when it's worth saying.
+  const run = useMemo(() => dayRun({ tasks, habits, focusLog: focus?.log }), [tasks, habits, focus?.log]);
+  const runWords = streakWords(run.days);
 
   const chosen = draft ?? [];
   const room = MAX_PICKS - chosen.length;
@@ -84,9 +90,10 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
     });
   };
 
+  // From the latest choice, not this render's: two quick taps both count.
   const choose = (id) => {
     celebrate();
-    setDraft(togglePick(chosen, id));
+    setDraft((current) => togglePick(current ?? [], id));
   };
 
   // Fills the empty slots one by one, so you see it choosing.
@@ -109,6 +116,9 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
     try {
       const ref = await createTask(user.uid, { title, dueDate: today, priority: "medium" });
       setNewTitle("");
+      // On the list now, not after the reload: picked and started before that
+      // finishes, it would otherwise drop out of today's three.
+      onAdd?.(normalizeTask({ id: ref.id, title, dueDate: today, priority: "medium", status: "todo", completed: false }));
       setDraft((current) => togglePick(current ?? [], ref.id));
       await onChanged();
     } catch {
@@ -134,6 +144,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
       await onChanged();
     } catch {
       setError("Couldn't save that tick. It'll be there when you try again.");
+      setHoldTry((n) => n + 1);
       await onChanged();
     }
   };
@@ -175,15 +186,16 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
       <div className="adhd-home-side">
         <header className="adhd-head">
           <div className="adhd-head-top">
-            <p className="adhd-date">{dateLine()}</p>
-            <button type="button" className="adhd-ghost" onClick={onShowAll}>
-              <FiGrid aria-hidden="true" /> Full view
-            </button>
+            <p className="adhd-date">
+              {dateLine()}
+              {runWords ? <span className="adhd-run"> · {runWords}</span> : null}
+            </p>
+            <FullView onClick={onShowAll} />
           </div>
           <h1 className="adhd-hello">
             {firstName ? (
               <>
-                {salutation()},<br />
+                <span className="adhd-hello-greet">{salutation()},</span>
                 <em>{firstName}.</em>
               </>
             ) : (
@@ -219,6 +231,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
           </div>
         </div>
 
+        <ComingUp />
         <HabitStrip habits={habits} onLogs={onHabitLogs} />
       </div>
 
@@ -279,8 +292,9 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
                           disabled={!selected && room === 0}
                           onClick={() => choose(task.id)}
                         >
+                          {/* Picked ones show their place in today's order. */}
                           <span className="adhd-option-mark" aria-hidden="true">
-                            {selected ? <FiCheck /> : null}
+                            {selected ? position + 1 : null}
                           </span>
                           <span className="adhd-option-text">
                             <span className="adhd-option-title">{task.title}</span>
@@ -357,7 +371,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
             {focusedToday >= 1 ? <p className="adhd-celebrate-stat">{formatMinutes(focusedToday)} of focus today</p> : null}
             <div className="adhd-picker-actions">
               <button type="button" className="adhd-btn" onClick={onShowAll}>
-                <FiGrid aria-hidden="true" /> Full view
+                <FiLayout aria-hidden="true" /> Full view
               </button>
               <button type="button" className="adhd-btn adhd-btn-primary" onClick={() => openPicker([])}>
                 Pick more <FiArrowRight aria-hidden="true" />
@@ -367,6 +381,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
         ) : (
           <NowCard
             task={plan.now}
+            holdKey={`${plan.now.id}:${holdTry}`}
             today={today}
             finishing={finishing === plan.now.id}
             stepLeaving={stepLeaving}
@@ -421,24 +436,13 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
   );
 }
 
-function NowCard({ task, today, finishing, stepLeaving, timer, canSwap, onStart, onDone, onStep, onSwap, onSkip }) {
-  const cardRef = useRef(null);
+function NowCard({ task, holdKey, today, finishing, stepLeaving, timer, canSwap, onStart, onDone, onStep, onSwap, onSkip }) {
   const step = currentStep(task);
   const due = gentleDue(task.dueDate, today);
   const stepsDone = task.subtasks.length > 0 && !step;
 
-  // A soft light follows the pointer across the card, on devices with one.
-  const light = (event) => {
-    if (event.pointerType !== "mouse" || !cardRef.current) return;
-    const box = cardRef.current.getBoundingClientRect();
-    cardRef.current.style.setProperty("--mx", `${event.clientX - box.left}px`);
-    cardRef.current.style.setProperty("--my", `${event.clientY - box.top}px`);
-  };
-
   return (
-    <article ref={cardRef} className={`adhd-card adhd-stage adhd-now${finishing ? " is-finishing" : ""}`} onPointerMove={light}>
-      <span className="adhd-now-light" aria-hidden="true" />
-
+    <article className={`adhd-card adhd-stage adhd-now${finishing ? " is-finishing" : ""}`}>
       <div className="adhd-now-top">
         <p className="adhd-eyebrow">
           <span className="adhd-pulse" aria-hidden="true" /> Now
@@ -481,10 +485,9 @@ function NowCard({ task, today, finishing, stepLeaving, timer, canSwap, onStart,
             <strong>{timer ? timer.label : "Just start"}</strong>
             <small>{timer ? "Open the timer" : `${STARTER_MINUTES} minutes. That's all.`}</small>
           </span>
-          <span className="adhd-start-glint" aria-hidden="true" />
         </button>
         <div className="adhd-hold-wrap">
-          <HoldButton key={task.id} label={`Finish ${task.title}`} onComplete={onDone} className={stepsDone ? "is-ready" : ""}>
+          <HoldButton key={holdKey} label={`Finish ${task.title}`} onComplete={onDone} className={stepsDone ? "is-ready" : ""}>
             <FiCheck aria-hidden="true" /> Hold to finish
           </HoldButton>
           {finishing ? <Burst /> : null}
