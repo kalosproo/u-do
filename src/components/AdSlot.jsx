@@ -36,8 +36,8 @@ export default function AdSlot({ enabled = true }) {
         style={{ display: "block" }}
         data-ad-client={CLIENT}
         data-ad-slot={SLOT}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
+        data-ad-format="horizontal"
+        data-full-width-responsive="false"
       />
     </div>
   );
