@@ -4346,3 +4346,28 @@ body.is-focusing { overflow: hidden; }
 .study-room-link > svg { flex-shrink: 0; font-size: 18px; }
 .study-room-link > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .study-room-link small { color: var(--text-muted); font-size: 12.5px; }
+
+/* AdSense slot: keep the unit aligned with the page content and the dark UI. */
+.adsense-container {
+  max-width: 1180px;
+  margin: var(--s-6) auto 0;
+  padding: var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.adsense-container::before {
+  content: "Advertisement";
+  display: block;
+  margin-bottom: var(--s-2);
+  color: var(--text-subtle);
+  font-size: var(--t-xs);
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.adsense-container:has(ins[data-ad-status="unfilled"]) {
+  display: none;
+}
