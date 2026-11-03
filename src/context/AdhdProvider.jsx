@@ -3,26 +3,48 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AdhdContext } from "./adhdContext";
 import { useAuth } from "../hooks/useAuth";
 import { hasBeta, loadAdhdPrefs, saveAdhdPrefs } from "../services/adhd";
-import { cleanPicks, keepLocalPrefs, picksFor, planDay } from "../utils/adhd";
+import { cleanPicks, keepLocalPrefs, pickLimitOf, picksFor, planDay, textSizeOf, todayPartsOf } from "../utils/adhd";
 
 /**
  * ADHD mode: a calmer, one-thing-at-a-time version of the app, for the
  * accounts the rules let try it. Everyone else never sees a trace of it.
  *
- * Whether it's on, and today's three picks, live on the account so they
+ * Whether it's on, and today's picks, live on the account so they
  * follow the person between devices. A copy on this device means the right
  * home screen shows at once rather than flashing the other one first.
  */
 
 const CACHE_KEY = "u_do_adhd";
-// Lively or calm motion: a feel for this device, so it lives here, not on the account.
+// Feels for this device, so they live here, not on the account: lively or
+// calm motion, how many things a day, the text size, and what Today shows.
 const MOTION_KEY = "u_do_motion";
+const PICKS_KEY = "u_do_picks";
+const TEXT_KEY = "u_do_text";
+const TODAY_KEY = "u_do_today";
 
-const readMotion = () => {
+const readSetting = (key) => {
   try {
-    return localStorage.getItem(MOTION_KEY) === "calm" ? "calm" : "lively";
+    return localStorage.getItem(key);
   } catch {
-    return "lively";
+    return null;
+  }
+};
+
+const writeSetting = (key, value) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* A convenience only. */
+  }
+};
+
+const readMotion = () => (readSetting(MOTION_KEY) === "calm" ? "calm" : "lively");
+
+const readTodayParts = () => {
+  try {
+    return todayPartsOf(JSON.parse(readSetting(TODAY_KEY) || "null"));
+  } catch {
+    return todayPartsOf(null);
   }
 };
 const OFF = { uid: null, available: false, enabled: false, day: "", picks: [] };
@@ -131,12 +153,31 @@ export function AdhdProvider({ children }) {
   const setMotion = useCallback((next) => {
     const value = next === "calm" ? "calm" : "lively";
     setMotionState(value);
-    try {
-      localStorage.setItem(MOTION_KEY, value);
-    } catch {
-      /* A convenience only. */
-    }
+    writeSetting(MOTION_KEY, value);
   }, []);
+
+  const [pickLimit, setPickLimitState] = useState(() => pickLimitOf(readSetting(PICKS_KEY)));
+  const setPickLimit = useCallback((next) => {
+    const value = pickLimitOf(next);
+    setPickLimitState(value);
+    writeSetting(PICKS_KEY, String(value));
+  }, []);
+
+  // Keyed off the root element like the motion, and only while ADHD mode is on.
+  const [textSize, setTextSizeState] = useState(() => textSizeOf(readSetting(TEXT_KEY)));
+  useEffect(() => {
+    if (on && textSize !== "standard") document.documentElement.dataset.text = textSize;
+    else delete document.documentElement.dataset.text;
+  }, [on, textSize]);
+  const setTextSize = useCallback((next) => {
+    const value = textSizeOf(next);
+    setTextSizeState(value);
+    writeSetting(TEXT_KEY, value);
+  }, []);
+
+  const [todayParts, setTodayParts] = useState(readTodayParts);
+  const setTodayPart = useCallback((part, shown) => setTodayParts((now) => ({ ...now, [part]: Boolean(shown) })), []);
+  useEffect(() => writeSetting(TODAY_KEY, JSON.stringify(todayParts)), [todayParts]);
 
   const update = useCallback(
     (patch) => {
@@ -166,8 +207,14 @@ export function AdhdProvider({ children }) {
       setPicks,
       motion,
       setMotion,
+      pickLimit,
+      setPickLimit,
+      textSize,
+      setTextSize,
+      todayParts,
+      setTodayPart,
     }),
-    [uid, current.available, on, setEnabled, picks, setPicks, motion, setMotion]
+    [uid, current.available, on, setEnabled, picks, setPicks, motion, setMotion, pickLimit, setPickLimit, textSize, setTextSize, todayParts, setTodayPart]
   );
 
   return <AdhdContext.Provider value={value}>{children}</AdhdContext.Provider>;

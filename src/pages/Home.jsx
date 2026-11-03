@@ -72,7 +72,7 @@ function Home() {
   const [error, setError] = useState("");
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [savingTask, setSavingTask] = useState(false);
-  // ADHD mode opens on today's three; "Full view" (/?full=1) shows this page
+  // ADHD mode opens on today's picks; "Full view" (/?full=1) shows this page
   // as usual. Kept in the address, so the dock's Today always comes back.
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -244,7 +244,7 @@ function Home() {
     <section className="dashboard-page">
       {adhd?.enabled ? (
         <button type="button" className="adhd-back" onClick={() => navigate("/")}>
-          <FiArrowLeft aria-hidden="true" /> Back to today&apos;s three
+          <FiArrowLeft aria-hidden="true" /> Back to today
         </button>
       ) : null}
       <header className="dashboard-header-block">

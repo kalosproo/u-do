@@ -64,6 +64,13 @@ html[data-adhd="on"][data-theme="light"] {
   scrollbar-color: rgba(10, 10, 10, 0.2) transparent;
 }
 
+/* ---- Text size: a choice in You, for this device. Every size in this file
+   is multiplied by it, so the scale above keeps its proportions; all but the
+   three big numbers (the timer face, the running clock, the month's spend),
+   which are big already and sized to the frames they sit in. -------------- */
+html[data-adhd="on"][data-text="large"] { --adhd-text: 1.12; }
+html[data-adhd="on"][data-text="larger"] { --adhd-text: 1.25; }
+
 /* ---- Ground rules ------------------------------------------------------- */
 html[data-adhd="on"] body { overflow-x: clip; }
 html[data-adhd="on"] ::selection { background: var(--text); color: var(--bg); }
@@ -137,14 +144,14 @@ html[data-adhd="on"] .focus-pill { bottom: calc(96px + env(safe-area-inset-botto
 
 /* ---- Headers ------------------------------------------------------------ */
 .adhd-head-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 34px; }
-.adhd-title { min-width: 0; font-size: clamp(30px, 8.6vw, 38px); font-weight: 800; line-height: 1.05; letter-spacing: -0.035em; text-wrap: balance; }
-.adhd-sub { margin-top: 8px; max-width: 40ch; font-size: 15.5px; line-height: 1.5; color: var(--text-muted); text-wrap: pretty; }
-.adhd-date { font-size: 13px; font-weight: 650; color: var(--text-muted); }
+.adhd-title { min-width: 0; font-size: calc(clamp(30px, 8.6vw, 38px) * var(--adhd-text, 1)); font-weight: 800; line-height: 1.05; letter-spacing: -0.035em; text-wrap: balance; }
+.adhd-sub { margin-top: 8px; max-width: 40ch; font-size: calc(15.5px * var(--adhd-text, 1)); line-height: 1.5; color: var(--text-muted); text-wrap: pretty; }
+.adhd-date { font-size: calc(13px * var(--adhd-text, 1)); font-weight: 650; color: var(--text-muted); }
 /* Today greets you: the one place the serif speaks. */
 .adhd-hello {
   margin-top: 18px;
   font-family: var(--adhd-serif);
-  font-size: clamp(42px, 11.6vw, 56px);
+  font-size: calc(clamp(42px, 11.6vw, 56px) * var(--adhd-text, 1));
   font-weight: 400;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -153,8 +160,8 @@ html[data-adhd="on"] .focus-pill { bottom: calc(96px + env(safe-area-inset-botto
 .adhd-hello em { font-style: italic; }
 .adhd-head .adhd-sub { margin-top: 14px; }
 
-.adhd-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 750; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-subtle); }
-.adhd-count { font-size: 13px; font-weight: 750; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.adhd-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: calc(11.5px * var(--adhd-text, 1)); font-weight: 750; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-subtle); }
+.adhd-count { font-size: calc(13px * var(--adhd-text, 1)); font-weight: 750; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 /* The way out to the full page, and the way back from it. */
 .adhd-ghost,
@@ -170,14 +177,14 @@ html[data-adhd="on"] .focus-pill { bottom: calc(96px + env(safe-area-inset-botto
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--adhd-text, 1));
   font-weight: 650;
   text-decoration: none;
   cursor: pointer;
   transition: color 0.2s var(--ease), border-color 0.2s var(--ease), background 0.2s var(--ease), transform var(--speed-fast) var(--ease);
 }
 .adhd-ghost svg,
-.adhd-back svg { font-size: 14px; }
+.adhd-back svg { font-size: calc(14px * var(--adhd-text, 1)); }
 .adhd-ghost:active,
 .adhd-back:active { transform: scale(0.96); }
 .adhd-back { margin-bottom: var(--s-4); }
@@ -196,9 +203,9 @@ html[data-adhd="on"] .focus-pill { bottom: calc(96px + env(safe-area-inset-botto
 .adhd-group > li + li { border-top: 1px solid var(--adhd-line); }
 .adhd-stage { view-transition-name: adhd-stage; }
 
-.adhd-error { padding: 12px 16px; border: 1px solid var(--adhd-line-strong); border-radius: 14px; background: var(--adhd-surface-2); font-size: 14px; line-height: 1.45; }
-.adhd-empty { font-size: 15.5px; line-height: 1.5; color: var(--text-muted); text-wrap: pretty; }
-.adhd-hint { font-size: 14px; line-height: 1.5; color: var(--text-subtle); }
+.adhd-error { padding: 12px 16px; border: 1px solid var(--adhd-line-strong); border-radius: 14px; background: var(--adhd-surface-2); font-size: calc(14px * var(--adhd-text, 1)); line-height: 1.45; }
+.adhd-empty { font-size: calc(15.5px * var(--adhd-text, 1)); line-height: 1.5; color: var(--text-muted); text-wrap: pretty; }
+.adhd-hint { font-size: calc(14px * var(--adhd-text, 1)); line-height: 1.5; color: var(--text-subtle); }
 
 /* ---- Buttons ------------------------------------------------------------ */
 .adhd-btn {
@@ -214,17 +221,17 @@ html[data-adhd="on"] .focus-pill { bottom: calc(96px + env(safe-area-inset-botto
   background: var(--adhd-surface-2);
   color: var(--text);
   font: inherit;
-  font-size: 15px;
+  font-size: calc(15px * var(--adhd-text, 1));
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
   transition: transform var(--speed-fast) var(--ease), background 0.2s var(--ease), border-color 0.2s var(--ease), opacity 0.2s var(--ease);
 }
-.adhd-btn svg { flex-shrink: 0; font-size: 17px; }
+.adhd-btn svg { flex-shrink: 0; font-size: calc(17px * var(--adhd-text, 1)); }
 .adhd-btn:active:not(:disabled) { transform: scale(0.97); }
 .adhd-btn:disabled { opacity: 0.36; cursor: not-allowed; }
 .adhd-btn-primary { background: var(--text); color: var(--bg); }
-.adhd-btn.adhd-btn-sm { height: 40px; padding: 0 14px; border-radius: 12px; font-size: 14px; }
+.adhd-btn.adhd-btn-sm { height: 40px; padding: 0 14px; border-radius: 12px; font-size: calc(14px * var(--adhd-text, 1)); }
 :root[data-theme="light"] .adhd-btn:not(.adhd-btn-primary) { border-color: var(--adhd-line-strong); background: var(--adhd-surface); }
 
 .adhd-link {
@@ -234,7 +241,7 @@ html[data-adhd="on"] .focus-pill { bottom: calc(96px + env(safe-area-inset-botto
   background: none;
   color: var(--text-muted);
   font: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--adhd-text, 1));
   font-weight: 650;
   text-decoration: underline;
   text-decoration-color: var(--adhd-line-strong, currentColor);
@@ -289,7 +296,7 @@ html[data-adhd="on"] button.adhd-link.adhd-link-center { display: flex; }
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--adhd-text, 1));
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -297,11 +304,11 @@ html[data-adhd="on"] button.adhd-link.adhd-link-center { display: flex; }
   transition: color 0.25s var(--ease);
 }
 .adhd-chips button.is-on { color: var(--text); }
-.adhd-chips.is-sm button { min-height: 36px; font-size: 13.5px; }
+.adhd-chips.is-sm button { min-height: 36px; font-size: calc(13.5px * var(--adhd-text, 1)); }
 /* Stacked: one choice per line, for choices too long to share a row. */
 .adhd-chips.is-stack { grid-auto-flow: row; grid-auto-rows: minmax(46px, auto); grid-auto-columns: auto; border-radius: 16px; }
 .adhd-chips.is-stack .adhd-chips-thumb { right: 3px; bottom: auto; width: auto; height: calc((100% - 6px) / var(--n)); border-radius: 13px; transform: translate3d(0, calc(100% * var(--i)), 0); }
-.adhd-chips.is-stack button { padding: 0 16px; border-radius: 13px; text-align: left; font-size: 15px; }
+.adhd-chips.is-stack button { padding: 0 16px; border-radius: 13px; text-align: left; font-size: calc(15px * var(--adhd-text, 1)); }
 
 /* Several choices that wrap, like money categories. */
 .adhd-pills { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -313,7 +320,7 @@ html[data-adhd="on"] button.adhd-link.adhd-link-center { display: flex; }
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--adhd-text, 1));
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease), transform var(--speed-fast) var(--ease);
@@ -372,7 +379,7 @@ html[data-adhd="on"] .adhd-switch:not(.is-on) { background: var(--adhd-surface-3
   transition: border-color 0.2s var(--ease);
 }
 .adhd-add:focus-within { border-color: var(--text-muted); }
-.adhd-add > svg { flex-shrink: 0; font-size: 18px; }
+.adhd-add > svg { flex-shrink: 0; font-size: calc(18px * var(--adhd-text, 1)); }
 html[data-adhd="on"] .adhd-add input {
   flex: 1;
   min-width: 0;
@@ -384,11 +391,11 @@ html[data-adhd="on"] .adhd-add input {
   box-shadow: none;
   color: var(--text);
   font: inherit;
-  font-size: 16px;
+  font-size: calc(16px * var(--adhd-text, 1));
   outline: none;
 }
 html[data-adhd="on"] .adhd-add input::placeholder { color: var(--text-subtle); }
-.adhd-add-btn { flex-shrink: 0; height: 42px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--text); color: var(--bg); font: inherit; font-size: 14px; font-weight: 750; cursor: pointer; transition: opacity 0.2s var(--ease), transform var(--speed-fast) var(--ease); }
+.adhd-add-btn { flex-shrink: 0; height: 42px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--text); color: var(--bg); font: inherit; font-size: calc(14px * var(--adhd-text, 1)); font-weight: 750; cursor: pointer; transition: opacity 0.2s var(--ease), transform var(--speed-fast) var(--ease); }
 .adhd-add-btn:active:not(:disabled) { transform: scale(0.95); }
 /* Nothing to add yet: the button keeps its place but waits out of sight. */
 .adhd-add-btn:disabled { opacity: 0; pointer-events: none; }
@@ -405,7 +412,7 @@ html[data-adhd="on"] .adhd-quick-input {
   background: var(--adhd-field);
   color: var(--text);
   font: inherit;
-  font-size: 17px;
+  font-size: calc(17px * var(--adhd-text, 1));
   font-weight: 600;
   outline: none;
   box-shadow: none;
@@ -417,8 +424,8 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
 /* ---- Folds -------------------------------------------------------------- */
 .adhd-fold { border-top: 1px solid var(--adhd-line); }
 .adhd-fold-head { width: 100%; min-height: 54px; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
-.adhd-fold-count { min-width: 22px; height: 22px; display: grid; place-items: center; padding: 0 7px; border-radius: 999px; background: var(--adhd-surface-2); font-size: 12px; font-weight: 750; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-.adhd-fold-chevron { margin-left: auto; font-size: 18px; color: var(--text-subtle); transition: transform 0.3s var(--adhd-glide); }
+.adhd-fold-count { min-width: 22px; height: 22px; display: grid; place-items: center; padding: 0 7px; border-radius: 999px; background: var(--adhd-surface-2); font-size: calc(12px * var(--adhd-text, 1)); font-weight: 750; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.adhd-fold-chevron { margin-left: auto; font-size: calc(18px * var(--adhd-text, 1)); color: var(--text-subtle); transition: transform 0.3s var(--adhd-glide); }
 .adhd-fold.is-open .adhd-fold-chevron { transform: rotate(180deg); }
 .adhd-fold-body { padding-bottom: 12px; animation: adhd-rise 0.4s var(--adhd-glide) both; }
 
@@ -450,13 +457,13 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
   border-radius: 16px;
   background: var(--adhd-sheet-solid);
   box-shadow: var(--adhd-float);
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--adhd-text, 1));
   font-weight: 650;
   transform: translateX(-50%);
   animation: adhd-toast-in 0.4s var(--adhd-glide) both;
 }
 .adhd-toast:not(:has(button)) { padding-right: 18px; }
-.adhd-toast button { flex-shrink: 0; height: 36px; padding: 0 14px; border: 0; border-radius: 11px; background: var(--text); color: var(--bg); font: inherit; font-size: 14px; font-weight: 750; cursor: pointer; }
+.adhd-toast button { flex-shrink: 0; height: 36px; padding: 0 14px; border: 0; border-radius: 11px; background: var(--text); color: var(--bg); font: inherit; font-size: calc(14px * var(--adhd-text, 1)); font-weight: 750; cursor: pointer; }
 @keyframes adhd-toast-in { from { opacity: 0; transform: translate(-50%, 12px); } }
 
 /* =========================================================================
@@ -466,7 +473,7 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
 /* One column on a phone (the habits strip last), two on a wide screen. */
 .adhd-home-side,
 .adhd-home-main { display: contents; }
-.adhd-home-side > :is(.adhd-coming, .adhd-strip) { order: 1; }
+.adhd-home-side > :is(.adhd-coming, .adhd-strip, .adhd-level) { order: 1; }
 
 /* Days in a row, said quietly beside the date when it's worth saying. */
 .adhd-run { color: var(--text); }
@@ -484,9 +491,9 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
 .adhd-status.is-single { grid-template-columns: minmax(0, 1fr); }
 .adhd-tile { min-width: 0; display: flex; align-items: center; gap: 12px; }
 .adhd-tile-ring + .adhd-tile-day { padding-left: 18px; border-left: 1px solid var(--adhd-line); }
-.adhd-tile-text strong { display: block; font-size: 22px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
-.adhd-tile-text strong small { font-size: 14px; font-weight: 650; color: var(--text-subtle); letter-spacing: 0; }
-.adhd-tile-text > small { display: block; margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.adhd-tile-text strong { display: block; font-size: calc(22px * var(--adhd-text, 1)); font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.adhd-tile-text strong small { font-size: calc(14px * var(--adhd-text, 1)); font-weight: 650; color: var(--text-subtle); letter-spacing: 0; }
+.adhd-tile-text > small { display: block; margin-top: 4px; font-size: calc(12px * var(--adhd-text, 1)); font-weight: 600; color: var(--text-muted); white-space: nowrap; }
 
 .adhd-ring { width: 42px; height: 42px; flex-shrink: 0; overflow: visible; }
 .adhd-ring circle { fill: none; stroke: var(--adhd-line-strong); stroke-width: 4.5; stroke-linecap: round; transition: stroke 0.5s var(--ease); }
@@ -499,7 +506,15 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
 .adhd-day-fill { position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--day) * 100%); border-radius: inherit; background: var(--text-subtle); }
 /* The dot for now, with a ring of page colour so the track seems to pass behind it. */
 .adhd-day-dot { position: absolute; top: 50%; left: calc(var(--day) * 100%); width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--text); box-shadow: 0 0 0 3px var(--bg); }
-.adhd-day-label { font-size: 12.5px; font-weight: 650; color: var(--text-muted); }
+.adhd-day-label { font-size: calc(12.5px * var(--adhd-text, 1)); font-weight: 650; color: var(--text-muted); }
+
+/* ---- Level: the day track's look, for points instead of hours ----------- */
+.adhd-level { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.adhd-level-n { font-size: calc(12.5px * var(--adhd-text, 1)); font-weight: 750; color: var(--text); white-space: nowrap; }
+.adhd-level small { font-size: calc(12.5px * var(--adhd-text, 1)); font-weight: 650; color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adhd-level-track { position: relative; height: 2px; overflow: hidden; border-radius: 999px; background: var(--adhd-line-strong); }
+.adhd-level-track > span { position: absolute; inset: 0; border-radius: inherit; background: var(--text); transform: scaleX(var(--p, 0)); transform-origin: left center; transition: transform 0.9s var(--adhd-glide); }
+.adhd-level-track.is-big { height: 6px; }
 
 /* ---- Now ---------------------------------------------------------------- */
 .adhd-now { overflow: hidden; }
@@ -507,12 +522,12 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
 .adhd-pulse { position: relative; width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: var(--text); }
 .adhd-pulse::after { content: ""; position: absolute; inset: -5px; border: 1px solid var(--text); border-radius: 50%; opacity: 0; animation: adhd-ping 2.6s var(--adhd-glide) 4; }
 @keyframes adhd-ping { 0% { transform: scale(0.4); opacity: 0.7; } 100% { transform: scale(1.8); opacity: 0; } }
-.adhd-chip { padding: 5px 10px; border: 1px solid var(--adhd-line-strong); border-radius: 999px; color: var(--text-muted); font-size: 12px; font-weight: 650; white-space: nowrap; }
+.adhd-chip { padding: 5px 10px; border: 1px solid var(--adhd-line-strong); border-radius: 999px; color: var(--text-muted); font-size: calc(12px * var(--adhd-text, 1)); font-weight: 650; white-space: nowrap; }
 
 .adhd-now-body { display: flex; align-items: flex-start; gap: 12px; margin-top: 16px; }
 .adhd-now-title {
   min-width: 0;
-  font-size: clamp(26px, 7.2vw, 32px);
+  font-size: calc(clamp(26px, 7.2vw, 32px) * var(--adhd-text, 1));
   font-weight: 800;
   line-height: 1.12;
   letter-spacing: -0.032em;
@@ -544,8 +559,8 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
 .adhd-step-rail span { flex: 1; max-width: 40px; height: 3px; border-radius: 999px; background: var(--adhd-line-strong); }
 .adhd-step-rail .is-done { background: var(--text); }
 .adhd-step-rail .is-now { background: var(--text-subtle); animation: adhd-breathe 2.8s ease-in-out 4; }
-.adhd-step-count { font-size: 11.5px; font-weight: 750; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-subtle); }
-.adhd-step-title { margin-top: 6px; font-size: 17px; font-weight: 650; line-height: 1.35; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.adhd-step-count { font-size: calc(11.5px * var(--adhd-text, 1)); font-weight: 750; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-subtle); }
+.adhd-step-title { margin-top: 6px; font-size: calc(17px * var(--adhd-text, 1)); font-weight: 650; line-height: 1.35; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .adhd-step-done {
   margin-top: 12px;
   display: inline-flex;
@@ -558,13 +573,13 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--adhd-text, 1));
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s var(--ease), transform var(--speed-fast) var(--ease);
 }
 .adhd-step-done:active { transform: scale(0.97); }
-.adhd-step-note { margin-top: 16px; color: var(--text-muted); font-size: 14.5px; }
+.adhd-step-note { margin-top: 16px; color: var(--text-muted); font-size: calc(14.5px * var(--adhd-text, 1)); }
 
 .adhd-now-actions { margin-top: 20px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 
@@ -586,11 +601,11 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
   transition: transform 0.2s var(--adhd-glide), opacity 0.2s var(--ease);
 }
 .adhd-start:active { transform: scale(0.975); }
-.adhd-start-icon { position: relative; width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 11px; background: var(--bg); color: var(--text); font-size: 16px; }
+.adhd-start-icon { position: relative; width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 11px; background: var(--bg); color: var(--text); font-size: calc(16px * var(--adhd-text, 1)); }
 .adhd-start-icon svg { margin-left: 2px; }
 .adhd-start-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.adhd-start-text strong { overflow: hidden; font-size: 15.5px; font-weight: 750; letter-spacing: -0.01em; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.adhd-start-text small { overflow: hidden; font-size: 12px; font-weight: 600; opacity: 0.6; text-overflow: ellipsis; white-space: nowrap; }
+.adhd-start-text strong { overflow: hidden; font-size: calc(15.5px * var(--adhd-text, 1)); font-weight: 750; letter-spacing: -0.01em; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adhd-start-text small { overflow: hidden; font-size: calc(12px * var(--adhd-text, 1)); font-weight: 600; opacity: 0.6; text-overflow: ellipsis; white-space: nowrap; }
 .adhd-start.is-live .adhd-start-icon::after { content: ""; position: absolute; inset: -4px; border: 2px solid var(--bg); border-radius: 14px; opacity: 0; animation: adhd-ping 2.4s var(--adhd-glide) 4; }
 .adhd-start-sheet { width: 100%; margin-top: 20px; }
 
@@ -598,6 +613,13 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
    the words turns with it. A drag that becomes a scroll lets go of the
    hold, so scrolling past the button can never finish a task by accident. */
 .adhd-hold-wrap { position: relative; display: grid; }
+/* The points a finish earns, lifting off the button and fading. */
+.adhd-plus { position: absolute; z-index: 4; left: 50%; top: 0; translate: -50% -100%; padding: 4px 10px; border-radius: var(--r-pill); background: var(--text); color: var(--bg); font-size: calc(13px * var(--adhd-text, 1)); font-weight: 800; font-variant-numeric: tabular-nums; pointer-events: none; animation: adhd-plus 0.76s var(--adhd-glide) both; }
+@keyframes adhd-plus {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.9); }
+  30% { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translate3d(0, -14px, 0); }
+}
 .adhd-hold {
   --hold: 0;
   position: relative;
@@ -612,7 +634,7 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 15px;
+  font-size: calc(15px * var(--adhd-text, 1));
   font-weight: 700;
   cursor: pointer;
   user-select: none;
@@ -651,7 +673,7 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--adhd-text, 1));
   font-weight: 650;
   cursor: pointer;
   transition: color 0.2s var(--ease), background 0.2s var(--ease);
@@ -672,7 +694,7 @@ html[data-adhd="on"] .adhd-quick-input:focus { border-color: var(--text-muted); 
   background: none;
   color: var(--text-muted);
   font: inherit;
-  font-size: 15.5px;
+  font-size: calc(15.5px * var(--adhd-text, 1));
   font-weight: 550;
   text-align: left;
 }
@@ -680,13 +702,13 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
 .adhd-later-title { min-width: 0; overflow-wrap: anywhere; }
 .adhd-later-dot { width: 22px; height: 22px; flex-shrink: 0; display: grid; place-items: center; }
 .adhd-later-dot::before { content: ""; width: 9px; height: 9px; border: 1.5px solid var(--text-subtle); border-radius: 50%; }
-.adhd-later-tick { width: 22px; height: 22px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 12px; }
+.adhd-later-tick { width: 22px; height: 22px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: var(--text); color: var(--bg); font-size: calc(12px * var(--adhd-text, 1)); }
 .adhd-later-item.is-done { color: var(--text-subtle); }
 .adhd-later-item.is-done .adhd-later-title { text-decoration: line-through; text-decoration-color: var(--adhd-line-strong); }
-.adhd-later-go { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--text-subtle); }
-@media (hover: none) { .adhd-later-go { font-size: 0; gap: 0; } .adhd-later-go svg { font-size: 16px; } }
+.adhd-later-go { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-size: calc(12.5px * var(--adhd-text, 1)); font-weight: 700; color: var(--text-subtle); }
+@media (hover: none) { .adhd-later-go { font-size: 0; gap: 0; } .adhd-later-go svg { font-size: calc(16px * var(--adhd-text, 1)); } }
 
-/* ---- Picking today's three --------------------------------------------- */
+/* ---- Picking today's few ----------------------------------------------- */
 .adhd-picker-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .adhd-tray { list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .adhd-slot {
@@ -703,12 +725,12 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
   font: inherit;
   text-align: left;
 }
-.adhd-slot-n { width: 28px; height: 28px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--adhd-line-strong); border-radius: 50%; font-size: 13px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; }
-.adhd-slot-empty { font-size: 14px; }
+.adhd-slot-n { width: 28px; height: 28px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--adhd-line-strong); border-radius: 50%; font-size: calc(13px * var(--adhd-text, 1)); font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; }
+.adhd-slot-empty { font-size: calc(14px * var(--adhd-text, 1)); }
 .adhd-slot.is-filled { border-style: solid; border-color: transparent; background: var(--adhd-surface-2); color: var(--text); cursor: pointer; animation: adhd-slot-in 0.45s var(--ease-spring); }
 .adhd-slot.is-filled .adhd-slot-n { border-color: transparent; background: var(--text); color: var(--bg); }
 @keyframes adhd-slot-in { from { opacity: 0; transform: scale(0.95); } }
-.adhd-slot-title { flex: 1; min-width: 0; overflow: hidden; font-size: 15px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.adhd-slot-title { flex: 1; min-width: 0; overflow: hidden; font-size: calc(15px * var(--adhd-text, 1)); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .adhd-slot-x { flex-shrink: 0; opacity: 0.45; }
 
 .adhd-list-label { display: flex; margin: 24px 0 10px; }
@@ -742,7 +764,7 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
   place-items: center;
   border: 1.5px solid var(--text-subtle);
   border-radius: 50%;
-  font-size: 12px;
+  font-size: calc(12px * var(--adhd-text, 1));
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -750,8 +772,8 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
 }
 .adhd-option.is-selected .adhd-option-mark { border-color: var(--text); background: var(--text); color: var(--bg); animation: adhd-pop 0.4s var(--ease-spring); }
 .adhd-option-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.adhd-option-title { font-size: 15.5px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
-.adhd-option-meta { font-size: 12.5px; color: var(--text-subtle); }
+.adhd-option-title { font-size: calc(15.5px * var(--adhd-text, 1)); font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.adhd-option-meta { font-size: calc(12.5px * var(--adhd-text, 1)); color: var(--text-subtle); }
 .adhd-picker .adhd-empty { margin-top: 18px; }
 .adhd-picker .adhd-add { margin-top: 16px; }
 .adhd-picker-actions { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; }
@@ -763,25 +785,25 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
 /* A ring rolls out from the tick, once. */
 .adhd-celebrate-mark::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 1px solid var(--adhd-line-strong); border-radius: 50%; animation: adhd-ring 1.6s 0.4s var(--adhd-glide) both; }
 @keyframes adhd-ring { from { transform: scale(0.7); opacity: 1; } to { transform: scale(3.6); opacity: 0; } }
-.adhd-serif { font-family: var(--adhd-serif); font-size: clamp(38px, 10.4vw, 50px); font-weight: 400; line-height: 1; letter-spacing: -0.02em; text-wrap: balance; }
+.adhd-serif { font-family: var(--adhd-serif); font-size: calc(clamp(38px, 10.4vw, 50px) * var(--adhd-text, 1)); font-weight: 400; line-height: 1; letter-spacing: -0.02em; text-wrap: balance; }
 .adhd-serif em { font-style: italic; }
-.adhd-celebrate p { max-width: 32ch; font-size: 15.5px; line-height: 1.5; color: var(--text-muted); text-wrap: pretty; }
-.adhd-celebrate .adhd-celebrate-stat { font-size: 11.5px; font-weight: 750; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-subtle); }
+.adhd-celebrate p { max-width: 32ch; font-size: calc(15.5px * var(--adhd-text, 1)); line-height: 1.5; color: var(--text-muted); text-wrap: pretty; }
+.adhd-celebrate .adhd-celebrate-stat { font-size: calc(11.5px * var(--adhd-text, 1)); font-weight: 750; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-subtle); }
 .adhd-celebrate .adhd-picker-actions { width: 100%; max-width: 420px; margin-top: 14px; }
 
 /* ---- Coming up: the next class today, the nearest exam ----------------- */
 .adhd-coming ul { list-style: none; margin-top: 6px; }
 .adhd-coming li { display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 0; }
 .adhd-coming li + li { border-top: 1px solid var(--adhd-line); }
-.adhd-coming-icon { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; background: var(--adhd-surface-2); color: var(--text-muted); font-size: 16px; }
+.adhd-coming-icon { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; background: var(--adhd-surface-2); color: var(--text-muted); font-size: calc(16px * var(--adhd-text, 1)); }
 .adhd-coming-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.adhd-coming-text strong { overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.adhd-coming-text small { font-size: 13px; color: var(--text-subtle); font-variant-numeric: tabular-nums; }
+.adhd-coming-text strong { overflow: hidden; font-size: calc(15.5px * var(--adhd-text, 1)); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.adhd-coming-text small { font-size: calc(13px * var(--adhd-text, 1)); color: var(--text-subtle); font-variant-numeric: tabular-nums; }
 
 /* ---- Little things today ------------------------------------------------ */
 .adhd-strip-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .adhd-strip ul { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
-.adhd-strip li { min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 6px 15px 6px 9px; border: 1px solid var(--adhd-line); border-radius: 999px; background: var(--adhd-surface); font-size: 14px; font-weight: 650; transition: color 0.25s var(--ease), border-color 0.25s var(--ease); }
+.adhd-strip li { min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 6px 15px 6px 9px; border: 1px solid var(--adhd-line); border-radius: 999px; background: var(--adhd-surface); font-size: calc(14px * var(--adhd-text, 1)); font-weight: 650; transition: color 0.25s var(--ease), border-color 0.25s var(--ease); }
 .adhd-strip li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .adhd-strip li.is-done { color: var(--text-subtle); }
 
@@ -811,8 +833,8 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
 .adhd-row-item + .adhd-row-item::before { content: ""; position: absolute; top: 0; left: 52px; right: 10px; height: 1px; background: var(--adhd-line); pointer-events: none; }
 .adhd-row-item .adhd-row { padding: 0 10px; }
 .adhd-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 15px 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
-.adhd-row-title { font-size: 16px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; transition: color 0.3s var(--ease); }
-.adhd-row-meta { font-size: 13px; color: var(--text-subtle); }
+.adhd-row-title { font-size: calc(16px * var(--adhd-text, 1)); font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; transition: color 0.3s var(--ease); }
+.adhd-row-meta { font-size: calc(13px * var(--adhd-text, 1)); color: var(--text-subtle); }
 .adhd-row.is-leaving { opacity: 0; transform: translateX(16px); transition-delay: 0.2s; }
 .adhd-row.is-leaving .adhd-row-title,
 .adhd-row.is-done .adhd-row-title { color: var(--text-subtle); text-decoration: line-through; text-decoration-color: var(--adhd-line-strong); }
@@ -821,7 +843,7 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
 
 /* A clean slate for a pile of old tasks. */
 .adhd-fresh { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 12px; padding: 16px 18px; border-radius: 16px; background: var(--adhd-surface-2); }
-.adhd-fresh p { font-size: 14px; line-height: 1.5; color: var(--text-muted); }
+.adhd-fresh p { font-size: calc(14px * var(--adhd-text, 1)); line-height: 1.5; color: var(--text-muted); }
 
 /* A task's sheet. */
 .adhd-task-sheet { display: flex; flex-direction: column; }
@@ -829,15 +851,15 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
 /* The name, then the pencil right after it, both clear of the close button. */
 .adhd-sheet-rename { align-self: flex-start; max-width: 100%; display: flex; align-items: flex-start; gap: 10px; padding: 0 44px 0 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: text; }
 .adhd-sheet-rename .adhd-sheet-title { padding-right: 0; }
-.adhd-sheet-rename svg { flex-shrink: 0; margin-top: 7px; font-size: 15px; color: var(--text-subtle); }
+.adhd-sheet-rename svg { flex-shrink: 0; margin-top: 7px; font-size: calc(15px * var(--adhd-text, 1)); color: var(--text-subtle); }
 .adhd-rename { padding-right: 44px; }
 /* Stuck? Three small first moves, one tap to make one a step. */
 .adhd-stuck { display: flex; flex-direction: column; gap: 6px; }
-.adhd-stuck button { min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border: 1px dashed var(--adhd-line-strong); border-radius: 12px; background: transparent; color: var(--text-muted); font: inherit; font-size: 14.5px; font-weight: 650; text-align: left; cursor: pointer; transition: color 0.2s var(--ease), border-color 0.2s var(--ease), transform var(--speed-fast) var(--ease); }
-.adhd-stuck button svg { flex-shrink: 0; font-size: 15px; }
+.adhd-stuck button { min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border: 1px dashed var(--adhd-line-strong); border-radius: 12px; background: transparent; color: var(--text-muted); font: inherit; font-size: calc(14.5px * var(--adhd-text, 1)); font-weight: 650; text-align: left; cursor: pointer; transition: color 0.2s var(--ease), border-color 0.2s var(--ease), transform var(--speed-fast) var(--ease); }
+.adhd-stuck button svg { flex-shrink: 0; font-size: calc(15px * var(--adhd-text, 1)); }
 .adhd-stuck button:active { transform: scale(0.98); }
 .adhd-steps { list-style: none; display: flex; flex-direction: column; }
-.adhd-steps li { display: flex; align-items: center; gap: 12px; min-height: 48px; font-size: 15.5px; font-weight: 600; }
+.adhd-steps li { display: flex; align-items: center; gap: 12px; min-height: 48px; font-size: calc(15.5px * var(--adhd-text, 1)); font-weight: 600; }
 .adhd-steps li + li { border-top: 1px solid var(--adhd-line); }
 .adhd-steps li span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .adhd-steps li.is-done span { color: var(--text-subtle); text-decoration: line-through; }
@@ -846,9 +868,9 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
 .adhd-habits { list-style: none; display: flex; flex-direction: column; }
 .adhd-habit { display: flex; align-items: center; gap: 16px; padding: 14px 0; }
 .adhd-habit-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
-.adhd-habit-title { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.adhd-habit-title { font-size: calc(16.5px * var(--adhd-text, 1)); font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .adhd-habit.is-done .adhd-habit-title { color: var(--text-muted); }
-.adhd-habit-meta { font-size: 13px; color: var(--text-subtle); }
+.adhd-habit-meta { font-size: calc(13px * var(--adhd-text, 1)); color: var(--text-subtle); }
 .adhd-dots { display: flex; gap: 6px; margin-top: 5px; }
 .adhd-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--adhd-line-strong); }
 .adhd-dots i.is-on { background: var(--text); }
@@ -890,8 +912,8 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
 .adhd-dial line.is-lit { stroke: var(--text); }
 .adhd-focus-go-inner { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .adhd-focus-go-inner strong { font-size: clamp(46px, 13vw, 58px); font-weight: 500; line-height: 1; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
-.adhd-focus-go-inner small { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; background: var(--text); color: var(--bg); font-size: 11.5px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; }
-.adhd-focus-go-inner small svg { font-size: 11px; }
+.adhd-focus-go-inner small { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; background: var(--text); color: var(--bg); font-size: calc(11.5px * var(--adhd-text, 1)); font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; }
+.adhd-focus-go-inner small svg { font-size: calc(11px * var(--adhd-text, 1)); }
 /* On a short phone the face shrinks a little, so it clears the dock. */
 @media (max-width: 520px) and (max-height: 860px) {
   .adhd-focus-go { width: min(54vw, 204px); margin: 20px auto 16px; }
@@ -906,8 +928,8 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
 /* A row with a setting: what it is on the left, the control on the right. */
 .adhd-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--adhd-line); }
 .adhd-toggle-row > span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.adhd-toggle-row strong { font-size: 15.5px; font-weight: 700; }
-.adhd-toggle-row small { font-size: 13px; line-height: 1.4; color: var(--text-subtle); }
+.adhd-toggle-row strong { font-size: calc(15.5px * var(--adhd-text, 1)); font-weight: 700; }
+.adhd-toggle-row small { font-size: calc(13px * var(--adhd-text, 1)); line-height: 1.4; color: var(--text-subtle); }
 .adhd-toggle-row .adhd-chips { flex-shrink: 0; min-width: 176px; }
 .adhd-focus-card .adhd-toggle-row { margin-top: 4px; }
 
@@ -916,37 +938,37 @@ button.adhd-later-item { cursor: pointer; transition: color 0.2s var(--ease); }
 .adhd-link-card:active { transform: scale(0.985); }
 .adhd-link-card > svg:first-child { width: 40px; height: 40px; flex-shrink: 0; padding: 10px; border-radius: 12px; background: var(--adhd-surface-2); color: var(--text-muted); }
 .adhd-link-card span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.adhd-link-card strong { font-size: 15.5px; font-weight: 700; }
-.adhd-link-card small { font-size: 13px; color: var(--text-subtle); }
-.adhd-link-card-go { margin-left: auto; flex-shrink: 0; font-size: 18px; color: var(--text-subtle); }
+.adhd-link-card strong { font-size: calc(15.5px * var(--adhd-text, 1)); font-weight: 700; }
+.adhd-link-card small { font-size: calc(13px * var(--adhd-text, 1)); color: var(--text-subtle); }
+.adhd-link-card-go { margin-left: auto; flex-shrink: 0; font-size: calc(18px * var(--adhd-text, 1)); color: var(--text-subtle); }
 
 /* =========================================================================
    MONEY, FRIENDS, YOU
    ========================================================================= */
 .adhd-money-total { display: flex; flex-direction: column; gap: 6px; }
 .adhd-money-total strong { font-size: clamp(42px, 12.4vw, 56px); font-weight: 500; line-height: 1; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.adhd-money-total small { font-size: 13px; font-weight: 650; color: var(--text-subtle); }
+.adhd-money-total small { font-size: calc(13px * var(--adhd-text, 1)); font-weight: 650; color: var(--text-subtle); }
 .adhd-money-add { display: flex; flex-direction: column; gap: 14px; }
 .adhd-money-amount { display: flex; align-items: center; gap: 8px; padding: 0 18px; border: 1px solid var(--adhd-line-strong); border-radius: 16px; background: var(--adhd-field); transition: border-color 0.2s var(--ease); }
 .adhd-money-amount:focus-within { border-color: var(--text-muted); }
-.adhd-money-amount span { font-size: 26px; font-weight: 500; color: var(--text-subtle); }
-html[data-adhd="on"] .adhd-money-amount input { flex: 1; min-width: 0; height: 68px; padding: 0; border: 0; background: transparent; box-shadow: none; color: var(--text); font: inherit; font-size: 34px; font-weight: 500; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; outline: none; }
+.adhd-money-amount span { font-size: calc(26px * var(--adhd-text, 1)); font-weight: 500; color: var(--text-subtle); }
+html[data-adhd="on"] .adhd-money-amount input { flex: 1; min-width: 0; height: 68px; padding: 0; border: 0; background: transparent; box-shadow: none; color: var(--text); font: inherit; font-size: calc(34px * var(--adhd-text, 1)); font-weight: 500; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; outline: none; }
 html[data-adhd="on"] .adhd-money-amount input::placeholder { color: var(--text-subtle); }
 .adhd-money-list { list-style: none; display: flex; flex-direction: column; }
 .adhd-money-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 58px; padding: 10px 0; }
 .adhd-money-list span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.adhd-money-list strong { overflow: hidden; font-size: 15px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.adhd-money-list small { font-size: 12.5px; color: var(--text-subtle); }
-.adhd-money-list b { flex-shrink: 0; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.adhd-money-list strong { overflow: hidden; font-size: calc(15px * var(--adhd-text, 1)); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.adhd-money-list small { font-size: calc(12.5px * var(--adhd-text, 1)); color: var(--text-subtle); }
+.adhd-money-list b { flex-shrink: 0; font-size: calc(15px * var(--adhd-text, 1)); font-weight: 650; font-variant-numeric: tabular-nums; }
 
 .adhd-people { list-style: none; display: flex; flex-direction: column; }
 .adhd-person { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 0; }
 .adhd-person.is-request { flex-wrap: wrap; row-gap: 10px; }
-.adhd-avatar { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--adhd-line); border-radius: 50%; background: var(--adhd-surface-2); object-fit: cover; font-size: 17px; font-weight: 750; color: var(--text-muted); }
-.adhd-avatar.is-big { width: 64px; height: 64px; font-size: 24px; }
+.adhd-avatar { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--adhd-line); border-radius: 50%; background: var(--adhd-surface-2); object-fit: cover; font-size: calc(17px * var(--adhd-text, 1)); font-weight: 750; color: var(--text-muted); }
+.adhd-avatar.is-big { width: 64px; height: 64px; font-size: calc(24px * var(--adhd-text, 1)); }
 .adhd-person-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.adhd-person-name strong { overflow: hidden; font-size: 15.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.adhd-person-name small { font-size: 13px; color: var(--text-subtle); }
+.adhd-person-name strong { overflow: hidden; font-size: calc(15.5px * var(--adhd-text, 1)); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.adhd-person-name small { font-size: calc(13px * var(--adhd-text, 1)); color: var(--text-subtle); }
 .adhd-person-actions { display: flex; gap: 8px; }
 /* A request keeps room for the name; the buttons drop below it if they must. */
 .adhd-person.is-request .adhd-person-name { flex: 1 1 130px; }
@@ -955,10 +977,23 @@ html[data-adhd="on"] .adhd-money-amount input::placeholder { color: var(--text-s
 
 .adhd-you { display: flex; align-items: center; gap: 16px; }
 .adhd-you span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.adhd-you strong { overflow: hidden; font-size: 19px; font-weight: 750; letter-spacing: -0.02em; text-overflow: ellipsis; white-space: nowrap; }
-.adhd-you small { font-size: 13px; color: var(--text-subtle); }
+.adhd-you strong { overflow: hidden; font-size: calc(19px * var(--adhd-text, 1)); font-weight: 750; letter-spacing: -0.02em; text-overflow: ellipsis; white-space: nowrap; }
+.adhd-you small { font-size: calc(13px * var(--adhd-text, 1)); color: var(--text-subtle); }
 .adhd-settings { display: flex; flex-direction: column; gap: 16px; }
-.adhd-settings .adhd-toggle-row:first-child { padding-top: 0; border-top: 0; }
+.adhd-settings .adhd-toggle-row:first-child,
+.adhd-settings > .adhd-eyebrow + .adhd-toggle-row { padding-top: 0; border-top: 0; }
+/* A setting whose choices are words: they get the whole width, under it. */
+.adhd-toggle-row.is-wide { flex-wrap: wrap; }
+.adhd-toggle-row.is-wide .adhd-chips { width: 100%; min-width: 0; }
+
+.adhd-progress { display: flex; flex-direction: column; gap: 10px; }
+.adhd-progress-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.adhd-progress-today { font-size: calc(13px * var(--adhd-text, 1)); font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.adhd-progress-level { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; }
+.adhd-progress-level strong { font-size: calc(24px * var(--adhd-text, 1)); font-weight: 750; letter-spacing: -0.02em; }
+.adhd-progress-level small { font-size: calc(13px * var(--adhd-text, 1)); font-weight: 650; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.adhd-progress-next { margin: 0; font-size: calc(14px * var(--adhd-text, 1)); font-weight: 650; color: var(--text); }
+.adhd-progress-how { margin: 0; font-size: calc(12.5px * var(--adhd-text, 1)); line-height: 1.45; color: var(--text-subtle); }
 
 /* =========================================================================
    THE DOCK, SHEETS, ADDING FROM ANYWHERE
@@ -1001,14 +1036,14 @@ html[data-adhd="on"] .adhd-money-amount input::placeholder { color: var(--text-s
   background: transparent;
   color: var(--text-subtle);
   font: inherit;
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--adhd-text, 1));
   font-weight: 700;
   letter-spacing: 0.01em;
   text-decoration: none;
   cursor: pointer;
   transition: color 0.2s var(--ease);
 }
-.adhd-dock svg { font-size: 21px; }
+.adhd-dock svg { font-size: calc(21px * var(--adhd-text, 1)); }
 .adhd-dock a.active,
 .adhd-dock > button.active { color: var(--text); }
 /* One highlight that slides to whichever tab is active, with a little spring. */
@@ -1027,7 +1062,7 @@ html[data-adhd="on"] .adhd-money-amount input::placeholder { color: var(--text-s
   border-radius: 50%;
   background: var(--text);
   color: var(--bg);
-  font-size: 22px;
+  font-size: calc(22px * var(--adhd-text, 1));
   cursor: pointer;
   box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.55);
   transition: transform 0.2s var(--adhd-glide);
@@ -1084,15 +1119,15 @@ html[data-adhd="on"] .adhd-money-amount input::placeholder { color: var(--text-s
   border-radius: 50%;
   background: var(--adhd-surface-2);
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: calc(16px * var(--adhd-text, 1));
   cursor: pointer;
   transition: color 0.2s var(--ease), transform var(--speed-fast) var(--ease);
 }
 .adhd-sheet-close:active { transform: scale(0.92); }
-.adhd-sheet-title { padding-right: 44px; font-size: 24px; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; text-wrap: balance; }
+.adhd-sheet-title { padding-right: 44px; font-size: calc(24px * var(--adhd-text, 1)); font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; text-wrap: balance; }
 .adhd-sheet-title em { font-style: normal; }
 .adhd-sheet-task { overflow-wrap: anywhere; }
-.adhd-sheet-meta { margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--text-muted); }
+.adhd-sheet-meta { margin-top: 6px; font-size: calc(14px * var(--adhd-text, 1)); font-weight: 600; color: var(--text-muted); }
 
 /* More: big tiles, one per place. */
 .adhd-more { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -1113,9 +1148,9 @@ html[data-adhd="on"] .adhd-money-amount input::placeholder { color: var(--text-s
   cursor: pointer;
   transition: border-color 0.2s var(--ease), transform var(--speed-fast) var(--ease);
 }
-.adhd-more-tile svg { margin-bottom: auto; font-size: 21px; color: var(--text-muted); }
-.adhd-more-tile strong { font-size: 16px; font-weight: 750; letter-spacing: -0.015em; }
-.adhd-more-tile small { font-size: 12.5px; color: var(--text-subtle); }
+.adhd-more-tile svg { margin-bottom: auto; font-size: calc(21px * var(--adhd-text, 1)); color: var(--text-muted); }
+.adhd-more-tile strong { font-size: calc(16px * var(--adhd-text, 1)); font-weight: 750; letter-spacing: -0.015em; }
+.adhd-more-tile small { font-size: calc(12.5px * var(--adhd-text, 1)); color: var(--text-subtle); }
 .adhd-more-tile:active { transform: scale(0.97); }
 .adhd-more-tile.is-here { border-color: var(--text-muted); }
 .adhd-more-tile:last-child:nth-child(odd) { grid-column: 1 / -1; min-height: 72px; }
@@ -1123,11 +1158,11 @@ html[data-adhd="on"] .adhd-money-amount input::placeholder { color: var(--text-s
 /* Quick add: the brain dump. */
 .adhd-quick { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
 .adhd-quick-add { width: 100%; }
-.adhd-quick-hint { margin-top: 16px; text-align: center; font-size: 13.5px; color: var(--text-subtle); }
+.adhd-quick-hint { margin-top: 16px; text-align: center; font-size: calc(13.5px * var(--adhd-text, 1)); color: var(--text-subtle); }
 .adhd-quick-added { list-style: none; margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
-.adhd-quick-added li { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; border-radius: 12px; background: var(--adhd-surface-2); font-size: 14.5px; font-weight: 600; animation: adhd-slot-in 0.35s var(--ease-spring); }
+.adhd-quick-added li { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; border-radius: 12px; background: var(--adhd-surface-2); font-size: calc(14.5px * var(--adhd-text, 1)); font-weight: 600; animation: adhd-slot-in 0.35s var(--ease-spring); }
 .adhd-quick-added li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.adhd-quick-added small { font-size: 12px; color: var(--text-subtle); }
+.adhd-quick-added small { font-size: calc(12px * var(--adhd-text, 1)); color: var(--text-subtle); }
 
 /* =========================================================================
    THE FOCUS SCREEN: break ideas, "keep going?" and "done with it?"
@@ -1147,15 +1182,15 @@ html[data-adhd="on"] .adhd-money-amount input::placeholder { color: var(--text-s
   user-select: text;
   animation: adhd-rise 0.5s var(--ease-out) both;
 }
-.focus-idea small { font-size: 11px; font-weight: 750; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-subtle); }
-.focus-idea p { font-size: 16.5px; font-weight: 650; line-height: 1.35; animation: adhd-rise 0.4s var(--ease-out) both; }
-.focus-idea button { margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.focus-idea small { font-size: calc(11px * var(--adhd-text, 1)); font-weight: 750; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-subtle); }
+.focus-idea p { font-size: calc(16.5px * var(--adhd-text, 1)); font-weight: 650; line-height: 1.35; animation: adhd-rise 0.4s var(--ease-out) both; }
+.focus-idea button { margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; border: 0; background: none; color: var(--text-muted); font: inherit; font-size: calc(13px * var(--adhd-text, 1)); font-weight: 650; cursor: pointer; }
 .focus-screen.has-idea .focus-ring { width: min(84vw, calc(100dvh - 450px), 560px); }
 
 /* "Done with it?" — shown where the break idea goes, until it's answered. */
 .focus-taskdone p { display: inline-flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
 .focus-taskdone-actions { display: flex; gap: 8px; margin-top: 8px; }
-.focus-idea .focus-taskdone-actions button { height: 40px; margin: 0; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--r-pill); font-size: 14px; }
+.focus-idea .focus-taskdone-actions button { height: 40px; margin: 0; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--r-pill); font-size: calc(14px * var(--adhd-text, 1)); }
 .focus-idea .focus-taskdone-actions button.is-yes { border-color: transparent; background: var(--text); color: var(--bg); }
 
 /* In the flip clock it's one quiet line under the cards, and the cards
@@ -1170,12 +1205,12 @@ html[data-adhd="on"] .adhd-money-amount input::placeholder { color: var(--text-s
   border-radius: var(--r-pill);
 }
 .focus-b .focus-idea small { display: none; }
-.focus-b .focus-idea p { font-size: 15px; font-weight: 600; }
+.focus-b .focus-idea p { font-size: calc(15px * var(--adhd-text, 1)); font-weight: 600; }
 .focus-b .focus-idea button { margin: 0; flex-shrink: 0; width: 36px; height: 36px; justify-content: center; border-radius: 50%; background: var(--surface-2); font-size: 0; }
-.focus-b .focus-idea button svg { font-size: 15px; }
+.focus-b .focus-idea button svg { font-size: calc(15px * var(--adhd-text, 1)); }
 .focus-b .focus-idea.focus-taskdone { flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 18px; border-radius: 20px; }
 .focus-b .focus-idea.focus-taskdone small { display: block; }
-.focus-b .focus-idea.focus-taskdone button { width: auto; height: 40px; padding: 0 16px; border-radius: var(--r-pill); background: transparent; font-size: 14px; }
+.focus-b .focus-idea.focus-taskdone button { width: auto; height: 40px; padding: 0 16px; border-radius: var(--r-pill); background: transparent; font-size: calc(14px * var(--adhd-text, 1)); }
 .focus-b .focus-idea.focus-taskdone button.is-yes { background: var(--text); color: var(--bg); }
 .focus-screen.has-ask .focus-flip { --cw: min(84vw, calc((100dvh - 430px) / 2.1)); }
 .focus-screen.has-ask .focus-b { gap: 10px; }
@@ -1219,28 +1254,28 @@ html[data-adhd="on"] .adhd-money-amount input::placeholder { color: var(--text-s
   text-align: center;
   animation: adhd-rise 0.5s 0.05s var(--ease-out) both;
 }
-.focus-starter-card small { font-size: 11px; font-weight: 750; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-subtle); }
-.focus-starter-card h2 { font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif; font-size: clamp(34px, 8.5vw, 44px); font-weight: 400; letter-spacing: -0.02em; line-height: 1.02; }
+.focus-starter-card small { font-size: calc(11px * var(--adhd-text, 1)); font-weight: 750; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-subtle); }
+.focus-starter-card h2 { font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif; font-size: calc(clamp(34px, 8.5vw, 44px) * var(--adhd-text, 1)); font-weight: 400; letter-spacing: -0.02em; line-height: 1.02; }
 .focus-starter-card h2 em { font-style: italic; }
-.focus-starter-card p { font-size: 15.5px; line-height: 1.5; color: var(--text-muted); }
-.focus-starter .focus-starter-yes { width: 100%; height: 58px; margin-top: var(--s-2); border-radius: var(--r-pill); font-size: 16px; font-weight: 700; }
+.focus-starter-card p { font-size: calc(15.5px * var(--adhd-text, 1)); line-height: 1.5; color: var(--text-muted); }
+.focus-starter .focus-starter-yes { width: 100%; height: 58px; margin-top: var(--s-2); border-radius: var(--r-pill); font-size: calc(16px * var(--adhd-text, 1)); font-weight: 700; }
 
 /* =========================================================================
    THE FULL APP, WHEN ADHD MODE IS ON OR ABOUT TO BE
    ========================================================================= */
 
 /* The switch on the full profile page. */
-.adhd-beta { margin-left: 6px; padding: 2px 8px; border: 1px solid var(--border-strong); border-radius: var(--r-pill); font-size: 10.5px; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); vertical-align: 2px; }
+.adhd-beta { margin-left: 6px; padding: 2px 8px; border: 1px solid var(--border-strong); border-radius: var(--r-pill); font-size: calc(10.5px * var(--adhd-text, 1)); font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); vertical-align: 2px; }
 .adhd-toggle-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--s-2); margin-top: var(--s-3); }
 .adhd-toggle-list li { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
-.adhd-toggle-list strong { font-size: var(--t-sm); }
-.adhd-toggle-list span { font-size: var(--t-xs); line-height: 1.45; color: var(--text-muted); }
+.adhd-toggle-list strong { font-size: calc(var(--t-sm) * var(--adhd-text, 1)); }
+.adhd-toggle-list span { font-size: calc(var(--t-xs) * var(--adhd-text, 1)); line-height: 1.45; color: var(--text-muted); }
 
 /* The full Tasks page's "Just start". */
 .task-just-start { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-bottom: var(--s-1); }
 
 /* What ADHD mode quietens across the full pages. */
-html[data-adhd="on"] body { font-size: 15px; line-height: 1.6; }
+html[data-adhd="on"] body { font-size: calc(15px * var(--adhd-text, 1)); line-height: 1.6; }
 html[data-adhd="on"] .udo-background,
 html[data-adhd="on"] .adsense-container,
 html[data-adhd="on"] .focus-leaderboard,
@@ -1342,7 +1377,7 @@ html[data-adhd="on"] .habit-sub .state-recovery { color: var(--text-muted); font
   padding: 0 20px;
   border-radius: 16px;
   background: var(--adhd-surface-3);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--adhd-text, 1));
   font-weight: 800;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -1414,8 +1449,8 @@ html[data-adhd="on"] .adhd-chips button:active { transform: scale(0.96); }
   html[data-adhd="on"] { --adhd-inset: 16px; }
   .adhd-card { padding: 18px; border-radius: 22px; }
   .adhd-card.adhd-group { padding: 2px 16px; }
-  .adhd-title { font-size: 30px; }
-  .adhd-hello { font-size: 40px; }
+  .adhd-title { font-size: calc(30px * var(--adhd-text, 1)); }
+  .adhd-hello { font-size: calc(40px * var(--adhd-text, 1)); }
 }
 @media (max-width: 520px) {
   .adhd-home,
@@ -1426,7 +1461,7 @@ html[data-adhd="on"] .adhd-chips button:active { transform: scale(0.96); }
 /* A short phone: Today's greeting gives up a little height, so the Now
    card's buttons sit above the dock without a scroll. */
 @media (max-width: 520px) and (max-height: 800px) {
-  .adhd-hello { margin-top: 12px; font-size: clamp(36px, 10vw, 44px); }
+  .adhd-hello { margin-top: 12px; font-size: calc(clamp(36px, 10vw, 44px) * var(--adhd-text, 1)); }
   .adhd-head .adhd-sub { margin-top: 10px; }
   .adhd-home { gap: 20px; }
 }
@@ -1454,9 +1489,9 @@ html[data-adhd="on"] .adhd-chips button:active { transform: scale(0.96); }
   }
   .adhd-home-side,
   .adhd-home-main { min-width: 0; display: flex; flex-direction: column; gap: 28px; }
-  .adhd-home-side > :is(.adhd-coming, .adhd-strip) { order: 0; }
+  .adhd-home-side > :is(.adhd-coming, .adhd-strip, .adhd-level) { order: 0; }
   .adhd-home-loading > .adhd-skeleton { grid-column: 1 / -1; }
-  .adhd-home .adhd-hello { font-size: clamp(56px, 5vw, 76px); }
+  .adhd-home .adhd-hello { font-size: calc(clamp(56px, 5vw, 76px) * var(--adhd-text, 1)); }
   .adhd-page:has(> .adhd-focus-card) { max-width: 960px; }
   .adhd-focus-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 48px; align-items: start; }
   .adhd-focus-card > * { grid-column: 1; }
@@ -1483,9 +1518,9 @@ html[data-adhd="on"] .adhd-chips button:active { transform: scale(0.96); }
   }
   .adhd-home-side,
   .adhd-home-main { min-width: 0; display: flex; flex-direction: column; gap: 18px; }
-  .adhd-home-side > :is(.adhd-coming, .adhd-strip) { order: 0; }
+  .adhd-home-side > :is(.adhd-coming, .adhd-strip, .adhd-level) { order: 0; }
   .adhd-home-loading > .adhd-skeleton { grid-column: 1 / -1; }
-  .adhd-hello { margin-top: 8px; font-size: 36px; }
+  .adhd-hello { margin-top: 8px; font-size: calc(36px * var(--adhd-text, 1)); }
   .adhd-head .adhd-sub { margin-top: 8px; }
 }
 /* Short screens of any kind: a slimmer dock, the same places in it. */

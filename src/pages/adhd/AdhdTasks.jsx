@@ -5,10 +5,11 @@ import { Confetti } from "../../components/adhd/AdhdBits";
 import { AddBar, AdhdPage, Chips, Fold, FullView, Sheet, Swipe, Tick, Toast } from "../../components/adhd/AdhdUI";
 import { useToast } from "../../components/adhd/useToast";
 import { useWarm } from "../../components/adhd/useWarm";
+import { useAdhd } from "../../hooks/useAdhd";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
 import { createTask, deleteTask, fetchTasks, setSubtasks, setTaskStatus, updateTask } from "../../services/tasks";
-import { TASKS_CHANGED, WHEN, dueFor, firstSteps, gentleDue, groupTasks } from "../../utils/adhd";
+import { POINTS, TASKS_CHANGED, WHEN, dueFor, firstSteps, gentleDue, groupTasks } from "../../utils/adhd";
 import { formatRelativeDay, todayKey } from "../../utils/dateKeys";
 import { isRepeating } from "../../utils/recurrence";
 import { STARTER_MINUTES } from "../../utils/focusTimer";
@@ -32,6 +33,7 @@ const whenOf = (task, today) => {
  */
 function AdhdTasks() {
   const { user } = useAuth();
+  const adhd = useAdhd();
   const focus = useFocus();
   const today = todayKey();
   const [tasks, setTasks] = useWarm(user ? `${user.uid}:tasks` : "");
@@ -104,7 +106,7 @@ function AdhdTasks() {
       next.delete(task.id);
       return next;
     });
-    showToast("Done. Nice.", () => reopen(task));
+    showToast(adhd?.todayParts?.level !== false ? `Done. +${POINTS.task}` : "Done. Nice.", () => reopen(task));
     try {
       await setTaskStatus(user.uid, task, "done");
     } catch {

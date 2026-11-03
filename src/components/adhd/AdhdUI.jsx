@@ -316,7 +316,8 @@ export function Swipe({ onRight, onLeft, rightLabel, leftLabel, disabled = false
 }
 
 /**
- * Two or three choices in a row, one of them picked. Never more than three.
+ * A few choices in a row, one of them picked: two or three words, or up to
+ * five when they're as short as numbers.
  * The picked one sits on a raised piece that slides across to the next pick.
  */
 export function Chips({ options, value, onChange, label, size = "md", stack = false }) {

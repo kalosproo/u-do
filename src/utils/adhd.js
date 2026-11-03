@@ -1,12 +1,29 @@
 /**
- * ADHD mode: one day, three things, one at a time.
+ * ADHD mode: one day, a few things (three unless you choose), one at a time.
  *
  * Today's picks are task ids saved with the day they were picked for, so
  * yesterday's list never carries over by itself. Everything here is plain
  * data in and out; the page and the provider do the saving.
  */
 
-export const MAX_PICKS = 3;
+/** The most a day can hold: what the rules allow. */
+export const MAX_PICKS = 5;
+/** How many a day, unless the person chooses another number in You. */
+export const DEFAULT_PICKS = 3;
+
+/** A saved "things a day" setting, made safe: a whole number from 1 to MAX_PICKS. */
+export const pickLimitOf = (value) => {
+  const limit = Math.round(Number(value));
+  return limit >= 1 && limit <= MAX_PICKS ? limit : DEFAULT_PICKS;
+};
+
+/** Text size in ADHD mode, a feel for each device. */
+export const TEXT_SIZES = ["standard", "large", "larger"];
+export const textSizeOf = (value) => (TEXT_SIZES.includes(value) ? value : "standard");
+
+/** The parts of Today that can be put away. Each shows unless switched off. */
+export const TODAY_PARTS = ["time", "habits", "coming", "run", "level"];
+export const todayPartsOf = (saved) => Object.fromEntries(TODAY_PARTS.map((part) => [part, saved?.[part] !== false]));
 
 const PRIORITY = { high: 0, medium: 1, low: 2 };
 
@@ -28,13 +45,13 @@ export const rankTasks = (tasks, today) =>
     );
   });
 
-/** Fills the free slots with the top-ranked tasks not already picked. */
-export const pickForMe = (tasks, today, picks = []) => {
+/** Fills the free slots, up to `limit`, with the top-ranked tasks not already picked. */
+export const pickForMe = (tasks, today, picks = [], limit = DEFAULT_PICKS) => {
   const kept = cleanPicks(picks);
   const extra = rankTasks(tasks, today)
     .map((task) => task.id)
     .filter((id) => !kept.includes(id));
-  return [...kept, ...extra].slice(0, MAX_PICKS);
+  return [...kept, ...extra.slice(0, Math.max(0, limit - kept.length))];
 };
 
 export const cleanPicks = (picks) =>
@@ -69,10 +86,10 @@ export const todayPlan = (tasks, picks) => {
   };
 };
 
-export const togglePick = (picks, id) => {
+export const togglePick = (picks, id, limit = DEFAULT_PICKS) => {
   const clean = cleanPicks(picks);
   if (clean.includes(id)) return clean.filter((item) => item !== id);
-  return clean.length >= MAX_PICKS ? clean : [...clean, id];
+  return clean.length >= limit ? clean : [...clean, id];
 };
 
 /** Sends the current task to the back, so the next one comes up. */
@@ -254,4 +271,60 @@ export const dayRun = ({ tasks = [], habits = [], focusLog = {} } = {}, now = ne
     day.setDate(day.getDate() - 1);
   }
   return { days, today };
+};
+
+/** What each kind of thing done is worth. */
+export const POINTS = { task: 10, habit: 5, minute: 1 };
+
+/**
+ * Points from the person's own records, all time: every finished task, every
+ * ticked habit day, every minute of focus. `today` is today's share. Nothing
+ * is stored; the records are the score.
+ */
+export const pointsFrom = ({ tasks = [], habits = [], focusLog = {} } = {}, now = new Date()) => {
+  const day = keyOf(now);
+  let total = 0;
+  let today = 0;
+  for (const task of tasks) {
+    if (isOpen(task)) continue;
+    total += POINTS.task;
+    const at = doneAt(task);
+    if (at && keyOf(new Date(at)) === day) today += POINTS.task;
+  }
+  for (const habit of habits) {
+    for (const [key, done] of Object.entries(habit?.logs || {})) {
+      if (!done) continue;
+      total += POINTS.habit;
+      if (key === day) today += POINTS.habit;
+    }
+  }
+  for (const [key, entry] of Object.entries(focusLog || {})) {
+    const minutes = Math.max(0, Math.floor(Number(entry?.minutes) || 0)) * POINTS.minute;
+    total += minutes;
+    if (key === day) today += minutes;
+  }
+  return { total, today };
+};
+
+/** Points needed to reach a level: 0, 50, 150, 300, 500… each step 50 longer. */
+export const levelStart = (level) => 25 * level * (level - 1);
+
+/** The level for a points total, and how far into it. */
+export const levelFor = (points) => {
+  const total = Math.max(0, Math.floor(Number(points) || 0));
+  let level = 1;
+  while (levelStart(level + 1) <= total) level += 1;
+  const from = levelStart(level);
+  const to = levelStart(level + 1);
+  return { level, from, to, toNext: to - total, progress: (total - from) / (to - from) };
+};
+
+/** Two focus logs as one, day by day, keeping the larger count where both have a day. */
+export const mergeFocusLogs = (a = {}, b = {}) => {
+  const merged = { ...(a || {}) };
+  for (const [key, entry] of Object.entries(b || {})) {
+    const minutes = Math.max(Number(merged[key]?.minutes) || 0, Number(entry?.minutes) || 0);
+    merged[key] = { ...merged[key], ...entry, minutes };
+  }
+  return merged;
 };

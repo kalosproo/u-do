@@ -266,7 +266,8 @@ service cloud.firestore {
       }
 
       // Settings that follow the person between devices. Only "adhd" so far:
-      // whether ADHD mode is on, and today's three picks.
+      // whether ADHD mode is on, and today's picks (three unless the person
+      // chooses up to five).
       match /prefs/{docId} {
         allow read, delete: if isOwner(uid);
         allow create, update: if isOwner(uid) && docId == 'adhd' && validAdhdPrefs(request.resource.data);
@@ -277,7 +278,7 @@ service cloud.firestore {
       return data.keys().hasOnly(['enabled', 'day', 'picks', 'updatedAt'])
         && data.enabled is bool
         && (!('day' in data) || (data.day is string && data.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
-        && (!('picks' in data) || (data.picks is list && data.picks.size() <= 3));
+        && (!('picks' in data) || (data.picks is list && data.picks.size() <= 5));
     }
 
     /**
