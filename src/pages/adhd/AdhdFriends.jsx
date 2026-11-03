@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiUserPlus } from "react-icons/fi";
+import { FiChevronRight, FiUserPlus } from "react-icons/fi";
 
-import { AdhdPage } from "../../components/adhd/AdhdUI";
+import { AdhdPage, FullView } from "../../components/adhd/AdhdUI";
 import { useWarm } from "../../components/adhd/useWarm";
 import { useAuth } from "../../hooks/useAuth";
 import { readPresence } from "../../services/focusSync";
@@ -57,22 +57,16 @@ function AdhdFriends() {
 
   return (
     <AdhdPage
-      eyebrow="Friends"
-      title="Your"
-      italic="people."
+      title="Friends"
       sub={friends === null ? " " : live ? `${live} focusing right now. Want to join them?` : friends.length ? "Nobody's focusing right now." : "Study's easier with someone. Add a friend."}
-      action={
-        <Link to="/friends?full=1" className="adhd-ghost">
-          Full view
-        </Link>
-      }
+      action={<FullView to="/friends?full=1" />}
     >
       {requests.length ? (
         <section className="adhd-list-block">
           <p className="adhd-eyebrow">Wants to connect</p>
-          <ul className="adhd-people">
+          <ul className="adhd-people adhd-card adhd-group">
             {requests.map((request) => (
-              <li key={request.uid} className="adhd-card adhd-person is-request">
+              <li key={request.uid} className="adhd-person is-request">
                 <Avatar name={request.displayName || request.username} photo={request.photoURL} />
                 <span className="adhd-person-name">
                   <strong>{request.displayName || request.username || "Someone"}</strong>
@@ -98,7 +92,7 @@ function AdhdFriends() {
           <span />
         </div>
       ) : friends.length ? (
-        <ul className="adhd-people">
+        <ul className="adhd-people adhd-card adhd-group">
           {friends.map((person) => (
             <li key={person.uid} className="adhd-person">
               <Avatar name={person.displayName} photo={person.photoURL} />
@@ -118,6 +112,7 @@ function AdhdFriends() {
           <strong>Add a friend</strong>
           <small>Find them by username or share your link</small>
         </span>
+        <FiChevronRight className="adhd-link-card-go" aria-hidden="true" />
       </Link>
     </AdhdPage>
   );

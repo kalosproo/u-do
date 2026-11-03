@@ -1,11 +1,11 @@
-import { useMemo, useRef, useState } from "react";
-import { FiArrowRight, FiCheck, FiGrid, FiMoon, FiPlay, FiPlus, FiRepeat, FiX, FiZap } from "react-icons/fi";
+import { useEffect, useMemo, useState } from "react";
+import { FiArrowRight, FiCheck, FiLayout, FiMoon, FiPlay, FiPlus, FiRepeat, FiX, FiZap } from "react-icons/fi";
 
 import { useAdhd } from "../../hooks/useAdhd";
 import { useAuth } from "../../hooks/useAuth";
 import { useFocus } from "../../hooks/useFocus";
 import { createTask, normalizeTask, setSubtasks, setTaskStatus } from "../../services/tasks";
-import { MAX_PICKS, currentStep, gentleDue, isOpen, pickForMe, rankTasks, swapNow, todayPlan, togglePick } from "../../utils/adhd";
+import { DEFAULT_PICKS, POINTS, currentStep, dayRun, gentleDue, isOpen, pickForMe, rankTasks, streakWords, swapNow, todayPlan, togglePick } from "../../utils/adhd";
 import { playDone } from "../../utils/ambient";
 import { formatRelativeDay, todayKey } from "../../utils/dateKeys";
 import { celebrate } from "../../utils/feedback";
@@ -13,8 +13,10 @@ import { STARTER_MINUTES, formatClock, formatMinutes } from "../../utils/focusTi
 import { morph, morphName } from "../../utils/morph";
 import { toggleSubtask } from "../../utils/subtasks";
 import { Burst, Check, Confetti, DayTrack, HoldButton, ProgressRing } from "./AdhdBits";
-import { Tick } from "./AdhdUI";
+import { FullView, Tick, Toast } from "./AdhdUI";
+import ComingUp from "./ComingUp";
 import { enrichHabit, toggledLogs } from "./habitBits";
+import { useProgress } from "./useProgress";
 import { setHabitLogs } from "../../services/habits";
 import { Link } from "react-router-dom";
 
@@ -22,9 +24,30 @@ import { Link } from "react-router-dom";
 const SHORT_LIST = 8;
 /** Long enough to see the tick land before the next task glides in. */
 const FINISH_MS = 760;
-const COUNT_WORDS = ["", "one", "two", "three"];
+const COUNT_WORDS = ["", "one", "two", "three", "four", "five"];
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// The level last celebrated on this device, so each new one gets its moment once.
+const LEVEL_KEY = "u_do_level";
+const LEVEL_UP_MS = 4200;
+
+const readSeenLevel = (uid) => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LEVEL_KEY) || "null");
+    return saved && uid && saved.uid === uid ? Number(saved.level) || 0 : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const writeSeenLevel = (uid, level) => {
+  try {
+    localStorage.setItem(LEVEL_KEY, JSON.stringify({ uid, level }));
+  } catch {
+    /* A convenience only. */
+  }
+};
 
 const dateLine = () =>
   new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
@@ -36,10 +59,10 @@ const salutation = () => {
 
 /**
  * Home in ADHD mode. One screen, one question at a time: what are today's
- * three, and what's the one thing now? Everything else is a tap away under
+ * few things (three unless chosen otherwise), and what's the one thing now? Everything else is a tap away under
  * "Full view", never in the way.
  */
-function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatch, onShowAll }) {
+function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatch, onAdd, onShowAll }) {
   const { user } = useAuth();
   const adhd = useAdhd();
   const focus = useFocus();
@@ -57,17 +80,47 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
   const [stepLeaving, setStepLeaving] = useState(null);
   const [error, setError] = useState("");
   const [party, setParty] = useState(0);
+  // Bumped when a finish fails to save, so the hold button is fresh again.
+  const [holdTry, setHoldTry] = useState(0);
 
   const firstName = user?.displayName?.trim()?.split(/\s+/)[0] || "";
   const picking = draft !== null || plan.picked.length === 0;
   const allDone = !picking && !plan.now;
+  const showRing = !picking && plan.picked.length > 0;
+  const showTime = adhd.todayParts?.time !== false;
   const donePicked = plan.picked.filter((task) => !isOpen(task));
   // Done first, then the one now, then the rest: the ring fills clockwise.
   const ringStates = [...donePicked.map(() => "done"), ...(plan.now ? ["now"] : []), ...plan.next.map(() => "")];
   const focusedToday = focus?.log?.[today]?.minutes || 0;
+  // Days in a row with something done: only said when it's worth saying.
+  const run = useMemo(() => dayRun({ tasks, habits, focusLog: focus?.log }), [tasks, habits, focus?.log]);
+  const runWords = streakWords(run.days);
 
+  // How many things a day (three unless set in You), and which parts of
+  // Today the person wants to see.
+  const limit = adhd.pickLimit || DEFAULT_PICKS;
+  const parts = adhd.todayParts || {};
   const chosen = draft ?? [];
-  const room = MAX_PICKS - chosen.length;
+  const room = Math.max(0, limit - chosen.length);
+
+  // Points and level, unless switched off in You.
+  const pointsOn = parts.level !== false;
+  const progress = useProgress(tasks, habits);
+  const [seenLevel, setSeenLevel] = useState(() => readSeenLevel(user?.uid));
+  const newLevel = pointsOn && progress.ready && seenLevel > 0 && progress.level > seenLevel ? progress.level : 0;
+  useEffect(() => {
+    if (!user || !progress.ready || progress.level <= seenLevel) return undefined;
+    writeSeenLevel(user.uid, progress.level);
+    // The very first time there's nothing to celebrate: just remember where they are.
+    const timer = setTimeout(() => setSeenLevel(progress.level), seenLevel ? LEVEL_UP_MS : 0);
+    return () => clearTimeout(timer);
+  }, [user, progress.ready, progress.level, seenLevel]);
+  const celebrateStat = [
+    pointsOn && progress.today ? `+${progress.today} points` : "",
+    focusedToday >= 1 ? `${formatMinutes(focusedToday)} of focus` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const openPicker = (initial) => {
     setError("");
@@ -76,7 +129,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
 
   const savePicks = (picks) => {
     // Finished picks stay in the ring while there's room, so progress isn't lost.
-    const keep = donePicked.map((task) => task.id).slice(0, Math.max(0, MAX_PICKS - picks.length));
+    const keep = donePicked.map((task) => task.id).slice(0, Math.max(0, limit - picks.length));
     morph(() => {
       adhd.setPicks([...keep, ...picks]);
       setDraft(null);
@@ -84,18 +137,19 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
     });
   };
 
+  // From the latest choice, not this render's: two quick taps both count.
   const choose = (id) => {
     celebrate();
-    setDraft(togglePick(chosen, id));
+    setDraft((current) => togglePick(current ?? [], id, limit));
   };
 
   // Fills the empty slots one by one, so you see it choosing.
   const pickSlowly = () => {
-    const extra = pickForMe(tasks, today, chosen).filter((id) => !chosen.includes(id));
+    const extra = pickForMe(tasks, today, chosen, limit).filter((id) => !chosen.includes(id));
     extra.forEach((id, index) =>
       setTimeout(() => {
         celebrate();
-        setDraft((current) => (current?.includes(id) ? current : togglePick(current ?? [], id)));
+        setDraft((current) => (current?.includes(id) ? current : togglePick(current ?? [], id, limit)));
       }, 140 * (index + 1))
     );
   };
@@ -109,7 +163,10 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
     try {
       const ref = await createTask(user.uid, { title, dueDate: today, priority: "medium" });
       setNewTitle("");
-      setDraft((current) => togglePick(current ?? [], ref.id));
+      // On the list now, not after the reload: picked and started before that
+      // finishes, it would otherwise drop out of today's picks.
+      onAdd?.(normalizeTask({ id: ref.id, title, dueDate: today, priority: "medium", status: "todo", completed: false }));
+      setDraft((current) => togglePick(current ?? [], ref.id, limit));
       await onChanged();
     } catch {
       setError("Couldn't add that. Try again in a moment.");
@@ -126,7 +183,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
     await wait(FINISH_MS);
     if (last) setParty((n) => n + 1);
     morph(() => {
-      onPatch(task.id, { status: "done", completed: true });
+      onPatch(task.id, { status: "done", completed: true, completedAt: new Date().toISOString() });
       setFinishing(null);
     });
     try {
@@ -134,6 +191,7 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
       await onChanged();
     } catch {
       setError("Couldn't save that tick. It'll be there when you try again.");
+      setHoldTry((n) => n + 1);
       await onChanged();
     }
   };
@@ -175,15 +233,16 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
       <div className="adhd-home-side">
         <header className="adhd-head">
           <div className="adhd-head-top">
-            <p className="adhd-date">{dateLine()}</p>
-            <button type="button" className="adhd-ghost" onClick={onShowAll}>
-              <FiGrid aria-hidden="true" /> Full view
-            </button>
+            <p className="adhd-date">
+              {dateLine()}
+              {runWords && parts.run !== false ? <span className="adhd-run"> · {runWords}</span> : null}
+            </p>
+            <FullView onClick={onShowAll} />
           </div>
           <h1 className="adhd-hello">
             {firstName ? (
               <>
-                {salutation()},<br />
+                <span className="adhd-hello-greet">{salutation()},</span>
                 <em>{firstName}.</em>
               </>
             ) : (
@@ -192,34 +251,51 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
           </h1>
           <p className="adhd-sub">
             {picking
-              ? "What matters today? Pick up to three. Fewer is fine."
+              ? limit === 1
+                ? "What matters today? Pick the one thing."
+                : `What matters today? Pick up to ${COUNT_WORDS[limit]}. Fewer is fine.`
               : allDone
                 ? "Everything you picked is done."
                 : "One thing at a time. That's the whole plan."}
           </p>
         </header>
 
-        <div className={`adhd-status${!picking && plan.picked.length ? "" : " is-single"}`}>
-          {!picking && plan.picked.length ? (
-            <div className="adhd-tile adhd-tile-ring" role="img" aria-label={`${plan.done} of ${plan.picked.length} done`}>
-              <ProgressRing states={ringStates} />
-              <span className="adhd-tile-text">
-                <strong>
-                  <span key={plan.done} className="adhd-roll">
-                    {plan.done}
-                  </span>
-                  <small>/{plan.picked.length}</small>
-                </strong>
-                <small>done today</small>
-              </span>
-            </div>
-          ) : null}
-          <div className="adhd-tile adhd-tile-day">
-            <DayTrack />
+        {showRing || showTime ? (
+          <div className={`adhd-status${showRing && showTime ? "" : " is-single"}`}>
+            {showRing ? (
+              <div className="adhd-tile adhd-tile-ring" role="img" aria-label={`${plan.done} of ${plan.picked.length} done`}>
+                <ProgressRing states={ringStates} />
+                <span className="adhd-tile-text">
+                  <strong>
+                    <span key={plan.done} className="adhd-roll">
+                      {plan.done}
+                    </span>
+                    <small>/{plan.picked.length}</small>
+                  </strong>
+                  <small>done today</small>
+                </span>
+              </div>
+            ) : null}
+            {showTime ? (
+              <div className="adhd-tile adhd-tile-day">
+                <DayTrack />
+              </div>
+            ) : null}
           </div>
-        </div>
+        ) : null}
 
-        <HabitStrip habits={habits} onLogs={onHabitLogs} />
+        {pointsOn && progress.shown ? (
+          <div className="adhd-level" role="img" aria-label={`Level ${progress.level}. ${progress.toNext} points to level ${progress.level + 1}.`}>
+            <span className="adhd-level-n">Level {progress.level}</span>
+            <span className="adhd-level-track" aria-hidden="true">
+              <span style={{ "--p": progress.progress }} />
+            </span>
+            <small>{progress.toNext} to go</small>
+          </div>
+        ) : null}
+
+        {parts.coming !== false ? <ComingUp /> : null}
+        {parts.habits !== false ? <HabitStrip habits={habits} onLogs={onHabitLogs} /> : null}
       </div>
 
       <div className="adhd-home-main">
@@ -232,14 +308,14 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
         {picking ? (
           <article className="adhd-card adhd-stage adhd-picker">
             <div className="adhd-picker-head">
-              <p className="adhd-eyebrow">Your three</p>
+              <p className="adhd-eyebrow">{limit === 1 ? "Your one thing" : `Your ${COUNT_WORDS[limit]}`}</p>
               <span className="adhd-count">
-                {chosen.length}/{MAX_PICKS}
+                {chosen.length}/{limit}
               </span>
             </div>
 
             <ol className="adhd-tray">
-              {Array.from({ length: MAX_PICKS }, (_, index) => {
+              {Array.from({ length: Math.max(limit, chosen.length) }, (_, index) => {
                 const task = byId.get(chosen[index]);
                 return (
                   <li key={task ? task.id : `empty-${index}`}>
@@ -279,8 +355,9 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
                           disabled={!selected && room === 0}
                           onClick={() => choose(task.id)}
                         >
+                          {/* Picked ones show their place in today's order. */}
                           <span className="adhd-option-mark" aria-hidden="true">
-                            {selected ? <FiCheck /> : null}
+                            {selected ? position + 1 : null}
                           </span>
                           <span className="adhd-option-text">
                             <span className="adhd-option-title">{task.title}</span>
@@ -354,10 +431,10 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
               )}
             </h2>
             <p>That&apos;s a real day. Rest now — or pick more if you&apos;ve still got the spark.</p>
-            {focusedToday >= 1 ? <p className="adhd-celebrate-stat">{formatMinutes(focusedToday)} of focus today</p> : null}
+            {celebrateStat ? <p className="adhd-celebrate-stat">{celebrateStat} today</p> : null}
             <div className="adhd-picker-actions">
               <button type="button" className="adhd-btn" onClick={onShowAll}>
-                <FiGrid aria-hidden="true" /> Full view
+                <FiLayout aria-hidden="true" /> Full view
               </button>
               <button type="button" className="adhd-btn adhd-btn-primary" onClick={() => openPicker([])}>
                 Pick more <FiArrowRight aria-hidden="true" />
@@ -367,11 +444,13 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
         ) : (
           <NowCard
             task={plan.now}
+            holdKey={`${plan.now.id}:${holdTry}`}
             today={today}
             finishing={finishing === plan.now.id}
             stepLeaving={stepLeaving}
             timer={timer}
             canSwap={plan.next.length > 0}
+            points={pointsOn ? POINTS.task : 0}
             onStart={() => justStart(plan.now)}
             onDone={() => finish(plan.now)}
             onStep={(step) => finishStep(plan.now, step)}
@@ -417,28 +496,19 @@ function AdhdHome({ tasks: rawTasks, habits = [], onHabitLogs, onChanged, onPatc
         ) : null}
       </div>
       {party ? <Confetti key={party} /> : null}
+      {newLevel ? <Confetti key={`level-${newLevel}`} /> : null}
+      <Toast message={newLevel ? `Level ${newLevel}. Nice work.` : ""} />
     </section>
   );
 }
 
-function NowCard({ task, today, finishing, stepLeaving, timer, canSwap, onStart, onDone, onStep, onSwap, onSkip }) {
-  const cardRef = useRef(null);
+function NowCard({ task, holdKey, today, finishing, stepLeaving, timer, canSwap, points, onStart, onDone, onStep, onSwap, onSkip }) {
   const step = currentStep(task);
   const due = gentleDue(task.dueDate, today);
   const stepsDone = task.subtasks.length > 0 && !step;
 
-  // A soft light follows the pointer across the card, on devices with one.
-  const light = (event) => {
-    if (event.pointerType !== "mouse" || !cardRef.current) return;
-    const box = cardRef.current.getBoundingClientRect();
-    cardRef.current.style.setProperty("--mx", `${event.clientX - box.left}px`);
-    cardRef.current.style.setProperty("--my", `${event.clientY - box.top}px`);
-  };
-
   return (
-    <article ref={cardRef} className={`adhd-card adhd-stage adhd-now${finishing ? " is-finishing" : ""}`} onPointerMove={light}>
-      <span className="adhd-now-light" aria-hidden="true" />
-
+    <article className={`adhd-card adhd-stage adhd-now${finishing ? " is-finishing" : ""}`}>
       <div className="adhd-now-top">
         <p className="adhd-eyebrow">
           <span className="adhd-pulse" aria-hidden="true" /> Now
@@ -481,13 +551,17 @@ function NowCard({ task, today, finishing, stepLeaving, timer, canSwap, onStart,
             <strong>{timer ? timer.label : "Just start"}</strong>
             <small>{timer ? "Open the timer" : `${STARTER_MINUTES} minutes. That's all.`}</small>
           </span>
-          <span className="adhd-start-glint" aria-hidden="true" />
         </button>
         <div className="adhd-hold-wrap">
-          <HoldButton key={task.id} label={`Finish ${task.title}`} onComplete={onDone} className={stepsDone ? "is-ready" : ""}>
+          <HoldButton key={holdKey} label={`Finish ${task.title}`} onComplete={onDone} className={stepsDone ? "is-ready" : ""}>
             <FiCheck aria-hidden="true" /> Hold to finish
           </HoldButton>
           {finishing ? <Burst /> : null}
+          {finishing && points ? (
+            <span className="adhd-plus" aria-hidden="true">
+              +{points}
+            </span>
+          ) : null}
         </div>
       </div>
 

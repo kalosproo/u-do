@@ -8,6 +8,7 @@ import VerifyEmailBanner from "../VerifyEmailBanner";
 import { useAuth } from "../../hooks/useAuth";
 import { createTask } from "../../services/tasks";
 import { TASKS_CHANGED, WHEN, dueFor } from "../../utils/adhd";
+import { quietMotion } from "../../utils/morph";
 import { Ambient } from "./AdhdBits";
 import { Chips, Sheet } from "./AdhdUI";
 
@@ -34,6 +35,9 @@ function AdhdShell() {
   const pillRef = useRef(null);
   const mainRef = useRef(null);
   const placeRef = useRef(null);
+  const scrolls = useRef(new Map());
+  const scrollKey = useRef("");
+  const here = location.pathname + location.search;
 
   // Where you are, left to right along the dock; More's places count as More.
   const place = location.pathname === "/" ? 0 : location.pathname.startsWith("/tasks") ? 1 : location.pathname.startsWith("/focus") ? 2 : 3;
@@ -61,18 +65,42 @@ function AdhdShell() {
     if (!pill.dataset.ready) requestAnimationFrame(() => (pill.dataset.ready = "1"));
   }, [place, location.pathname]);
 
-  // Keep the highlight lined up if the dock changes size (rotating a phone).
+  // Keep the highlight lined up whenever the dock changes size (rotating a
+  // phone, resizing a window, the font arriving late).
   useEffect(() => {
-    const onResize = () => {
-      const active = dockRef.current?.querySelector(".active");
+    const dock = dockRef.current;
+    if (!dock || typeof ResizeObserver === "undefined") return undefined;
+    const realign = () => {
+      const active = dock.querySelector(".active");
       if (active && pillRef.current) {
         pillRef.current.style.width = `${active.offsetWidth}px`;
         pillRef.current.style.transform = `translate3d(${active.offsetLeft}px, 0, 0)`;
       }
     };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const observer = new ResizeObserver(realign);
+    observer.observe(dock);
+    return () => observer.disconnect();
   }, []);
+
+  // Each screen keeps its own place, like the tabs of a phone app: scroll
+  // down Tasks, look at Focus, come back, and Tasks is where you left it. A
+  // screen you haven't been to opens at the top.
+  useEffect(() => {
+    const remember = () => scrolls.current.set(scrollKey.current, window.scrollY);
+    window.addEventListener("scroll", remember, { passive: true });
+    return () => window.removeEventListener("scroll", remember);
+  }, []);
+  useLayoutEffect(() => {
+    scrollKey.current = here;
+    window.scrollTo(0, scrolls.current.get(here) || 0);
+  }, [here]);
+
+  // Tapping the tab you're already on takes you back to the top of it.
+  const topIfHere = (to) => (event) => {
+    if (location.pathname !== to || location.search) return;
+    event.preventDefault();
+    window.scrollTo({ top: 0, behavior: quietMotion() ? "auto" : "smooth" });
+  };
 
   // The app's usual "capture" shortcut opens the quick add here too.
   useEffect(() => {
@@ -96,18 +124,18 @@ function AdhdShell() {
 
       <nav ref={dockRef} className="adhd-dock" aria-label="Main">
         <span ref={pillRef} className="adhd-dock-pill" aria-hidden="true" />
-        <NavLink to="/" end>
+        <NavLink to="/" end onClick={topIfHere("/")}>
           <FiSun aria-hidden="true" />
           <span>Today</span>
         </NavLink>
-        <NavLink to="/tasks">
+        <NavLink to="/tasks" onClick={topIfHere("/tasks")}>
           <FiCheckCircle aria-hidden="true" />
           <span>Tasks</span>
         </NavLink>
         <button type="button" className={`adhd-dock-add${adding ? " is-open" : ""}`} aria-label="Add something" onClick={() => setAdding(true)}>
           <FiPlus aria-hidden="true" />
         </button>
-        <NavLink to="/focus">
+        <NavLink to="/focus" onClick={topIfHere("/focus")}>
           <FiPlayCircle aria-hidden="true" />
           <span>Focus</span>
         </NavLink>

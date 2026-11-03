@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 
-import { AdhdPage, Chips, Toast } from "../../components/adhd/AdhdUI";
+import { AdhdPage, Chips, FullView, Toast } from "../../components/adhd/AdhdUI";
 import { useToast } from "../../components/adhd/useToast";
 import { useWarm } from "../../components/adhd/useWarm";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../../config/financeCategories";
@@ -86,15 +85,9 @@ function AdhdMoney() {
 
   return (
     <AdhdPage
-      eyebrow="Money"
-      title="Your"
-      italic="money."
+      title="Money"
       sub={entries === null ? " " : `Spent in ${monthName}`}
-      action={
-        <Link to="/finance?full=1" className="adhd-ghost">
-          Full view
-        </Link>
-      }
+      action={<FullView to="/finance?full=1" />}
     >
       <div className="adhd-card adhd-money-total">
         <strong>{entries === null ? "…" : formatMoney(spent)}</strong>
@@ -139,7 +132,7 @@ function AdhdMoney() {
       {recent.length ? (
         <section className="adhd-list-block">
           <p className="adhd-eyebrow">Lately</p>
-          <ul className="adhd-money-list">
+          <ul className="adhd-money-list adhd-card adhd-group">
             {recent.map((entry) => (
               <li key={entry.id}>
                 <span>

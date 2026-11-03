@@ -1,7 +1,7 @@
 import { useAdhd } from "../../hooks/useAdhd";
 
 const WHAT = [
-  ["Today's three", "Home asks for up to three things, then shows only the one to do now."],
+  ["Today's few", "Home asks for up to three things (or one to five, your choice), then shows only the one to do now."],
   ["Just start", "Five minutes on the timer, then the choice to keep going."],
   ["Kind words", "Nothing is \"overdue\" or \"broken\" — it's from earlier, or welcome back."],
   ["Quiet screens", "No leaderboards, charts, ads or moving background. Bigger, calmer type."],

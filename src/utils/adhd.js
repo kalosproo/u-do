@@ -1,12 +1,29 @@
 /**
- * ADHD mode: one day, three things, one at a time.
+ * ADHD mode: one day, a few things (three unless you choose), one at a time.
  *
  * Today's picks are task ids saved with the day they were picked for, so
  * yesterday's list never carries over by itself. Everything here is plain
  * data in and out; the page and the provider do the saving.
  */
 
-export const MAX_PICKS = 3;
+/** The most a day can hold: what the rules allow. */
+export const MAX_PICKS = 5;
+/** How many a day, unless the person chooses another number in You. */
+export const DEFAULT_PICKS = 3;
+
+/** A saved "things a day" setting, made safe: a whole number from 1 to MAX_PICKS. */
+export const pickLimitOf = (value) => {
+  const limit = Math.round(Number(value));
+  return limit >= 1 && limit <= MAX_PICKS ? limit : DEFAULT_PICKS;
+};
+
+/** Text size in ADHD mode, a feel for each device. */
+export const TEXT_SIZES = ["standard", "large", "larger"];
+export const textSizeOf = (value) => (TEXT_SIZES.includes(value) ? value : "standard");
+
+/** The parts of Today that can be put away. Each shows unless switched off. */
+export const TODAY_PARTS = ["time", "habits", "coming", "run", "level"];
+export const todayPartsOf = (saved) => Object.fromEntries(TODAY_PARTS.map((part) => [part, saved?.[part] !== false]));
 
 const PRIORITY = { high: 0, medium: 1, low: 2 };
 
@@ -28,13 +45,13 @@ export const rankTasks = (tasks, today) =>
     );
   });
 
-/** Fills the free slots with the top-ranked tasks not already picked. */
-export const pickForMe = (tasks, today, picks = []) => {
+/** Fills the free slots, up to `limit`, with the top-ranked tasks not already picked. */
+export const pickForMe = (tasks, today, picks = [], limit = DEFAULT_PICKS) => {
   const kept = cleanPicks(picks);
   const extra = rankTasks(tasks, today)
     .map((task) => task.id)
     .filter((id) => !kept.includes(id));
-  return [...kept, ...extra].slice(0, MAX_PICKS);
+  return [...kept, ...extra.slice(0, Math.max(0, limit - kept.length))];
 };
 
 export const cleanPicks = (picks) =>
@@ -42,6 +59,16 @@ export const cleanPicks = (picks) =>
 
 /** The picks that apply today: none if they were made on another day. */
 export const picksFor = (prefs, today) => (prefs?.day === today ? cleanPicks(prefs.picks) : []);
+
+const millisOf = (time) => (typeof time?.toMillis === "function" ? time.toMillis() : Number(time) || 0);
+
+/**
+ * Whether this device's copy of the prefs beats the one the server sent: only
+ * when a change made here never reached the server (the app closed with no
+ * signal, say) and no other device has saved since.
+ */
+export const keepLocalPrefs = (local, server) =>
+  Boolean(local?.unsynced) && (Number(local.editedAt) || 0) > millisOf(server?.updatedAt);
 
 /**
  * Today's plan from the picks: the picked tasks that still exist, in order,
@@ -59,10 +86,10 @@ export const todayPlan = (tasks, picks) => {
   };
 };
 
-export const togglePick = (picks, id) => {
+export const togglePick = (picks, id, limit = DEFAULT_PICKS) => {
   const clean = cleanPicks(picks);
   if (clean.includes(id)) return clean.filter((item) => item !== id);
-  return clean.length >= MAX_PICKS ? clean : [...clean, id];
+  return clean.length >= limit ? clean : [...clean, id];
 };
 
 /** Sends the current task to the back, so the next one comes up. */
@@ -115,6 +142,8 @@ export const gentleDue = (dueDate, today) => (dueDate && dueDate < today ? "From
  */
 export const DAY_START_HOUR = 7;
 export const DAY_END_HOUR = 23;
+/** Before this hour it's still last night, for the day track and for picks. */
+export const DAY_TURNS_AT = 5;
 
 const hoursLabel = (minutes) => {
   const halves = Math.round(minutes / 30);
@@ -129,7 +158,7 @@ export const dayLeft = (date = new Date()) => {
   const progress = Math.min(1, Math.max(0, (minutes - start) / (end - start)));
   const left = Math.max(0, end - minutes);
   // Past midnight is still last night, not an early morning.
-  if (minutes < 5 * 60) return { progress: 1, left: 0, label: "Late. Rest counts too." };
+  if (minutes < DAY_TURNS_AT * 60) return { progress: 1, left: 0, label: "Late. Rest counts too." };
   if (minutes < start) return { progress, left, label: "Early. The day hasn't started yet." };
   if (left === 0) return { progress, left, label: "Late. Rest counts too." };
   if (left < 60) return { progress, left, label: `About ${left} min left today` };
@@ -145,6 +174,13 @@ export const WHEN = [
 
 const keyOf = (date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+/**
+ * The day today's picks belong to. It turns over at 5am, not midnight, so
+ * three things picked late at night are still there at half past twelve.
+ */
+export const planDay = (now = new Date()) =>
+  keyOf(now.getHours() < DAY_TURNS_AT ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1) : now);
 
 /** The due date a "when" stands for: today's key, tomorrow's, or none. */
 export const dueFor = (when, now = new Date()) => {
@@ -187,3 +223,108 @@ export const streakWords = (streak, frequency = "daily") => {
 
 /** Sent after a quick add, so whatever list is on screen reads itself again. */
 export const TASKS_CHANGED = "udo:tasks-changed";
+
+/**
+ * Getting started is the hard part. For a task with no steps yet, three
+ * tiny first moves that fit what it's about, so "where do I even begin?"
+ * has an answer one tap away. Checked in order: the first kind that fits wins.
+ */
+const FIRST_STEPS = [
+  [/\b(revise|revision|study|exams?|tests?|quiz|homework|worksheet|questions?|maths?|physics|chemistry|biology|practice|learn)\b/, ["Get your notes and a pen out", "Do only the first question", "Set a ten-minute timer"]],
+  [/\b(write|writing|essay|report|assignment|draft|story|letter|blog|intro|summary)\b/, ["Open a blank page and type the title", "Write one messy sentence", "List three points to cover"]],
+  [/\b(call|phone|ring)\b/, ["Find the number", "Write down the one thing to say", "Press call"]],
+  [/\b(e-?mail|reply|message|text|dm|whatsapp|respond)\b/, ["Open the conversation", "Write just the first line", "Send it, even if it's short"]],
+  [/\b(appointment|dentist|doctor|form|apply|application|booking)\b|\bbook (a|an|the)\b/, ["Find the website or the number", "Get the details you'll need ready", "Do just the first step"]],
+  [/\b(return|post|drop off|pick up|collect|deliver)\b/, ["Put it by the door now", "Check when it's open", "Go while you remember"]],
+  [/\b(read|reading|chapter|book|article|pages?)\b/, ["Open it to the right page", "Read one page", "Note one thing you learned"]],
+  [/\b(clean|tidy|laundry|dishes|wash|organi[sz]e|declutter|room|desk)\b/, ["Put on one song", "Clear one small surface", "Put five things away"]],
+  [/\b(buy|shop|shopping|order|groceries|pay|bill|renew|subscription)\b/, ["Open the website or app", "Add it to the basket", "Pay, and it's done"]],
+  [/\b(gym|run|walk|exercise|workout|yoga|stretch|swim)\b/, ["Put your shoes on", "Do five minutes, then decide", "Fill your water bottle"]],
+];
+const ANY_FIRST_STEPS = ["Get what you need in front of you", "Do the first two minutes", "Decide what \"done\" looks like"];
+
+export const firstSteps = (title = "") => {
+  const text = String(title).toLowerCase();
+  return (FIRST_STEPS.find(([pattern]) => pattern.test(text)) || [null, ANY_FIRST_STEPS])[1];
+};
+
+/**
+ * Days in a row with at least one thing done: a task finished, a habit
+ * ticked or a minute of focus. Nothing yet today doesn't break it, the day
+ * isn't over; it just isn't counted until something happens. Only ever good
+ * news, so a gap simply starts the count again from nothing.
+ */
+export const dayRun = ({ tasks = [], habits = [], focusLog = {} } = {}, now = new Date()) => {
+  const active = new Set();
+  for (const task of tasks) {
+    const at = isOpen(task) ? 0 : doneAt(task);
+    if (at) active.add(keyOf(new Date(at)));
+  }
+  for (const habit of habits) for (const [key, done] of Object.entries(habit?.logs || {})) if (done) active.add(key);
+  for (const [key, entry] of Object.entries(focusLog || {})) if ((Number(entry?.minutes) || 0) >= 1) active.add(key);
+  const day = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const today = active.has(keyOf(day));
+  if (!today) day.setDate(day.getDate() - 1);
+  let days = 0;
+  while (active.has(keyOf(day))) {
+    days += 1;
+    day.setDate(day.getDate() - 1);
+  }
+  return { days, today };
+};
+
+/** What each kind of thing done is worth. */
+export const POINTS = { task: 10, habit: 5, minute: 1 };
+
+/**
+ * Points from the person's own records, all time: every finished task, every
+ * ticked habit day, every minute of focus. `today` is today's share. Nothing
+ * is stored; the records are the score.
+ */
+export const pointsFrom = ({ tasks = [], habits = [], focusLog = {} } = {}, now = new Date()) => {
+  const day = keyOf(now);
+  let total = 0;
+  let today = 0;
+  for (const task of tasks) {
+    if (isOpen(task)) continue;
+    total += POINTS.task;
+    const at = doneAt(task);
+    if (at && keyOf(new Date(at)) === day) today += POINTS.task;
+  }
+  for (const habit of habits) {
+    for (const [key, done] of Object.entries(habit?.logs || {})) {
+      if (!done) continue;
+      total += POINTS.habit;
+      if (key === day) today += POINTS.habit;
+    }
+  }
+  for (const [key, entry] of Object.entries(focusLog || {})) {
+    const minutes = Math.max(0, Math.floor(Number(entry?.minutes) || 0)) * POINTS.minute;
+    total += minutes;
+    if (key === day) today += minutes;
+  }
+  return { total, today };
+};
+
+/** Points needed to reach a level: 0, 50, 150, 300, 500… each step 50 longer. */
+export const levelStart = (level) => 25 * level * (level - 1);
+
+/** The level for a points total, and how far into it. */
+export const levelFor = (points) => {
+  const total = Math.max(0, Math.floor(Number(points) || 0));
+  let level = 1;
+  while (levelStart(level + 1) <= total) level += 1;
+  const from = levelStart(level);
+  const to = levelStart(level + 1);
+  return { level, from, to, toNext: to - total, progress: (total - from) / (to - from) };
+};
+
+/** Two focus logs as one, day by day, keeping the larger count where both have a day. */
+export const mergeFocusLogs = (a = {}, b = {}) => {
+  const merged = { ...(a || {}) };
+  for (const [key, entry] of Object.entries(b || {})) {
+    const minutes = Math.max(Number(merged[key]?.minutes) || 0, Number(entry?.minutes) || 0);
+    merged[key] = { ...merged[key], ...entry, minutes };
+  }
+  return merged;
+};

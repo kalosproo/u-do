@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 
 import { Confetti } from "../../components/adhd/AdhdBits";
-import { AddBar, AdhdPage, Chips, Sheet, Tick, Toast } from "../../components/adhd/AdhdUI";
+import { AddBar, AdhdPage, Chips, FullView, Sheet, Tick, Toast } from "../../components/adhd/AdhdUI";
 import { enrichHabit, toggledLogs } from "../../components/adhd/habitBits";
 import { useToast } from "../../components/adhd/useToast";
 import { useWarm } from "../../components/adhd/useWarm";
@@ -94,9 +93,7 @@ function AdhdHabits() {
 
   return (
     <AdhdPage
-      eyebrow="Habits"
-      title="Little"
-      italic="things."
+      title="Habits"
       sub={
         habits === null
           ? " "
@@ -106,11 +103,7 @@ function AdhdHabits() {
               : `${done} of ${list.length} done today.`
             : "Add one small thing you'd like to do most days."
       }
-      action={
-        <Link to="/habits?full=1" className="adhd-ghost">
-          Full view
-        </Link>
-      }
+      action={<FullView to="/habits?full=1" />}
     >
       {error ? (
         <p className="adhd-error" role="alert">
@@ -124,7 +117,7 @@ function AdhdHabits() {
           <span />
         </div>
       ) : list.length ? (
-        <ul className="adhd-habits">
+        <ul className="adhd-habits adhd-card adhd-group">
           {list.map((habit) => {
             const words = streakWords(habit.streak, habit.frequency);
             return (

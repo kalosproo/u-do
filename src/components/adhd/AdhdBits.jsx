@@ -5,7 +5,6 @@ import { dayLeft } from "../../utils/adhd";
 import { buzz } from "../../utils/feedback";
 import { quietMotion } from "../../utils/morph";
 
-
 /**
  * Today's picks as one ring cut into equal arcs: lit when done, breathing
  * for the one in progress, faint for the rest.
@@ -244,17 +243,10 @@ export function HoldButton({ onComplete, label, className = "", children, ms = 6
 }
 
 /**
- * The light behind ADHD mode's home: two soft pools that drift so slowly
- * you only notice the room feels alive, and a fine grain over everything.
+ * Behind everything: in the dark, a faint light from above so black has some
+ * depth; in the light, nothing. It never moves, so it never costs a frame.
  */
 export function Ambient() {
   if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="adhd-ambient" aria-hidden="true">
-      <span className="adhd-ambient-a" />
-      <span className="adhd-ambient-b" />
-      <span className="adhd-ambient-grain" />
-    </div>,
-    document.body
-  );
+  return createPortal(<div className="adhd-ambient" aria-hidden="true" />, document.body);
 }
