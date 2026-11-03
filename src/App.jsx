@@ -71,7 +71,6 @@ function AppLayout() {
       <CommandPalette />
       <KeyboardShortcuts />
 
-      <AdSlot enabled={showAds} />
       <OfflineNotice />
 
       <main className="main-content with-sidebar">
@@ -79,6 +78,7 @@ function AppLayout() {
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
+        <AdSlot enabled={showAds} />
       </main>
     </>
   );
