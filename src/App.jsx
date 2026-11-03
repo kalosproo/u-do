@@ -74,10 +74,12 @@ function AppLayout() {
       <OfflineNotice />
 
       <main className="main-content with-sidebar">
-        <VerifyEmailBanner />
-        <ErrorBoundary>
-          <Outlet />
-        </ErrorBoundary>
+        <div className="main-page">
+          <VerifyEmailBanner />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
+        </div>
         <AdSlot enabled={showAds} />
       </main>
     </>
