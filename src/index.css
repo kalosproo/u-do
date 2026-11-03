@@ -86,7 +86,24 @@ textarea:focus-visible { outline-offset: 0; }
 
 .main-content.with-sidebar {
   margin-left: var(--sidebar-w);
+  /* The page, then the ad. The page's own box grows to fill a short screen,
+     so the ad sits at the foot of it instead of floating mid-screen under the
+     content; on a long page it simply follows. The page lays out inside that
+     box exactly as it did inside main. */
+  display: flex;
+  flex-direction: column;
 }
+
+/* The screen with a phone's browser bars showing, so on a short page the ad
+   above the bottom bar is fully in view without a scroll. */
+@supports (min-height: 100svh) {
+  .main-content.with-sidebar { min-height: 100svh; }
+}
+
+.main-page { flex: 1 0 auto; }
+
+/* Auto margins would shrink it to its content, and AdSense needs its width. */
+.main-content.with-sidebar > .adsense-container { width: 100%; }
 
 .app-loading-screen {
   min-height: 100vh;
@@ -4347,21 +4364,30 @@ body.is-focusing { overflow: hidden; }
 .study-room-link > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .study-room-link small { color: var(--text-muted); font-size: 12.5px; }
 
-/* AdSense slot: keep the unit aligned with the page content and the dark UI. */
+/* AdSense slot: keep the unit aligned with the page content and the dark UI.
+   The frame and label only appear once an ad has loaded, so an ad blocker or
+   an ad that never arrives leaves nothing behind, not an empty box. The slot
+   stays laid out (never display: none) so AdSense can still measure its width. */
 .adsense-container {
   max-width: 1180px;
-  margin: var(--s-6) auto 0;
+  margin: 0 auto;
+  text-align: center;
+  overflow: hidden;
+}
+
+.adsense-container:has(ins[data-ad-status="filled"]) {
+  margin-top: var(--s-6);
   padding: var(--s-3);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   background: var(--surface);
-  overflow: hidden;
 }
 
-.adsense-container::before {
+.adsense-container:has(ins[data-ad-status="filled"])::before {
   content: "Advertisement";
   display: block;
   margin-bottom: var(--s-2);
+  text-align: left;
   color: var(--text-subtle);
   font-size: var(--t-xs);
   letter-spacing: 0.055em;
