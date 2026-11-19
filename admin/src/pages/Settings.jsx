@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { useAdminAuth } from "../hooks/useAdminAuth.js";
-import { backfillBilling, seedPlanLimits } from "../services/adminApi.js";
+import { backfillBilling, findAdminUser, seedPlanLimits, setAdminClaim } from "../services/adminApi.js";
 import { readableError } from "../utils/format.js";
 
 const ACTIONS = [
@@ -31,6 +31,7 @@ export default function Settings() {
   const { user, role } = useAdminAuth();
   const [busy, setBusy] = useState("");
   const [results, setResults] = useState({});
+  const [accessResult, setAccessResult] = useState(null);
   const owner = role === "owner";
 
   const run = async (action) => {
@@ -41,6 +42,36 @@ export default function Settings() {
       setResults((prev) => ({ ...prev, [action.id]: { ok: true, text: action.done(result) } }));
     } catch (error) {
       setResults((prev) => ({ ...prev, [action.id]: { ok: false, text: readableError(error, "That failed.") } }));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const changeAccess = async (event) => {
+    event.preventDefault();
+    if (!owner || busy) return;
+
+    const fields = new FormData(event.currentTarget);
+    const email = fields.get("email").trim();
+    const grantRole = fields.get("role");
+    const revoke = event.nativeEvent.submitter?.value === "revoke";
+    setBusy(revoke ? "revoke" : "grant");
+    setAccessResult(null);
+    try {
+      const { users } = await findAdminUser({ term: email });
+      const targetUid = users[0]?.uid;
+      if (!targetUid) {
+        setAccessResult({ ok: false, text: `No account found for ${email}.` });
+        return;
+      }
+
+      await setAdminClaim(revoke ? { targetUid, revoke: true } : { targetUid, role: grantRole });
+      setAccessResult({
+        ok: true,
+        text: revoke ? `Revoked admin access for ${email}.` : `Granted ${grantRole} access to ${email}.`,
+      });
+    } catch (error) {
+      setAccessResult({ ok: false, text: readableError(error, "Could not update admin access.") });
     } finally {
       setBusy("");
     }
@@ -101,6 +132,34 @@ export default function Settings() {
                 </button>
               </div>
             ))}
+            {owner && (
+              <form className="setting" onSubmit={changeAccess}>
+                <fieldset disabled={busy !== ""} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+                  <legend><strong>Admin access</strong></legend>
+                  <div className="search" style={{ flexWrap: "wrap", marginBlock: "var(--s-2)" }}>
+                    <label>Account email <input name="email" type="email" required /></label>
+                    <label>
+                      Role{" "}
+                      <select name="role" defaultValue="admin">
+                        <option value="admin">Admin</option>
+                        <option value="support">Support</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="search">
+                    <button type="submit" value="grant" className="button">
+                      {busy === "grant" ? "Granting…" : "Grant"}
+                    </button>
+                    <button type="submit" value="revoke" className="button" data-variant="quiet">
+                      {busy === "revoke" ? "Revoking…" : "Revoke"}
+                    </button>
+                  </div>
+                  {accessResult && (
+                    <p className={accessResult.ok ? "page-note" : "notice"} role="status">{accessResult.text}</p>
+                  )}
+                </fieldset>
+              </form>
+            )}
           </div>
         </section>
       </div>

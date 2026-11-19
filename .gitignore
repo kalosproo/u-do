@@ -25,7 +25,7 @@ dist-ssr
 *.sln
 *.sw?
 
-u-do-0-firebase-adminsdk-fbsvc-71c4d6b9c7.json
+*firebase-adminsdk*.json
 
 # Android signing keys never go in the repository.
 *.keystore
